@@ -1,13 +1,65 @@
-# Senses IoT Hub by Chirp - RAK5146 Basic Station Image
+# DIY Raspberry Pi LoRaWAN Gateway for Home Automation
 
-This image contains a pre-configured setup of Senses IoT Hub, a complete LoRaWAN gateway solution by Chirp, designed to work with Raspberry Pi 4 and RAK5146 concentrator module.
+Welcome to the Raspberry Pi IoT Hub repository! This project helps you build your own DIY LoRaWAN gateway using a Raspberry Pi and RAK5146 concentrator, allowing you to connect LoRaWAN devices to Chirp's network and the Home Senses platform for smart home automation.
+
+## What is This Project?
+
+This repository contains everything you need to transform a Raspberry Pi into a powerful LoRaWAN gateway that connects to Chirp's cloud services. With this setup, you can:
+
+- Create your own LoRaWAN gateway for a fraction of the cost of commercial solutions
+- Connect various LoRaWAN sensors and devices throughout your home
+- Automate your home using the Home Senses platform
+- Contribute to the growing community of DIY IoT enthusiasts
+
+Whether you're a hobbyist, maker, or professional looking to explore LoRaWAN technology, this project provides a complete, open-source solution to get started.
+
+## Repository Contents
+
+- **Documentation**: Comprehensive guides for hardware setup, software installation, and troubleshooting
+- **Configuration Files**: Templates and examples for Basic Station and system services
+- **Web Interface**: A Go-based configuration utility to easily set up your gateway
+- **Scripts**: Utility scripts for installation and maintenance
 
 ## Hardware Requirements
 
-- Raspberry Pi 4
+- Raspberry Pi 4 (4GB or 8GB RAM recommended)
 - RAK5146 mPCIe card with SX1303 chipset
 - RAK HAT using mPCIe interface
 - 32GB or larger SD card
+- 5V/3A USB-C power supply
+- LoRa antenna (and optionally GPS antenna)
+
+## Quick Start Guide
+
+1. Assemble the hardware components (see [Hardware Setup](docs/hardware-setup.md))
+2. Download the [pre-configured Raspberry Pi OS image](#download-image)
+3. Flash the image to your SD card
+4. Configure your gateway to connect to Chirp's network
+5. Register your gateway on the Home Senses platform
+6. Start connecting LoRaWAN devices to automate your home
+
+## Pre-configured Image
+
+For convenience, we provide a pre-configured Raspberry Pi OS image with all necessary software installed.
+
+### Download Image
+
+You can download the latest Raspberry Pi OS image with pre-configured IoT Hub software here:
+- [Download Raspberry Pi IoT Hub Image]() (Coming soon)
+
+### Image Contents
+
+The pre-configured image contains:
+
+#### Pre-installed Software
+- Raspberry Pi OS (64-bit)
+- Docker and Docker Compose
+- Basic Station container (xoseperez/basicstation:latest)
+
+#### Configuration
+- SPI interface enabled for RAK5146
+- Docker configured for auto-start
+- Basic Station configured for Chirp's network
 
 ## Hardware Setup
 
@@ -31,7 +83,7 @@ The RAK HAT with mPCIe interface is configured for:
 3. Connect the antenna to the SMA connector
 4. (Optional) Connect the GPS antenna if using location services
 
-### SPI Interface
+## SPI Interface
 The system is configured to use:
 - SPI device: `/dev/spidev0.0`
 - SPI speed: 8MHz
@@ -107,8 +159,8 @@ The gateway EUI is a unique 64-bit identifier derived from the Raspberry Pi's et
    - Suffix: Last 6 digits of the ethernet MAC address
 
 Example:
-- MAC address: `E4:5F:01:11:1F:64`
-- Gateway EUI: `E45F01FFFE111F64`
+- MAC address: `E4:5F:01:11:1F:32`
+- Gateway EUI: `E45F01FFFE111F32`
 
 To find your gateway's EUI:
 ```bash

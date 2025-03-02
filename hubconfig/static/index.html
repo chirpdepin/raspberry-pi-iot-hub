@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senses IoT Hub Configuration</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <pre class="ascii-art">
+   _____                           
+  / ___/___  ____  ________  _____
+  \__ \/ _ \/ __ \/ ___/ _ \/ ___/
+ ___/ /  __/ / / (__  )  __(__  ) 
+/____/\___/_/ /_/____/\___/____/  
+            </pre>
+            <h1>IoT Hub by Chirp</h1>
+        </div>
+
+        <div class="info-box">
+            <h2>Gateway EUI</h2>
+            <p id="gateway-eui">Loading...</p>
+            <p class="hint">Use this Gateway EUI to generate certificates at app.chirpwireless.io</p>
+        </div>
+
+        <div class="config-form">
+            <form id="gateway-config" onsubmit="submitConfig(event)">
+                <div class="form-group">
+                    <label for="lns-url">ChirpStack LNS URL:</label>
+                    <input type="text" id="lns-url" name="lns-url" 
+                           placeholder="wss://lora-eu868.cloud.chirpwireless.io:443" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tc-trust">Root CA Certificate (tc.trust):</label>
+                    <div class="file-input-container">
+                        <input type="file" id="tc-trust" name="tc-trust" accept=".trust" required>
+                        <button type="button" class="file-select-btn" onclick="document.getElementById('tc-trust').click()">
+                            Select File
+                        </button>
+                        <span class="file-name" id="tc-trust-name">No file selected</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tc-crt">Gateway Certificate (tc.crt):</label>
+                    <div class="file-input-container">
+                        <input type="file" id="tc-crt" name="tc-crt" accept=".crt" required>
+                        <button type="button" class="file-select-btn" onclick="document.getElementById('tc-crt').click()">
+                            Select File
+                        </button>
+                        <span class="file-name" id="tc-crt-name">No file selected</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tc-key">Gateway Private Key (tc.key):</label>
+                    <div class="file-input-container">
+                        <input type="file" id="tc-key" name="tc-key" accept=".key" required>
+                        <button type="button" class="file-select-btn" onclick="document.getElementById('tc-key').click()">
+                            Select File
+                        </button>
+                        <span class="file-name" id="tc-key-name">No file selected</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="submit-btn">Upload & Start</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+    </div>
+
+    <script>
+        // Fetch Gateway EUI when page loads
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/gateway-eui');
+                const data = await response.json();
+                document.getElementById('gateway-eui').textContent = data.eui;
+            } catch (error) {
+                document.getElementById('gateway-eui').textContent = 'Error fetching Gateway EUI';
+                console.error('Error:', error);
+            }
+        });
+
+        // Update file name display when files are selected
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function() {
+                const nameSpan = document.getElementById(this.id + '-name');
+                nameSpan.textContent = this.files[0] ? this.files[0].name : 'No file selected';
+            });
+        });
+
+        async function submitConfig(event) {
+            event.preventDefault();
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = 'Configuring gateway...';
+            
+            const formData = new FormData();
+            formData.append('lns-url', document.getElementById('lns-url').value);
+            formData.append('tc-trust', document.getElementById('tc-trust').files[0]);
+            formData.append('tc-crt', document.getElementById('tc-crt').files[0]);
+            formData.append('tc-key', document.getElementById('tc-key').files[0]);
+
+            try {
+                const response = await fetch('/configure', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = 'Gateway configured successfully!';
+                    statusDiv.className = 'status-message success';
+                } else {
+                    statusDiv.textContent = 'Error: ' + result.error;
+                    statusDiv.className = 'status-message error';
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error connecting to server';
+                statusDiv.className = 'status-message error';
+            }
+        }
+    </script>
+</body>
+</html>

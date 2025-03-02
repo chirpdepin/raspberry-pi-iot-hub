@@ -1,0 +1,48 @@
+{
+    "sx1302_conf": {
+        "device": "/dev/spidev0.0",
+        "lorawan_public": true,
+        "clksrc": 0,
+        "no_temp_adj": true,
+        "radio_0": {
+            "enable": true,
+            "type": "SX1250",
+            "freq": 867500000,
+            "rssi_offset": -215.4,
+            "tx_enable": true,
+            "tx_gain_lut": [
+                {"rf_power": 12, "pa_gain": 1, "pwr_idx": 15},
+                {"rf_power": 14, "pa_gain": 1, "pwr_idx": 16},
+                {"rf_power": 16, "pa_gain": 1, "pwr_idx": 17},
+                {"rf_power": 20, "pa_gain": 1, "pwr_idx": 19},
+                {"rf_power": 23, "pa_gain": 1, "pwr_idx": 20}
+            ]
+        },
+        "radio_1": {
+            "enable": true,
+            "type": "SX1250",
+            "freq": 868500000,
+            "rssi_offset": -215.4,
+            "tx_enable": false
+        },
+        "chan_multiSF_0": {"enable": true, "radio": 1, "if": -400000},
+        "chan_multiSF_1": {"enable": true, "radio": 1, "if": -200000},
+        "chan_multiSF_2": {"enable": true, "radio": 1, "if": 0},
+        "chan_multiSF_3": {"enable": true, "radio": 0, "if": -400000},
+        "chan_multiSF_4": {"enable": true, "radio": 0, "if": -200000},
+        "chan_multiSF_5": {"enable": true, "radio": 0, "if": 0},
+        "chan_multiSF_6": {"enable": true, "radio": 0, "if": 200000},
+        "chan_multiSF_7": {"enable": true, "radio": 0, "if": 400000}
+    },
+    "station_conf": {
+        "routerid": "E45F01FFFE111F64",
+        "euiprefix": "0000000000",
+        "log_level": "DEBUG",
+        "radio_init": "/usr/local/rak/lora/rak5146/reset_lgw.sh start",
+        "RADIO_INIT_WAIT": "5s",
+        "uri": "wss://lora-eu868.cloud.chirpwireless.io:443",
+        "trust": "./tc.trust",
+        "key": "./tc.key",
+        "crt": "./tc.crt"
+    }
+}

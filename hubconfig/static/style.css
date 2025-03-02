@@ -1,0 +1,178 @@
+:root {
+    --primary-color: #FF4D14;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --error-color: #ff6b6b;
+    --background-color: #202224;
+    --text-color: #ffffff;
+    --border-color: #404244;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.ascii-art {
+    font-family: monospace;
+    white-space: pre;
+    display: block;
+    color: var(--primary-color);
+    margin: 1rem 0;
+    font-size: 0.8rem;
+}
+
+h1 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.config-form {
+    margin-top: 2rem;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: #2a2c2e;
+    color: var(--text-color);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus {
+    border-color: var(--secondary-color);
+    outline: none;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.file-input-container {
+    position: relative;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+}
+
+.file-input-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.file-input-button:hover {
+    background-color: #ff6434;
+}
+
+.file-name {
+    margin-left: 10px;
+    color: var(--text-color);
+}
+
+.submit-btn {
+    display: inline-block;
+    padding: 10px 30px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    margin: 0 auto;
+}
+
+.submit-btn:hover {
+    background-color: #ff6434;
+}
+
+.status {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.status.success {
+    background-color: #2a2c2e;
+    color: #28a745;
+}
+
+.status.error {
+    background-color: #2a2c2e;
+    color: var(--error-color);
+}
+
+.info-box {
+    background-color: #2a2c2e;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.info-box h2 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+#gateway-eui {
+    font-family: monospace;
+    font-size: 1.2em;
+    color: var(--primary-color);
+    margin: 10px 0;
+}
+
+.hint {
+    color: #a0a0a0;
+    font-size: 0.9em;
+    margin-top: 5px;
+}

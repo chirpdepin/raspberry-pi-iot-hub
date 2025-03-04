@@ -45,7 +45,7 @@ For convenience, we provide a pre-configured Raspberry Pi OS image with all nece
 ### Download Image
 
 You can download the latest Raspberry Pi OS image with pre-configured IoT Hub software here:
-- [Download Raspberry Pi IoT Hub Image]() (Coming soon)
+- [Download Raspberry Pi IoT Hub Image](https://chirpdepin.s3.fr-par.scw.cloud/raspberry-pi-iot-hub/raspberrydiyiothub)
 
 ### Image Contents
 

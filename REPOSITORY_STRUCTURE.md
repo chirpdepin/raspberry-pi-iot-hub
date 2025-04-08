@@ -1,7 +1,7 @@
 # Repository Structure
 
 IoT-Hub/
-├── hubconfig/                     # Web Interface (Go)
+├── webconfig/                     # Web Interface (Go)
 │   ├── static/                   # Static web assets
 │   │   ├── index.html           # Main web interface
 │   │   └── style.css            # Styling
@@ -35,7 +35,7 @@ IoT-Hub/
 
 ## Directory Descriptions
 
-### `/hubconfig`
+### `/webconfig`
 The main web interface application written in Go, providing configuration and management capabilities for the IoT Hub.
 - `static/`: Contains the web frontend (HTML, CSS)
 - `main.go`: Backend server implementation
@@ -59,7 +59,7 @@ Example configuration files and templates that users can use as reference.
 - `README.md`: Main project documentation and quick start guide
 - `LICENSE`: Project license information
 - `.gitignore`: Specifies which files Git should ignore
-- `hubconfig/main.go`: Main web interface server
+- `webconfig/main.go`: Main web interface server
 - `config/basicstation/docker-compose.yml`: Docker composition for Basic Station
 - `config/basicstation/basicstation.service`: Systemd service definition
 - `scripts/install.sh`: Main installation script

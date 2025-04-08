@@ -268,11 +268,18 @@ The Senses IoT Hub provides:
 ## Documentation
 
 Detailed documentation is available in the `docs` directory:
+
 - [Hardware Setup Guide](docs/hardware-setup.md)
 - [Software Installation Guide](docs/software-setup.md)
 - [Configuration Guide](docs/configuration.md)
 - [API Documentation](docs/api.md)
 - [Troubleshooting Guide](docs/troubleshooting.md)
+
+Additional protocol-specific documentation:
+
+- [Zigbee2MQTT Setup Guide](README_ZIGBEE.md) - Instructions for installing and configuring Zigbee2MQTT
+- [OpenThread Border Router Setup Guide](README_OTBR.md) - Guide for setting up Thread network connectivity
+- [Matter Protocol Setup Guide](README_MATTER.md) - Steps to configure Matter protocol for smart home devices
 
 ## Features
 

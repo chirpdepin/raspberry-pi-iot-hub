@@ -27,6 +27,7 @@ GET /gateway-eui
 - `eui`: The gateway's unique identifier in the format `E45F01FFFE{6_last_digits}`
 
 #### Error Response
+
 ```json
 {
     "success": false,
@@ -43,15 +44,18 @@ POST /configure
 ```
 
 #### Request
+
 Content-Type: `multipart/form-data`
 
 Fields:
+
 - `lns-url`: The URL of the LNS server (e.g., `wss://lora-eu868.cloud.chirpwireless.io:443`)
 - `tc-trust`: Root CA certificate file
 - `tc-crt`: Client certificate file
 - `tc-key`: Private key file
 
 #### Success Response
+
 ```json
 {
     "success": true
@@ -59,6 +63,7 @@ Fields:
 ```
 
 #### Error Response
+
 ```json
 {
     "success": false,
@@ -67,6 +72,7 @@ Fields:
 ```
 
 #### Notes
+
 - Certificate files must be in PEM format
 - Line endings will be automatically converted to LF
 - Files will be stored with 0400 permissions (read-only for owner)
@@ -81,13 +87,16 @@ POST /file-upload
 ```
 
 #### Request
+
 Content-Type: `multipart/form-data`
 
 Fields:
+
 - `file`: The certificate file to upload
 - `type`: Type of certificate (`tc.trust`, `tc.crt`, or `tc.key`)
 
 #### Success Response
+
 ```json
 {
     "success": true
@@ -95,6 +104,7 @@ Fields:
 ```
 
 #### Error Response
+
 ```json
 {
     "success": false,
@@ -105,6 +115,7 @@ Fields:
 ## Integration Examples
 
 ### Python Example
+
 ```python
 import requests
 
@@ -129,6 +140,7 @@ def configure_gateway(gateway_ip, lns_url, trust_file, crt_file, key_file):
 ```
 
 ### Curl Example
+
 ```bash
 # Get Gateway EUI
 curl http://[gateway-ip]/gateway-eui
@@ -161,12 +173,14 @@ curl -X POST http://[gateway-ip]/configure \
 ## Error Handling
 
 The API uses standard HTTP status codes:
+
 - 200: Success
 - 400: Bad Request (invalid input)
 - 405: Method Not Allowed (wrong HTTP method)
 - 500: Internal Server Error
 
 All error responses include a JSON object with:
+
 - `success`: false
 - `error`: Description of what went wrong
 
@@ -184,6 +198,7 @@ Currently, there are no rate limits implemented. However, be mindful of system r
 ## Support
 
 For issues, questions, or contributions:
+
 1. Open an issue on GitHub
 2. Check existing documentation
 3. Review common troubleshooting steps

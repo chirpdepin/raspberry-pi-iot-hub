@@ -7,6 +7,7 @@ This guide explains how to configure your Senses IoT Hub for different regions a
 The IoT Hub comes pre-configured for EU868 frequency plan. Below are configuration examples for the most common regions.
 
 ### EU868 (Default Configuration)
+
 ```json
 {
     "sx1302_conf": {
@@ -37,6 +38,7 @@ The IoT Hub comes pre-configured for EU868 frequency plan. Below are configurati
 ```
 
 ### US915
+
 ```json
 {
     "sx1302_conf": {
@@ -96,6 +98,7 @@ When using the web interface, certificates are automatically formatted correctly
    - No empty lines after END certificate line
 
 Example of correct certificate format:
+
 ```
 -----BEGIN CERTIFICATE-----
 MIIBxTCCAWugAwIBAgIQd0cHKqXEsp1h/jxLUV+HZTAKBggqhkjOPQQDAjA4MRYw
@@ -137,6 +140,7 @@ If you encounter issues:
 ## Support
 
 For configuration issues:
+
 1. Check the [Troubleshooting Guide](troubleshooting.md)
 2. Review logs: `docker logs basicstation-docker_basicstation_1`
 3. Create GitHub issue with:

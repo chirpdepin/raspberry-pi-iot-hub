@@ -252,19 +252,21 @@ sudo apt install golang
 ```bash
 cd /home/iotmaster/webconfig
 go build
-# Запуск с правами root для доступа к порту 8000
+# Run with root privileges to access port 8000
 sudo ./webconfig
 ```
 
-Веб-сервер запустится на порту 8000. Вы увидите сообщение: `Server starting on port :8000...`
+The web server will start on port 8000. You will see the message: `Server starting on port :8000...`
 
-5. Для автоматического запуска веб-интерфейса при загрузке системы, создайте сервис systemd:
+To access the web interface, open `http://<raspberry-pi-ip>:8000` in your browser
+
+5. To automatically start the web interface when the system boots, create a systemd service:
 
 ```bash
 sudo nano /etc/systemd/system/webconfig.service
 ```
 
-Добавьте следующее содержимое:
+Add the following content:
 
 ```ini
 [Unit]
@@ -284,7 +286,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-6. Включите и запустите сервис:
+6. Enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
@@ -324,7 +326,7 @@ sudo systemctl start webconfig.service
 1. **Web Interface Not Accessible**
    - Check if service is running: `sudo systemctl status webconfig.service`
    - Verify port 8000 is available: `sudo netstat -tulpn | grep 8000`
-   - Проверьте логи: `sudo journalctl -u webconfig.service -f`
+   - Check logs: `sudo journalctl -u webconfig.service -f`
 
 2. **Basic Station Connection Fails**
    - Verify certificate formats

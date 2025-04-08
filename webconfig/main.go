@@ -78,6 +78,14 @@ func handleConfigure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate tc.uri file from LNS URL
+	tcUriPath := filepath.Join(certDir, "tc.uri")
+	if err := ioutil.WriteFile(tcUriPath, []byte(lnsURL), 0400); err != nil {
+		sendError(w, "Failed to write tc.uri file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("Generated tc.uri file with content: %s\n", lnsURL)
+
 	// Handle file uploads
 	files := map[string]string{
 		"tc-trust": filepath.Join(certDir, "tc.trust"),

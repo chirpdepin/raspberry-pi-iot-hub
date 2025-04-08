@@ -8,14 +8,38 @@ Zigbee2MQTT is a bridge that allows you to connect Zigbee devices to your MQTT b
 
 ## Installation
 
+## MQTT Configuration
+
+Zigbee2MQTT requires an MQTT broker. Make sure Mosquitto is installed and configured:
+
+```bash
+# Install Mosquitto MQTT broker
+sudo apt-get install -y mosquitto mosquitto-clients
+
+# Enable and start Mosquitto
+sudo systemctl enable mosquitto
+sudo systemctl start mosquitto
+```
+
+## Installation Zigbee2MQTT
+
 Follow the official Zigbee2MQTT installation documentation: [Official Zigbee2MQTT Installation Guide](https://www.zigbee2mqtt.io/guide/installation/01_linux.html#optional-running-as-a-daemon-with-systemctl)
 
-As shown in the official documentation, you'll need to create two important files:
+As shown in the official documentation, you'll need to create one important files:
 
 - `/opt/zigbee2mqtt/data/configuration.yaml` - Configuration file
-- `/etc/systemd/system/zigbee2mqtt.service` - Service file (if you want to run as a service)
+
+If you are using nrf52840 dongle and it is connected to `/dev/ttyACM0`, add the following to the configuration:
+
+```ini
+serial:
+  port: /dev/ttyACM0
+  adapter: zboss
+```
 
 ## Running as a Service
+
+If you want to run Zigbee2MQTT as a service, you need to create a file `/etc/systemd/system/zigbee2mqtt.service` - Service file
 
 ### Start Zigbee2MQTT Service
 
@@ -43,6 +67,14 @@ sudo journalctl -u zigbee2mqtt.service -f
 ```bash
 cd /opt/zigbee2mqtt/
 pnpm start
+```
+
+### Access the Web Interface
+
+To access the Zigbee2MQTT web interface, navigate to:
+
+```bash
+http://<raspberry-pi-ip>:8080
 ```
 
 ## Troubleshooting
@@ -74,6 +106,28 @@ WantedBy=multi-user.target
 ```
 
 For more information about this issue, see [GitHub Issue #22164](https://github.com/Koenkk/zigbee2mqtt/issues/22164).
+
+### Troubleshooting MQTT Connection
+
+If you see a "MQTT failed to connect" error, check:
+
+1. That Mosquitto is running: `sudo systemctl status mosquitto`
+2. Configure Mosquitto to allow anonymous connections (for testing):
+
+   ```bash
+   echo "allow_anonymous true\nlistener 1883" | sudo tee -a /etc/mosquitto/mosquitto.conf
+   sudo systemctl restart mosquitto
+   ```
+
+3. Test MQTT connectivity:
+
+   ```bash
+   # In one terminal
+   mosquitto_sub -h localhost -t "test" -v
+   
+   # In another terminal
+   mosquitto_pub -h localhost -t "test" -m "hello"
+   ```
 
 ## MQTT Commands
 

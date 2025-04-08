@@ -100,7 +100,7 @@ docker logs basicstation
 ✓ **Check:**
 
 ```bash
-ps aux | grep hubconfig
+ps aux | grep webconfig
 netstat -tulpn | grep 80
 ```
 
@@ -109,9 +109,9 @@ netstat -tulpn | grep 80
 1. Restart the service:
 
    ```bash
-   cd /home/iotmaster/hubconfig
-   sudo killall hubconfig
-   sudo ./hubconfig
+   cd /home/iotmaster/webconfig
+   sudo killall webconfig
+   sudo ./webconfig
    ```
 
 2. Verify port 80 is available
@@ -274,7 +274,7 @@ If issues persist:
    # Basic Station logs
    docker logs basicstation
    # Web interface logs
-   journalctl -u hubconfig
+   journalctl -u webconfig
    ```
 
 2. **Create GitHub Issue:**

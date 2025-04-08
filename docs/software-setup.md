@@ -234,7 +234,7 @@ Useful commands for service management:
 1. Create directory structure:
 
 ```bash
-mkdir -p /home/iotmaster/hubconfig
+mkdir -p /home/iotmaster/webconfig
 ```
 
 2. Install Go:
@@ -244,16 +244,16 @@ sudo apt install golang
 ```
 
 3. Transfer web interface files (using WinSCP or SCP):
-   - Copy hubconfig files using command: `scp -r hubconfig/* iotmaster@<raspberry-pi-ip>:/home/iotmaster/hubconfig/`
+   - Copy webconfig files using command: `scp -r webconfig/* iotmaster@<raspberry-pi-ip>:/home/iotmaster/webconfig/`
   
 
 4. Build and run the interface:
 
 ```bash
-cd /home/iotmaster/hubconfig
+cd /home/iotmaster/webconfig
 go build
 # Запуск с правами root для доступа к порту 8000
-sudo ./hubconfig
+sudo ./webconfig
 ```
 
 Веб-сервер запустится на порту 8000. Вы увидите сообщение: `Server starting on port :8000...`
@@ -261,7 +261,7 @@ sudo ./hubconfig
 5. Для автоматического запуска веб-интерфейса при загрузке системы, создайте сервис systemd:
 
 ```bash
-sudo nano /etc/systemd/system/hubconfig.service
+sudo nano /etc/systemd/system/webconfig.service
 ```
 
 Добавьте следующее содержимое:
@@ -273,8 +273,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/iotmaster/hubconfig
-ExecStart=/home/iotmaster/hubconfig/hubconfig
+WorkingDirectory=/home/iotmaster/webconfig
+ExecStart=/home/iotmaster/webconfig/webconfig
 User=iotmaster
 Group=iotmaster
 Restart=on-failure
@@ -288,8 +288,8 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable hubconfig.service
-sudo systemctl start hubconfig.service
+sudo systemctl enable webconfig.service
+sudo systemctl start webconfig.service
 ```
 
 ## Gateway Registration
@@ -322,9 +322,9 @@ sudo systemctl start hubconfig.service
 ### Common Issues
 
 1. **Web Interface Not Accessible**
-   - Check if service is running: `sudo systemctl status hubconfig.service`
+   - Check if service is running: `sudo systemctl status webconfig.service`
    - Verify port 8000 is available: `sudo netstat -tulpn | grep 8000`
-   - Проверьте логи: `sudo journalctl -u hubconfig.service -f`
+   - Проверьте логи: `sudo journalctl -u webconfig.service -f`
 
 2. **Basic Station Connection Fails**
    - Verify certificate formats

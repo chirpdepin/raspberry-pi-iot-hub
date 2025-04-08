@@ -86,6 +86,8 @@ sudo usermod -aG docker iotmaster
 
 ### 3. Configure Basic Station
 
+#### 3.1 Prepared configuration files
+
 1. Copy basic station config files:
 
 ```bash
@@ -147,14 +149,16 @@ services:
       - RESET_GPIO=529
 ```
 
-5. Start Basic Station:
+#### 3.2 Start Basic Station
+
+1. Start Basic Station:
 
 ```bash
 cd /home/iotmaster/basicstation-docker/
 docker-compose up -d
 ```
 
-### 3.1. Setting Up Basic Station as a System Service
+#### 3.3. Setting Up Basic Station as a System Service
 
 To automatically start Basic Station when the system boots, we'll configure a systemd service:
 
@@ -220,6 +224,7 @@ sudo journalctl -u basicstation.service -f
 ```
 
 Useful commands for service management:
+
 - Stop: `sudo systemctl stop basicstation.service`
 - Restart: `sudo systemctl restart basicstation.service`
 - Disable autostart: `sudo systemctl disable basicstation.service`
@@ -229,30 +234,67 @@ Useful commands for service management:
 1. Create directory structure:
 
 ```bash
-mkdir -p /home/iotmaster/hubconfig/static
-cd /home/iotmaster/hubconfig
+mkdir -p /home/iotmaster/hubconfig
 ```
 
 2. Install Go:
 
 ```bash
-sudo apt-get install golang
+sudo apt install golang
 ```
 
 3. Transfer web interface files (using WinSCP or SCP):
-   - Copy files from provided package to `/home/iotmaster/hubconfig/`
+   - Copy hubconfig files using command: `scp -r hubconfig/* iotmaster@<raspberry-pi-ip>:/home/iotmaster/hubconfig/`
+  
 
 4. Build and run the interface:
 
 ```bash
 cd /home/iotmaster/hubconfig
 go build
+# Запуск с правами root для доступа к порту 8000
 sudo ./hubconfig
+```
+
+Веб-сервер запустится на порту 8000. Вы увидите сообщение: `Server starting on port :8000...`
+
+5. Для автоматического запуска веб-интерфейса при загрузке системы, создайте сервис systemd:
+
+```bash
+sudo nano /etc/systemd/system/hubconfig.service
+```
+
+Добавьте следующее содержимое:
+
+```ini
+[Unit]
+Description=IoT Hub Configuration Web Interface
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/iotmaster/hubconfig
+ExecStart=/home/iotmaster/hubconfig/hubconfig
+User=iotmaster
+Group=iotmaster
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+6. Включите и запустите сервис:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable hubconfig.service
+sudo systemctl start hubconfig.service
 ```
 
 ## Gateway Registration
 
-1. Access web interface at `http://<raspberry-pi-ip>`
+1. Access web interface at `http://<raspberry-pi-ip>:8000`
 2. Note your Gateway EUI (displayed on interface)
 3. Register at [app.chirpwireless.io](https://app.chirpwireless.io):
    - Create account if needed
@@ -280,8 +322,9 @@ sudo ./hubconfig
 ### Common Issues
 
 1. **Web Interface Not Accessible**
-   - Check if service is running: `ps aux | grep hubconfig`
-   - Verify port 80 is available: `sudo netstat -tulpn | grep 80`
+   - Check if service is running: `sudo systemctl status hubconfig.service`
+   - Verify port 8000 is available: `sudo netstat -tulpn | grep 8000`
+   - Проверьте логи: `sudo journalctl -u hubconfig.service -f`
 
 2. **Basic Station Connection Fails**
    - Verify certificate formats

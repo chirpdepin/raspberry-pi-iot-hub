@@ -99,7 +99,7 @@ When using the web interface, certificates are automatically formatted correctly
 
 Example of correct certificate format:
 
-```
+```pem
 -----BEGIN CERTIFICATE-----
 MIIBxTCCAWugAwIBAgIQd0cHKqXEsp1h/jxLUV+HZTAKBggqhkjOPQQDAjA4MRYw
 [... certificate content ...]

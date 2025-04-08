@@ -44,7 +44,7 @@ func main() {
 
 	http.HandleFunc("/file-upload", handleFileUpload)
 
-	port := ":80"
+	port := ":8000"
 	fmt.Printf("Server starting on port %s...\n", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatal(err)
@@ -72,7 +72,7 @@ func handleConfigure(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create directory for certificates if it doesn't exist
-	certDir := "/home/iotmaster/basicstation-docker"
+	certDir := "/home/iotmaster/config"
 	if err := os.MkdirAll(certDir, 0755); err != nil {
 		sendError(w, "Failed to create certificate directory", http.StatusInternalServerError)
 		return
@@ -239,9 +239,9 @@ func backupCertificates() error {
     }
     
     // Copy existing certificates if they exist
-    certFiles := []string{"tc.key", "tc.crt", "tc.uri"}
+    certFiles := []string{"tc.key", "tc.crt", "tc.uri", "tc.trust"}
     for _, file := range certFiles {
-        srcPath := filepath.Join("/home/iotmaster/basicstation-docker/certs", file)
+        srcPath := filepath.Join("/home/iotmaster/config", file)
         if _, err := os.Stat(srcPath); err == nil {
             destPath := filepath.Join(backupPath, file)
             input, err := ioutil.ReadFile(srcPath)
@@ -257,18 +257,17 @@ func backupCertificates() error {
 }
 
 func stopBasicStation() error {
-    cmd := exec.Command("docker", "stop", "basicstation")
+    cmd := exec.Command("docker-compose", "down")
+    cmd.Dir = "/home/iotmaster/basicstation-docker"
     if err := cmd.Run(); err != nil {
-        // Ignore error if container is not running
-        if !strings.Contains(err.Error(), "No such container") {
-            return fmt.Errorf("failed to stop basicstation container: %v", err)
-        }
+        return fmt.Errorf("failed to stop basicstation container: %v", err)
     }
     return nil
 }
 
 func startBasicStation() error {
-    cmd := exec.Command("docker", "start", "basicstation")
+    cmd := exec.Command("docker-compose", "up", "-d")
+    cmd.Dir = "/home/iotmaster/basicstation-docker"
     if err := cmd.Run(); err != nil {
         return fmt.Errorf("failed to start basicstation container: %v", err)
     }
@@ -283,9 +282,9 @@ func handleFileUpload(w http.ResponseWriter, r *http.Request) {
 
     // Process file uploads
     files := map[string]string{
-        "tc-trust": "/home/iotmaster/basicstation-docker/tc.trust",
-        "tc-crt":   "/home/iotmaster/basicstation-docker/tc.crt",
-        "tc-key":   "/home/iotmaster/basicstation-docker/tc.key",
+        "tc-trust": "/home/iotmaster/config/tc.trust",
+        "tc-crt":   "/home/iotmaster/config/tc.crt",
+        "tc-key":   "/home/iotmaster/config/tc.key",
     }
 
     for formKey, destPath := range files {

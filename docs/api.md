@@ -12,7 +12,7 @@ All API endpoints are accessible at `http://[gateway-ip]`, where `[gateway-ip]` 
 
 Retrieves the unique identifier for your gateway. This EUI is required when registering your gateway with Chirp's LNS.
 
-```
+```http
 GET /gateway-eui
 ```
 
@@ -39,7 +39,7 @@ GET /gateway-eui
 
 Configures the gateway with certificates and LNS URL. This endpoint handles the upload of certificate files and updates the gateway configuration.
 
-```
+```http
 POST /configure
 ```
 
@@ -82,7 +82,7 @@ Fields:
 
 Handles individual certificate file uploads. This endpoint is used for updating specific certificates without reconfiguring the entire gateway.
 
-```
+```http
 POST /file-upload
 ```
 

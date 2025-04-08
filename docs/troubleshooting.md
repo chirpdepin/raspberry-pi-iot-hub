@@ -122,7 +122,7 @@ netstat -tulpn | grep 80
 
 ⚠️ **Error Message:**
 
-```
+```bash
 [any:ERRO] Parsing trust certificate: X509 - The CRT/CRL/CSR format is invalid
 ```
 

@@ -1,41 +1,43 @@
 # Repository Structure
 
+```bash
 IoT-Hub/
-├── webconfig/                     # Web Interface (Go)
-│   ├── static/                   # Static web assets
-│   │   ├── index.html           # Main web interface
-│   │   └── style.css            # Styling
-│   ├── main.go                  # Go backend code
-│   ├── go.mod                   # Go module definition
-│   └── README.md                # Web interface documentation
-│
-├── docs/                          # Documentation
-│   ├── api.md                    # API documentation
-│   ├── configuration.md          # Configuration guide
-│   ├── hardware-setup.md         # Hardware setup guide
-│   ├── software-setup.md         # Software installation guide
-│   └── troubleshooting.md        # Common issues and solutions
-│
-├── config/                        # Configuration files
-│   ├── basicstation.service      # Basic Station service definition
-│   ├── config.json               # Configuration file
-│   ├── tc.crt                    # Certificate file
-│   ├── tc.key                    # Key file
-│   ├── tc.trust                  # Trust file
-│   ├── tc.uri                    # URI file
-│   └── webconfig.service         # Web config service definition
-│
-├── docker/                        # Docker configurations
-│   └── docker-compose.yml        # Docker Compose file
-│
-├── scripts/                       # Utility scripts
-│   └── fix_certs.sh              # Certificate fix script
-│
-├── .gitignore                    # Git ignore file
-├── README.md                     # Main project documentation
-├── README_MATTER.md              # Matter protocol documentation
-├── README_OTBR.md                # OpenThread Border Router documentation
-└── README_ZIGBEE.md              # Zigbee protocol documentation
+|-- webconfig/                     # Web Interface (Go)
+|   |-- static/                   # Static web assets
+|   |   |-- index.html           # Main web interface
+|   |   `-- style.css            # Styling
+|   |-- main.go                  # Go backend code
+|   |-- go.mod                   # Go module definition
+|   `-- README.md                # Web interface documentation
+|
+|-- docs/                          # Documentation
+|   |-- api.md                    # API documentation
+|   |-- configuration.md          # Configuration guide
+|   |-- hardware-setup.md         # Hardware setup guide
+|   |-- software-setup.md         # Software installation guide
+|   `-- troubleshooting.md        # Common issues and solutions
+|
+|-- config/                        # Configuration files
+|   |-- basicstation.service      # Basic Station service definition
+|   |-- config.json               # Configuration file
+|   |-- tc.crt                    # Certificate file
+|   |-- tc.key                    # Key file
+|   |-- tc.trust                  # Trust file
+|   |-- tc.uri                    # URI file
+|   `-- webconfig.service         # Web config service definition
+|
+|-- docker/                        # Docker configurations
+|   `-- docker-compose.yml        # Docker Compose file
+|
+|-- scripts/                       # Utility scripts
+|   `-- fix_certs.sh              # Certificate fix script
+|
+|-- .gitignore                    # Git ignore file
+|-- README.md                     # Main project documentation
+|-- README_MATTER.md              # Matter protocol documentation
+|-- README_OTBR.md                # OpenThread Border Router documentation
+`-- README_ZIGBEE.md              # Zigbee protocol documentation
+```
 
 ## Directory Descriptions
 

@@ -143,9 +143,9 @@ KCAgELMJqJkwCgYIKoZIzj0EAwIDSAAwRQIhAK0jN5HPhvhk9DQzKX/st9kM8Hz5
 Place the certificate files in `/home/iotmaster/basicstation-docker/`:
 ```bash
 /home/iotmaster/basicstation-docker/
-├── tc.trust
-├── tc.crt
-└── tc.key
+|-- tc.trust
+|-- tc.crt
+`-- tc.key
 ```
 
 ### Gateway EUI Formation

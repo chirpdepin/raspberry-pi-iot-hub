@@ -33,7 +33,7 @@ Whether you're a hobbyist, maker, or professional looking to explore LoRaWAN tec
 
 1. Assemble the hardware components (see [Hardware Setup](docs/hardware-setup.md))
 2. Download the [pre-configured Raspberry Pi OS image](#download-image)
-3. Flash the image to your SD card
+3. Flash the image to your SD card using [balenaEtcher](https://etcher.balena.io/)
 4. Configure your gateway to connect to Chirp's network
 5. Register your gateway on the Home Senses platform
 6. Start connecting LoRaWAN devices to automate your home
@@ -45,18 +45,21 @@ For convenience, we provide a pre-configured Raspberry Pi OS image with all nece
 ### Download Image
 
 You can download the latest Raspberry Pi OS image with pre-configured IoT Hub software here:
-- [Download Raspberry Pi IoT Hub Image](https://chirpdepin.s3.fr-par.scw.cloud/raspberry-pi-iot-hub/raspberrydiyiothub)
+
+- [Download Raspberry Pi IoT Hub Image](https://chirpdepin.s3.fr-par.scw.cloud/raspberry-pi-iot-hub/raspberrydiyiothub_upd.img)
 
 ### Image Contents
 
 The pre-configured image contains:
 
 #### Pre-installed Software
+
 - Raspberry Pi OS (64-bit)
 - Docker and Docker Compose
 - Basic Station container (xoseperez/basicstation:latest)
 
 #### Configuration
+
 - SPI interface enabled for RAK5146
 - Docker configured for auto-start
 - Basic Station configured for Chirp's network
@@ -64,13 +67,16 @@ The pre-configured image contains:
 ## Hardware Setup
 
 ### RAK HAT Configuration
+
 The RAK HAT with mPCIe interface is configured for:
+
 - SPI interface enabled
 - Reset pin on GPIO 17
 - Power management handled by HAT
 - Automatic detection of RAK5146 module
 
 ### RAK5146 Features
+
 - Concentrator: Semtech SX1303 chipset
 - Design: CORECELL
 - TX Power: Up to 27 dBm
@@ -78,13 +84,16 @@ The RAK HAT with mPCIe interface is configured for:
 - GPS: Integrated for PPS synchronization
 
 ### Physical Connections
+
 1. Insert the RAK5146 mPCIe card into the RAK HAT
 2. Mount the RAK HAT on the Raspberry Pi 4's GPIO header
 3. Connect the antenna to the SMA connector
 4. (Optional) Connect the GPS antenna if using location services
 
 ## SPI Interface
+
 The system is configured to use:
+
 - SPI device: `/dev/spidev0.0`
 - SPI speed: 8MHz
 - Reset GPIO: 17
@@ -93,11 +102,13 @@ The system is configured to use:
 ## Image Contents
 
 ### Pre-installed Software
+
 - Raspberry Pi OS (64-bit)
 - Docker and Docker Compose
 - Basic Station container (xoseperez/basicstation:latest)
 
 ### Configuration
+
 - SPI interface enabled for RAK5146
 - Docker configured for auto-start
 - Basic Station configured for:
@@ -120,17 +131,20 @@ The system is configured to use:
 The Basic Station requires three certificate files in specific formats:
 
 #### Certificate Files
+
 - `tc.trust`: Root CA certificate
 - `tc.crt`: Client certificate
 - `tc.key`: Private key
 
 #### Certificate Format Requirements
+
 1. **File Format**: PEM format (Base64 encoded DER certificate)
 2. **Line Endings**: Unix style (LF, not CRLF)
 3. **No Extra Spaces**: No trailing spaces or empty lines after the END certificate line
 4. **Permissions**: Read-only (chmod 400)
 
 Example of correct certificate format:
+
 ```
 -----BEGIN CERTIFICATE-----
 MIIBxTCCAWugAwIBAgIQd0cHKqXEsp1h/jxLUV+HZTAKBggqhkjOPQQDAjA4MRYw
@@ -140,7 +154,9 @@ KCAgELMJqJkwCgYIKoZIzj0EAwIDSAAwRQIhAK0jN5HPhvhk9DQzKX/st9kM8Hz5
 ```
 
 #### Certificate Placement
+
 Place the certificate files in `/home/iotmaster/basicstation-docker/`:
+
 ```bash
 /home/iotmaster/basicstation-docker/
 |-- tc.trust
@@ -159,10 +175,12 @@ The gateway EUI is a unique 64-bit identifier derived from the Raspberry Pi's et
    - Suffix: Last 6 digits of the ethernet MAC address
 
 Example:
+
 - MAC address: `E4:5F:01:11:1F:32`
 - Gateway EUI: `E45F01FFFE111F32`
 
 To find your gateway's EUI:
+
 ```bash
 # Method 1: From Docker logs
 docker compose logs | grep "Station EUI"
@@ -176,11 +194,13 @@ ip link show eth0 | grep ether
 The Senses IoT Hub is pre-configured to connect with ChirpWireless.io, a powerful LoRaWAN Network Server:
 
 ### Connection Details
+
 - Server URL: `wss://lora-eu868.cloud.chirpwireless.io:443`
 - Region: EU868 (863.0MHz - 870.0MHz)
 - Protocol: Basic Station with LNS
 
 ### Gateway Registration
+
 1. Log into your ChirpWireless.io account
 2. Navigate to Gateway Management
 3. Add a new gateway using the EUI from your device
@@ -191,7 +211,9 @@ The Senses IoT Hub is pre-configured to connect with ChirpWireless.io, a powerfu
 5. Replace the existing certificates in `/home/iotmaster/basicstation-docker/`
 
 ### Frequency Plan
+
 The gateway is configured for the EU868 band with the following channels:
+
 - 867.1 MHz
 - 867.3 MHz
 - 867.5 MHz
@@ -202,6 +224,7 @@ The gateway is configured for the EU868 band with the following channels:
 - 868.5 MHz
 
 ### Data Rates
+
 - DR0: SF12/BW125
 - DR1: SF11/BW125
 - DR2: SF10/BW125
@@ -214,9 +237,11 @@ The gateway is configured for the EU868 band with the following channels:
 ## Customization
 
 ### Docker Compose Configuration
+
 The Basic Station configuration is in `/home/iotmaster/basicstation-docker/docker-compose.yml`
 
 Key settings:
+
 - `MODEL: "RAK5146"` - Concentrator model
 - `INTERFACE: "SPI"` - Interface type
 - `DEVICE: "/dev/spidev0.0"` - SPI device
@@ -224,6 +249,7 @@ Key settings:
 - `TC_URI: "wss://lora-eu868.cloud.chirpwireless.io:443"` - LNS server URL
 
 ## Default Credentials
+
 - Username: `iotmaster`
 - Password: `123qweASD`
 - Hostname: `chirphub`
@@ -231,9 +257,11 @@ Key settings:
 **Important**: For security reasons, please change the default password after first login using the `passwd` command.
 
 ## Support
+
 For issues and questions, please open an issue in the GitHub repository.
 
 ## License
+
 This image is provided as-is under the MIT license.
 
 # Senses IoT Hub
@@ -243,6 +271,7 @@ A complete DIY LoRaWAN gateway solution designed for home automation enthusiasts
 ## Overview
 
 The Senses IoT Hub provides:
+
 - Easy-to-use web interface for configuration
 - Basic Station protocol support
 - Integration with Chirp's LNS
@@ -303,7 +332,7 @@ Additional protocol-specific documentation:
 ## Default Access
 
 - Web Interface: `http://<raspberry-pi-ip>`
-- SSH Access: 
+- SSH Access:
   - Username: `iotmaster`
   - Password: `123qweASD`
   - Port: 22
@@ -317,6 +346,7 @@ We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.
 ## Support
 
 If you encounter any issues:
+
 1. Check the [Troubleshooting Guide](docs/troubleshooting.md)
 2. Search existing GitHub issues
 3. Create a new issue with detailed information

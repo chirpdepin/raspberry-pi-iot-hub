@@ -161,4 +161,6 @@ mosquitto_pub -h <raspberry-pi-ip> -t "zigbee2mqtt/0x00158d00053c075f/set" -m '{
 
 ## Integration with Chirp Service
 
-*Coming soon: Information about connecting Zigbee2MQTT to the Chirp bridge for enhanced functionality.*
+To connect your Zigbee2MQTT installation to the Chirp cloud service, you can use the Chirp MQTT Bridge. This bridge forwards all messages between your local Zigbee2MQTT instance and the Chirp cloud, allowing you to control your Zigbee devices remotely.
+
+For detailed installation and configuration instructions, please follow the guide in the [Chirp Bridge README](./chirp_bridge/README.md).

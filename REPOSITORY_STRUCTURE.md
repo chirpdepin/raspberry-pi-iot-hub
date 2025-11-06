@@ -1,78 +1,90 @@
 # Repository Structure
 
+```bash
 IoT-Hub/
-├── hubconfig/                     # Web Interface (Go)
-│   ├── static/                   # Static web assets
-│   │   ├── index.html           # Main web interface
-│   │   └── style.css            # Styling
-│   ├── main.go                  # Go backend code
-│   ├── go.mod                   # Go module definition
-│   └── README.md                # Web interface documentation
-│
-├── docs/                          # Documentation
-│   ├── images/                    # Documentation images
-│   ├── hardware-setup.md         # Hardware setup guide
-│   ├── software-setup.md         # Software installation guide
-│   └── troubleshooting.md       # Common issues and solutions
-│
-├── config/                        # Configuration templates
-│   ├── basicstation/            # Basic Station configurations
-│   │   ├── docker-compose.yml
-│   │   └── basicstation.service
-│   └── certificates/            # Certificate templates and scripts
-│       └── fix_certs.sh
-│
-├── scripts/                       # Utility scripts
-│   ├── install.sh               # Installation script
-│   └── setup-certificates.sh    # Certificate setup script
-│
-├── examples/                     # Example configurations
-│   └── config.json.example
-│
-├── .gitignore                    # Git ignore file
-├── LICENSE                       # Project license
-└── README.md                     # Main project documentation
+|-- webconfig/                     # Web Interface (Go)
+|   |-- static/                   # Static web assets
+|   |   |-- index.html           # Main web interface
+|   |   `-- style.css            # Styling
+|   |-- main.go                  # Go backend code
+|   |-- go.mod                   # Go module definition
+|   `-- README.md                # Web interface documentation
+|
+|-- docs/                          # Documentation
+|   |-- api.md                    # API documentation
+|   |-- configuration.md          # Configuration guide
+|   |-- hardware-setup.md         # Hardware setup guide
+|   |-- software-setup.md         # Software installation guide
+|   `-- troubleshooting.md        # Common issues and solutions
+|
+|-- config/                        # Configuration files
+|   |-- basicstation.service      # Basic Station service definition
+|   |-- config.json               # Configuration file
+|   |-- tc.crt                    # Certificate file
+|   |-- tc.key                    # Key file
+|   |-- tc.trust                  # Trust file
+|   |-- tc.uri                    # URI file
+|   `-- webconfig.service         # Web config service definition
+|
+|-- docker/                        # Docker configurations
+|   `-- docker-compose.yml        # Docker Compose file
+|
+|-- scripts/                       # Utility scripts
+|   `-- fix_certs.sh              # Certificate fix script
+|
+|-- .gitignore                    # Git ignore file
+|-- README.md                     # Main project documentation
+|-- README_MATTER.md              # Matter protocol documentation
+|-- README_OTBR.md                # OpenThread Border Router documentation
+`-- README_ZIGBEE.md              # Zigbee protocol documentation
+```
 
 ## Directory Descriptions
 
-### `/hubconfig`
+### `/webconfig`
 The main web interface application written in Go, providing configuration and management capabilities for the IoT Hub.
 - `static/`: Contains the web frontend (HTML, CSS)
 - `main.go`: Backend server implementation
 - `go.mod`: Go module dependencies
 
 ### `/docs`
-Contains all project documentation, including setup guides, troubleshooting information, and hardware specifications.
+Contains all project documentation, including API documentation, configuration guides, setup guides, troubleshooting information, and hardware specifications.
 
 ### `/config`
-Template configuration files and service definitions. These are the base configurations that users will need to modify with their specific settings.
+Configuration files and service definitions, including certificates and service files.
+
+### `/docker`
+Docker-related configurations, including the docker-compose.yml file for containerized deployments.
 
 ### `/scripts`
-Utility scripts for installation, setup, and maintenance of the IoT Hub.
-
-### `/examples`
-Example configuration files and templates that users can use as reference.
+Utility scripts for maintenance of the IoT Hub, including certificate management.
 
 ## File Descriptions
 
 ### Key Files
 - `README.md`: Main project documentation and quick start guide
-- `LICENSE`: Project license information
+- `README_MATTER.md`: Documentation for Matter protocol integration
+- `README_OTBR.md`: Documentation for OpenThread Border Router integration
+- `README_ZIGBEE.md`: Documentation for Zigbee protocol integration
 - `.gitignore`: Specifies which files Git should ignore
-- `hubconfig/main.go`: Main web interface server
-- `config/basicstation/docker-compose.yml`: Docker composition for Basic Station
-- `config/basicstation/basicstation.service`: Systemd service definition
-- `scripts/install.sh`: Main installation script
+- `webconfig/main.go`: Main web interface server
+- `docker/docker-compose.yml`: Docker composition for services
+- `config/basicstation.service`: Systemd service definition for Basic Station
+- `config/webconfig.service`: Systemd service definition for Web Configuration
+- `scripts/fix_certs.sh`: Script for fixing certificate issues
+- `docs/api.md`: API documentation and reference
+- `docs/configuration.md`: Configuration documentation
 - `docs/hardware-setup.md`: Detailed hardware setup instructions
 - `docs/software-setup.md`: Software installation and configuration guide
+- `docs/troubleshooting.md`: Common issues and solutions
 
 ## Notes for Contributors
-1. Always use template files with `.example` extension for configuration files
-2. Never commit actual certificates or keys
-3. Keep documentation up-to-date with code changes
-4. Follow the existing directory structure when adding new features
-5. For web interface changes:
+1. Keep documentation up-to-date with code changes
+2. Follow the existing directory structure when adding new features
+3. Update the REPOSITORY_STRUCTURE.md file when making structural changes
+4. For web interface changes:
    - Test all changes locally before committing
    - Update both frontend and backend documentation
    - Follow Go coding standards
    - Keep the UI responsive and mobile-friendly
+5. When adding new protocols or integrations, create a dedicated README file (e.g., README_PROTOCOL.md)

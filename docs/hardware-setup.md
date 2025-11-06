@@ -5,6 +5,7 @@ This guide will walk you through setting up the hardware components of your Sens
 ## Required Components
 
 ### Core Components
+
 - Raspberry Pi 4 (4GB or 8GB RAM recommended)
 - RAK2287/RAK5146 Pi HAT
 - RAK5146 mPCIe module
@@ -12,6 +13,7 @@ This guide will walk you through setting up the hardware components of your Sens
 - 5V/3A USB-C power supply for Raspberry Pi
 
 ### Antennas
+
 - LoRa Antenna (iPEX connector)
 - GPS Antenna (iPEX connector)
 
@@ -20,23 +22,27 @@ This guide will walk you through setting up the hardware components of your Sens
 ## Assembly Steps
 
 ### 1. Prepare the Raspberry Pi
+
 - Ensure the Raspberry Pi is unplugged
 - Remove any existing HATs or accessories
 - Clean the GPIO pins if necessary
 
 ### 2. Mount the RAK2287/RAK5146 Pi HAT
+
 1. Align the HAT with the Raspberry Pi's GPIO pins
 2. Carefully press down until the HAT is fully seated
 3. The HAT should sit parallel to the Raspberry Pi board
 
 ### 3. Install the RAK5146 mPCIe Module
+
 1. Locate the mPCIe slot on the HAT
 2. Align the RAK5146 module with the slot (45-degree angle)
 3. Insert the module firmly
 4. Lower the module to horizontal position
 5. Secure with two mounting screws
-   
+
 ### 4. Connect Antennas
+
 1. Locate the two iPEX antenna ports on the RAK5146 module
 2. Connect the LoRa antenna to the main RF port
 3. Connect the GPS antenna to the GPS port
@@ -45,12 +51,14 @@ This guide will walk you through setting up the hardware components of your Sens
 ## Antenna Placement
 
 ### LoRa Antenna
+
 - Mount as high as possible
 - Keep away from metal objects
 - Maintain vertical orientation
 - Use outdoor antenna for better range
 
 ### GPS Antenna
+
 - Place with clear view of the sky
 - Keep away from metal objects
 - Horizontal orientation preferred
@@ -67,6 +75,7 @@ This guide will walk you through setting up the hardware components of your Sens
 ## Verification
 
 Your hardware is properly set up when:
+
 1. Raspberry Pi power LED is on
 2. Raspberry Pi boots successfully
 3. You can access the gateway via network
@@ -74,15 +83,15 @@ Your hardware is properly set up when:
 ## Hardware Specifications
 
 ### RAK2287/RAK5146 Pi HAT
+
 - Product Link: [RAK Documentation](https://docs.rakwireless.com/product-categories/wishat/rak2287-rak5146-pi-hat/overview/)
 - Plug-and-play design
 - No jumper configuration required
 - mPCIe slot for RAK5146 module
 
 ### RAK5146 Module
+
 - SX1303 chipset
 - Dual iPEX antenna connectors
 - Integrated GNSS support
 - Secure mounting with screws
-
-

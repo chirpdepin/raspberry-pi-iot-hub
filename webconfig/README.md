@@ -21,23 +21,23 @@ A web-based configuration interface for the Senses IoT Hub by Chirp, designed sp
 
 1. Create the required directory structure:
 ```bash
-mkdir -p /home/iotmaster/hubconfig/static
+mkdir -p /home/iotmaster/webconfig/static
 ```
 
 2. Copy the files:
 ```bash
 # Copy the web interface files
-cp static/index.html /home/iotmaster/hubconfig/static/
-cp static/style.css /home/iotmaster/hubconfig/static/
+cp static/index.html /home/iotmaster/webconfig/static/
+cp static/style.css /home/iotmaster/webconfig/static/
 
 # Build and copy the binary
-GOOS=linux GOARCH=arm GOARM=7 go build -o hubconfig
-cp hubconfig /home/iotmaster/hubconfig/
+GOOS=linux GOARCH=arm GOARM=7 go build -o webconfig
+cp webconfig /home/iotmaster/webconfig/
 ```
 
 3. Set up as a system service:
 ```bash
-sudo nano /etc/systemd/system/hubconfig.service
+sudo nano /etc/systemd/system/webconfig.service
 ```
 
 Add the following content:
@@ -49,8 +49,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/iotmaster/hubconfig
-ExecStart=/home/iotmaster/hubconfig/hubconfig
+WorkingDirectory=/home/iotmaster/webconfig
+ExecStart=/home/iotmaster/webconfig/webconfig
 Restart=always
 
 [Install]
@@ -60,8 +60,8 @@ WantedBy=multi-user.target
 Enable and start the service:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable hubconfig
-sudo systemctl start hubconfig
+sudo systemctl enable webconfig
+sudo systemctl start webconfig
 ```
 
 ## Usage
@@ -104,9 +104,9 @@ Once your gateway is connected, you're ready to:
 ## Directory Structure
 
 ```
-/hubconfig/
+/webconfig/
 ├── main.go                # Go server implementation
-├── hubconfig             # Compiled binary
+├── webconfig             # Compiled binary
 ├── README.md             # This file
 └── static/
     ├── index.html        # Web interface
@@ -120,7 +120,7 @@ To build the binary for Raspberry Pi:
 set GOOS=linux
 set GOARCH=arm
 set GOARM=7
-go build -o hubconfig
+go build -o webconfig
 ```
 
 ## Contributing

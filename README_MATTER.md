@@ -59,6 +59,7 @@ To commission the Aqara Door/Window Sensor P2 with Matter over Thread:
 ```
 
 Where:
+
 - `110` - Node ID (you can choose any number)
 - `16258442499` - Matter pairing code found on the sensor
 - The long hex string - Thread network credentials, obtained by running `ot-ctl dataset active -x`

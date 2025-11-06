@@ -1,0 +1,15 @@
+[Unit]
+Description=IoT Hub Configuration Web Interface
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/iotmaster/webconfig
+ExecStart=/home/iotmaster/webconfig/webconfig
+User=iotmaster
+Group=iotmaster
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

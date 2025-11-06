@@ -12,6 +12,7 @@ This guide walks you through setting up your Senses IoT Hub software. The proces
 ## Initial Setup
 
 ### 1. Prepare SD Card
+
 1. Download the official RAK OS image (provided separately)
 2. Flash the image using Raspberry Pi Imager:
    - Select custom image
@@ -20,12 +21,14 @@ This guide walks you through setting up your Senses IoT Hub software. The proces
    - Write the image
 
 ### 2. First Boot
+
 1. Insert the SD card into Raspberry Pi
 2. Connect ethernet cable
 3. Connect power supply
 4. Wait for initial boot (2-3 minutes)
 
 ### 3. Find Your Gateway
+
 1. Use a network scanner or your router's interface to find the IP address
 2. Default hostname is `chirphub`
 3. Alternative: connect a monitor and keyboard to check IP address
@@ -33,6 +36,7 @@ This guide walks you through setting up your Senses IoT Hub software. The proces
 ## Remote Access Setup
 
 ### SSH Access
+
 ```bash
 # From Windows PowerShell or Command Prompt
 ssh iotmaster@<raspberry-pi-ip>
@@ -40,6 +44,7 @@ ssh iotmaster@<raspberry-pi-ip>
 ```
 
 ⚠️ **IMPORTANT**: Change the default password immediately:
+
 ```bash
 passwd
 ```
@@ -47,6 +52,7 @@ passwd
 ### File Transfer Options
 
 #### Using WinSCP (Recommended for Windows Users)
+
 1. Download and install WinSCP
 2. Connect using:
    - Host: `<raspberry-pi-ip>`
@@ -55,6 +61,7 @@ passwd
    - Port: 22
 
 #### Using SCP Command Line
+
 ```bash
 # Copy files to Raspberry Pi
 scp <local-file> iotmaster@<raspberry-pi-ip>:/home/iotmaster/
@@ -63,12 +70,14 @@ scp <local-file> iotmaster@<raspberry-pi-ip>:/home/iotmaster/
 ## Software Configuration
 
 ### 1. Update System
+
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Install Docker if not already installed
 sudo apt install -y docker.io docker-compose
@@ -76,61 +85,218 @@ sudo usermod -aG docker iotmaster
 ```
 
 ### 3. Configure Basic Station
-1. Create configuration directory:
+
+#### 3.1 Prepared configuration files
+
+1. Copy basic station config files:
+
 ```bash
-sudo mkdir -p /home/iotmaster/basicstation-docker
+scp tc.trust tc.crt tc.key tc.uri iotmaster@<raspberry-pi-ip>:/home/iotmaster/config/
+```
+
+2. Add permissions config files:
+
+```bash
+chmod 400 /home/iotmaster/config/tc.*
+chown iotmaster:iotmaster /home/iotmaster/config/tc.*
+```
+
+3. Create `basicstation-docker` directory:
+
+```bash
+mkdir -p /home/iotmaster/basicstation-docker
 cd /home/iotmaster/basicstation-docker
 ```
 
-2. Create docker-compose.yml:
+4. Create `docker-compose.yml`:
+
 ```bash
-sudo nano docker-compose.yml
+nano /home/iotmaster/basicstation-docker/docker-compose.yml
 ```
 
 Add the following content:
+
 ```yaml
 version: '2.0'
 services:
   basicstation:
     image: xoseperez/basicstation:latest
-    restart: unless-stopped
+    container_name: basicstation
+    # restart: unless-stopped
+    privileged: true
+    network_mode: host
     devices:
-      - "/dev/spidev0.0:/dev/spidev0.0"
+      - /dev/spidev0.0:/dev/spidev0.0
+    volumes:
+      - /home/iotmaster/config/tc.trust:/app/config/tc.trust
+      - /home/iotmaster/config/tc.crt:/app/config/tc.crt
+      - /home/iotmaster/config/tc.key:/app/config/tc.key
+      - /home/iotmaster/config/tc.uri:/app/config/tc.uri
+      - /sys:/sys
     environment:
+      - MODEL=RAK5146
+      - DESIGN=CORECELL
+      - INTERFACE=SPI
+      - DEVICE=/dev/spidev0.0
       - STATION_DEVICEID=RAK5146
       - STATION_RADIOCFG=sx1303_2g4
       - STATION_HWSPEC=sx1303
-      - STATION_TCPORT1=443
-      - STATION_TCURL1=wss://lora-eu868.cloud.chirpwireless.io:443
-      - STATION_RADIOINIT=/usr/local/rak/lora/rak5146/reset_lgw.sh start
-      - RESET_GPIO=17
+      - GATEWAY_EUI=E45F01FFFE111F64
+      - TC_URI=/app/config/tc.uri
+      - TC_TRUST=/app/config/tc.trust
+      - TC_KEY=/app/config/tc.key
+      - TC_CRT=/app/config/tc.crt
+      - RESET_GPIO=529
 ```
 
-### 4. Install Web Interface
-1. Create directory structure:
+#### 3.2 Start Basic Station
+
+1. Start Basic Station:
+
 ```bash
-mkdir -p /home/iotmaster/hubconfig/static
-cd /home/iotmaster/hubconfig
+cd /home/iotmaster/basicstation-docker/
+docker-compose up -d
+```
+
+#### 3.3. Setting Up Basic Station as a System Service
+
+To automatically start Basic Station when the system boots, we'll configure a systemd service:
+
+1. Create a service file:
+
+```bash
+sudo nano /etc/systemd/system/basicstation.service
+```
+
+2. Add the following content:
+
+```ini
+[Unit]
+Description=Basic Station LoRa Packet Forwarder
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/iotmaster/basicstation-docker
+ExecStartPre=-/usr/bin/docker-compose down
+ExecStart=/usr/bin/docker-compose up -d
+ExecStop=/usr/bin/docker-compose down
+User=iotmaster
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. Save the file (Ctrl+O, then Enter) and exit the editor (Ctrl+X)
+
+4. Reload the systemd configuration:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+5. Enable the service to start automatically at boot:
+
+```bash
+sudo systemctl enable basicstation.service
+```
+
+6. Start the service:
+
+```bash
+sudo systemctl start basicstation.service
+```
+
+7. Check the service status:
+
+```bash
+sudo systemctl status basicstation.service
+```
+
+8. To view service logs:
+
+```bash
+sudo journalctl -u basicstation.service -f
+```
+
+Useful commands for service management:
+
+- Stop: `sudo systemctl stop basicstation.service`
+- Restart: `sudo systemctl restart basicstation.service`
+- Disable autostart: `sudo systemctl disable basicstation.service`
+
+### 4. Install Web Interface
+
+1. Create directory structure:
+
+```bash
+mkdir -p /home/iotmaster/webconfig
 ```
 
 2. Install Go:
+
 ```bash
-sudo apt-get install golang
+sudo apt install golang
 ```
 
 3. Transfer web interface files (using WinSCP or SCP):
-   - Copy files from provided package to `/home/iotmaster/hubconfig/`
+   - Copy webconfig files using command: `scp -r webconfig/* iotmaster@<raspberry-pi-ip>:/home/iotmaster/webconfig/`
+  
 
 4. Build and run the interface:
+
 ```bash
-cd /home/iotmaster/hubconfig
+cd /home/iotmaster/webconfig
 go build
-sudo ./hubconfig
+# Run with root privileges to access port 8000
+sudo ./webconfig
+```
+
+The web server will start on port 8000. You will see the message: `Server starting on port :8000...`
+
+To access the web interface, open `http://<raspberry-pi-ip>:8000` in your browser
+
+5. To automatically start the web interface when the system boots, create a systemd service:
+
+```bash
+sudo nano /etc/systemd/system/webconfig.service
+```
+
+Add the following content:
+
+```ini
+[Unit]
+Description=IoT Hub Configuration Web Interface
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/iotmaster/webconfig
+ExecStart=/home/iotmaster/webconfig/webconfig
+User=iotmaster
+Group=iotmaster
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+6. Enable and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable webconfig.service
+sudo systemctl start webconfig.service
 ```
 
 ## Gateway Registration
 
-1. Access web interface at `http://<raspberry-pi-ip>`
+1. Access web interface at `http://<raspberry-pi-ip>:8000`
 2. Note your Gateway EUI (displayed on interface)
 3. Register at [app.chirpwireless.io](https://app.chirpwireless.io):
    - Create account if needed
@@ -146,9 +312,11 @@ sudo ./hubconfig
 
 2. Verify configuration:
    - Check Basic Station logs:
+
      ```bash
      docker logs -f basicstation-docker_basicstation_1
      ```
+
    - Look for successful connection messages
 
 ## Troubleshooting
@@ -156,8 +324,9 @@ sudo ./hubconfig
 ### Common Issues
 
 1. **Web Interface Not Accessible**
-   - Check if service is running: `ps aux | grep hubconfig`
-   - Verify port 80 is available: `sudo netstat -tulpn | grep 80`
+   - Check if service is running: `sudo systemctl status webconfig.service`
+   - Verify port 8000 is available: `sudo netstat -tulpn | grep 8000`
+   - Check logs: `sudo journalctl -u webconfig.service -f`
 
 2. **Basic Station Connection Fails**
    - Verify certificate formats
@@ -171,6 +340,7 @@ sudo ./hubconfig
 ## Next Steps
 
 After successful setup:
+
 1. Review [Configuration Guide](configuration.md) for advanced settings
 2. Set up your first LoRaWAN device
 3. Monitor gateway status on Chirp's platform
@@ -178,6 +348,7 @@ After successful setup:
 ## Support
 
 If you encounter issues:
+
 1. Check detailed logs: `docker logs basicstation-docker_basicstation_1`
 2. Review [Troubleshooting Guide](troubleshooting.md)
 3. Create GitHub issue with logs and error messages

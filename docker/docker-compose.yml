@@ -1,0 +1,32 @@
+version: '2.0'
+services:
+  basicstation:
+    image: xoseperez/basicstation:latest
+    container_name: basicstation
+    # restart: unless-stopped
+    privileged: true
+    network_mode: host
+    devices:
+      - /dev/spidev0.0:/dev/spidev0.0
+    volumes:
+      - /home/iotmaster/config/tc.trust:/app/config/tc.trust
+      - /home/iotmaster/config/tc.crt:/app/config/tc.crt
+      - /home/iotmaster/config/tc.key:/app/config/tc.key
+      - /home/iotmaster/config/tc.uri:/app/config/tc.uri
+      - /sys:/sys
+    environment:
+      - MODEL=RAK5146
+      - DESIGN=CORECELL
+      - INTERFACE=SPI
+      - DEVICE=/dev/spidev0.0
+#      - SPI_SPEED=800000
+      - STATION_DEVICEID=RAK5146
+      - STATION_RADIOCFG=sx1303_2g4
+      - STATION_HWSPEC=sx1303
+      - GATEWAY_EUI=E45F01FFFE111F64
+      - TC_URI=/app/config/tc.uri
+      - TC_TRUST=/app/config/tc.trust
+      - TC_KEY=/app/config/tc.key
+      - TC_CRT=/app/config/tc.crt
+      - RESET_GPIO=529
+#      - STATION_RADIOINIT=/usr/local/rak/lora/rak5146/reset_lgw.sh start

@@ -23,7 +23,10 @@ This guide combines official documentation from:
 
 ### Step 1: Prepare the Radio Co-Processor (RCP)
 
-Build the radio firmware using official Nordic instructions or use our pre-built firmware (TODO: add our firmware link).
+Build the radio firmware using official Nordic instructions or use our pre-built firmware files located in the `fw/nrf52840_dongle/openthread/` folder:
+
+- `ot_nrf52840_dongle_rcp.hex` - HEX file for flashing using nRF Programmer
+- `ot_nrf52840_dongle_rcp.zip` - ZIP package for flashing using nrfutil
 
 Flash the firmware using one of these methods:
 

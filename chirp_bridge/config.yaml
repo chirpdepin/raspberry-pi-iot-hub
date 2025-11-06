@@ -1,0 +1,22 @@
+# MQTT Bridge Configuration
+local_mqtt:
+  # Mode can be "auto" or "manual"
+  mode: "manual"
+  # Path to Zigbee2MQTT configuration file (used only if mode is "auto")
+  # zigbee2mqtt_config_path: "/opt/zigbee2mqtt/data/configuration.yaml"
+  # Manual settings (used only if mode is "manual")
+  server: "localhost"
+  port: 1883
+  base_topic: "zigbee2mqtt"
+  # Local MQTT username, if required
+  # username: ""
+  # Local MQTT password, if required
+  # password: ""
+
+cloud_mqtt:
+  server: "chirp.cloud.com"  # Replace with your cloud MQTT server address
+  port: 8883
+  base_topic: "zigbee2mqtt"
+  username: "chirp_cloud_user"  # Cloud MQTT username
+  password: "chirp_cloud_password"  # Cloud MQTT password
+  use_tls: true  # Use TLS for cloud connection

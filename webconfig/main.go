@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type Response struct {
@@ -119,12 +118,9 @@ func handleConfigure(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Update docker-compose.yml
-	err = updateDockerCompose(certDir, lnsURL)
-	if err != nil {
-		sendError(w, "Failed to update docker-compose.yml: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// The compose file deliberately is not edited here. Basic Station reads the
+	// LNS address from tc.uri, which was just written above, and the compose
+	// file has no LNS setting to keep in sync.
 
 	// Restart Docker container
 	err = restartContainer()
@@ -181,39 +177,6 @@ func getGatewayEUI() (string, error) {
     return "", fmt.Errorf("invalid MAC address format")
 }
 
-func updateDockerCompose(certDir string, lnsURL string) error {
-	dockerComposePath := filepath.Join(certDir, "docker-compose.yml")
-	
-	// Read current docker-compose.yml
-	content, err := ioutil.ReadFile(dockerComposePath)
-	if err != nil {
-		return fmt.Errorf("failed to read docker-compose.yml: %v", err)
-	}
-
-	// Convert to string for easier manipulation
-	composeContent := string(content)
-
-	// Find and replace the SERVER URL line
-	lines := strings.Split(composeContent, "\n")
-	for i, line := range lines {
-		if strings.Contains(line, "SERVER:") {
-			lines[i] = fmt.Sprintf("      - SERVER=%s", lnsURL)
-			break
-		}
-	}
-
-	// Join lines back together
-	newContent := strings.Join(lines, "\n")
-
-	// Write back to file
-	err = ioutil.WriteFile(dockerComposePath, []byte(newContent), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write docker-compose.yml: %v", err)
-	}
-
-	return nil
-}
-
 func restartContainer() error {
     // Change to the basicstation-docker directory
     cmd := exec.Command("/usr/bin/docker-compose", "down")
@@ -228,57 +191,6 @@ func restartContainer() error {
         return fmt.Errorf("failed to start container: %v", err)
     }
 
-    return nil
-}
-
-func backupCertificates() error {
-    backupDir := "/home/iotmaster/certificate_backups"
-    timestamp := time.Now().Format("20060102_150405")
-    backupPath := filepath.Join(backupDir, "certs_"+timestamp)
-    
-    // Create backup directory if it doesn't exist
-    if err := os.MkdirAll(backupDir, 0755); err != nil {
-        return fmt.Errorf("failed to create backup directory: %v", err)
-    }
-    
-    // Create backup subdirectory with timestamp
-    if err := os.MkdirAll(backupPath, 0755); err != nil {
-        return fmt.Errorf("failed to create backup subdirectory: %v", err)
-    }
-    
-    // Copy existing certificates if they exist
-    certFiles := []string{"tc.key", "tc.crt", "tc.uri", "tc.trust"}
-    for _, file := range certFiles {
-        srcPath := filepath.Join("/home/iotmaster/config", file)
-        if _, err := os.Stat(srcPath); err == nil {
-            destPath := filepath.Join(backupPath, file)
-            input, err := ioutil.ReadFile(srcPath)
-            if err != nil {
-                return fmt.Errorf("failed to read %s: %v", file, err)
-            }
-            if err := ioutil.WriteFile(destPath, input, 0644); err != nil {
-                return fmt.Errorf("failed to write backup of %s: %v", file, err)
-            }
-        }
-    }
-    return nil
-}
-
-func stopBasicStation() error {
-    cmd := exec.Command("docker-compose", "down")
-    cmd.Dir = "/home/iotmaster/basicstation-docker"
-    if err := cmd.Run(); err != nil {
-        return fmt.Errorf("failed to stop basicstation container: %v", err)
-    }
-    return nil
-}
-
-func startBasicStation() error {
-    cmd := exec.Command("docker-compose", "up", "-d")
-    cmd.Dir = "/home/iotmaster/basicstation-docker"
-    if err := cmd.Run(); err != nil {
-        return fmt.Errorf("failed to start basicstation container: %v", err)
-    }
     return nil
 }
 

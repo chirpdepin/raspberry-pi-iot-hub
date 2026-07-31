@@ -1,5 +1,18 @@
 # DIY Raspberry Pi LoRaWAN Gateway for Home Automation
 
+> **Running Ubuntu Server instead of Raspberry Pi OS? Start at
+> [docs/ubuntu-2604.md](docs/ubuntu-2604.md) and run `sudo ./scripts/install-ubuntu.sh`.**
+>
+> The rest of this README describes the pre-built Raspberry Pi OS image. Two things in it do **not**
+> apply on Ubuntu 24.04/26.04, and following them will cost you an afternoon:
+>
+> - The sysfs GPIO interface (`/sys/class/gpio`) has been removed from kernel 7.x, so every
+>   `reset_lgw.sh`-style reset script fails and the concentrator looks dead. Use `concentrator-reset`.
+> - The RAK5146 has no temperature sensor, which Semtech's HAL treats as fatal. A patch is included.
+>
+> See [CLAUDE.md](CLAUDE.md) for the full picture and
+> [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what is built so far.
+
 Welcome to the Raspberry Pi IoT Hub repository! This project helps you build your own DIY LoRaWAN gateway using a Raspberry Pi and RAK5146 concentrator, allowing you to connect LoRaWAN devices to Chirp's network and the Home Senses platform for smart home automation.
 
 ## What is This Project?
@@ -165,6 +178,10 @@ Place the certificate files in `/home/iotmaster/basicstation-docker/`:
 ```
 
 ### Gateway EUI Formation
+
+> **On the Ubuntu build the EUI is read from the concentrator chip instead** (`util_chip_id`, or
+> `GATEWAY_EUI_SOURCE=chip` in the compose file), which keeps the identifier attached to the card rather
+> than to the network interface. The MAC-derived scheme below applies to the Raspberry Pi OS image.
 
 The gateway EUI is a unique 64-bit identifier derived from the Raspberry Pi's ethernet MAC address:
 

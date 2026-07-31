@@ -1,32 +1,66 @@
-version: '2.0'
+# LoRa Basics Station for the IoT Hub.
+#
+# Installed to /opt/iot-hub/lorawan/docker-compose.yml by scripts/install-ubuntu.sh
+# and driven by config/iot-hub-lorawan.service.
+#
+# NOTHING HERE IS REGION-SPECIFIC, AND NOTHING SHOULD BE ADDED. Basic Station
+# receives its channel plan from the LNS in the router_config message, so an
+# EU868 card and a US915 card run this file unchanged. The region is chosen in
+# the Chirp console when the gateway is registered. See docs/ubuntu-2604.md.
+
 services:
   basicstation:
     image: xoseperez/basicstation:latest
     container_name: basicstation
-    # restart: unless-stopped
-    privileged: true
+    restart: unless-stopped
     network_mode: host
+
     devices:
+      # SPI bus to the concentrator.
       - /dev/spidev0.0:/dev/spidev0.0
+      # GPIO character device for the reset line. This replaces the "/sys:/sys"
+      # bind mount used previously: the sysfs GPIO ABI (/sys/class/gpio) no
+      # longer exists on kernel 7.x, so the old RESET_GPIO=529 could never work.
+      # The image ships libgpiod 1.6.3 and resets through the chardev itself.
+      - /dev/gpiochip0:/dev/gpiochip0
+      # Semtech's HAL probes I2C for an STTS751 temperature sensor. The RAK5146
+      # does not have one; passing the bus keeps the probe honest rather than
+      # having it fail with a permission error that looks like absent hardware.
+      - /dev/i2c-1:/dev/i2c-1
+
     volumes:
-      - /home/iotmaster/config/tc.trust:/app/config/tc.trust
-      - /home/iotmaster/config/tc.crt:/app/config/tc.crt
-      - /home/iotmaster/config/tc.key:/app/config/tc.key
-      - /home/iotmaster/config/tc.uri:/app/config/tc.uri
-      - /sys:/sys
+      # Must be READ-WRITE: the image generates its reset script and station.conf
+      # in here at startup. Mounting it read-only makes the container fail in a
+      # way that does not obviously point back to the mount.
+      - /etc/iot-hub/lorawan:/app/config
+
     environment:
+      # RAK5146 maps to SX1303/corecell in the image's model table; DESIGN,
+      # INTERFACE and the reset pin are all derived from it. Set MODEL=AUTO to
+      # let the image probe instead, which also works with other RAK cards.
       - MODEL=RAK5146
-      - DESIGN=CORECELL
       - INTERFACE=SPI
       - DEVICE=/dev/spidev0.0
-#      - SPI_SPEED=800000
-      - STATION_DEVICEID=RAK5146
-      - STATION_RADIOCFG=sx1303_2g4
-      - STATION_HWSPEC=sx1303
-      - GATEWAY_EUI=E45F01FFFE111F64
-      - TC_URI=/app/config/tc.uri
-      - TC_TRUST=/app/config/tc.trust
-      - TC_KEY=/app/config/tc.key
-      - TC_CRT=/app/config/tc.crt
-      - RESET_GPIO=529
-#      - STATION_RADIOINIT=/usr/local/rak/lora/rak5146/reset_lgw.sh start
+
+      # Reset line on the RAK2287/RAK5146 Pi HAT. This is a BCM GPIO number and
+      # is in fact the image's own default; it is stated explicitly because the
+      # previous value here (529) was a sysfs number and silently wrong.
+      - RESET_GPIO=17
+      - USE_LIBGPIOD=1
+
+      # Read the gateway EUI from the concentrator rather than hardcoding it or
+      # deriving it from the ethernet MAC. The identifier then follows the card,
+      # stays unique per unit, and survives a change of network hardware.
+      - GATEWAY_EUI_SOURCE=chip
+
+      # GNSS off. The RAK5146 has a receiver, but reaching it on a Pi 4 costs
+      # onboard Bluetooth (dtoverlay=disable-bt plus freeing ttyS0), which a hub
+      # also running Zigbee/Thread/Matter may want more. Without this the image
+      # tries to open "./" as a TTY and logs a misleading GPS failure on every
+      # start. See docs/ubuntu-2604.md to turn GNSS on.
+      - HAS_GPS=0
+
+      # Credentials live in the mounted config directory as tc.uri, tc.trust,
+      # tc.crt and tc.key. They are written during onboarding, not baked into
+      # the image; the systemd unit will not start this container until tc.uri
+      # exists.

@@ -29,6 +29,8 @@ files inside `raspberry-pi-iot-hub/`.
 | [docs/ubuntu-2604.md](docs/ubuntu-2604.md) | The Ubuntu Server build: GPIO chardev reset, the temperature-sensor patch, region-from-LNS, provisioning, GNSS opt-in |
 | [docs/zigbee-thread.md](docs/zigbee-thread.md) | Zigbee/Thread dongles: supported hardware table, stable device names, network coordinators, MQTT topology, troubleshooting |
 | [config/README.md](config/README.md) | What each config template is and the constraints that cannot live inside the files themselves (JSON has no comments) |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | The non-negotiable rules (region-agnostic, ship unprovisioned, stable device names, pinned images), testing bar, style |
+| [LICENSE](LICENSE) | MIT, Copyright (c) 2025-2026 Chirp |
 | [docs/hardware-setup.md](docs/hardware-setup.md) | Physical assembly |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common issues (Raspberry Pi OS era) |
 | [docs/configuration.md](docs/configuration.md), [docs/api.md](docs/api.md), [docs/software-setup.md](docs/software-setup.md) | Region reference, webconfig HTTP API, manual Raspberry Pi OS install |

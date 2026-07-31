@@ -279,7 +279,7 @@ For issues and questions, please open an issue in the GitHub repository.
 
 ## License
 
-This image is provided as-is under the MIT license.
+This image is provided as-is under the MIT License. See [LICENSE](LICENSE) for details.
 
 # Senses IoT Hub
 
@@ -370,7 +370,7 @@ If you encounter any issues:
 
 ## License
 
-This project is licensed under the BSD 3-Clause License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 

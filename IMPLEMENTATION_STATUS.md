@@ -222,19 +222,28 @@ to pristine unprovisioned state: `sudo systemctl stop iot-hub-zigbee && sudo rm 
 - **Zigbee2MQTT / OTBR / Matter / Lens twin** — already documented in the `README_*.md` files; untouched
   by this work.
 
-## Licensing — needs your decision before open-sourcing
+## Licensing — resolved 2026-08-01
 
-`README.md` **contradicts itself**: the first half says "provided as-is under the **MIT** license", the
-second says "licensed under the **BSD 3-Clause** License. See [LICENSE]". There is **no `LICENSE` file
-in the repo at all**, and `docs/CONTRIBUTING.md` is linked but does not exist either.
+**MIT**, `Copyright (c) 2025-2026 Chirp` — holder and start year taken from the existing notice in
+`webconfig/README.md` rather than invented. Previously the repo had **no `LICENSE` file at all** while
+`README.md` contradicted itself (MIT in one half, BSD 3-Clause in the other), which for a project meant
+to be downloaded and modified meant nobody had permission to use it.
 
-For a project meant to be downloaded, modified and possibly shipped in a product by Kilo Electronics,
-"no license" means no one has permission to use it. Not fixable without you: picking a license is a
-legal decision, not an editorial one. **Owner: Tim.** Next action: choose MIT or BSD-3-Clause, then the
-`LICENSE` file, the two README statements and a short `docs/CONTRIBUTING.md` follow in one small change.
+| | Item |
+|---|---|
+| ✅ | `LICENSE` added (MIT) |
+| ✅ | Both `README.md` license statements corrected to MIT and pointed at `LICENSE` |
+| ✅ | `docs/CONTRIBUTING.md` written — the link in `README.md` had been dead since the repo was created |
+| ✅ | Both linked from the `CLAUDE.md` documentation map |
 
 ## Before any image ships
 
+- 🚧 **A GitHub personal access token is stored in plaintext in `.git/config`** — the `origin` remote is
+  an `https://ghp_…@github.com/...` URL. Anyone who obtains this checkout gets push access to the
+  repository, and an SD-card image containing it would publish the token. **Owner: Tim.** Next action:
+  revoke it (GitHub → Settings → Developer settings → Personal access tokens), then
+  `git remote set-url origin git@github.com:chirpdepin/raspberry-pi-iot-hub.git` or use a credential
+  helper. Note `.git/` is not tracked, so this cannot be fixed by a commit.
 - `/boot/firmware/network-config` holds the home Wi-Fi PSK **in plaintext**.
 - SSH is **key-only** with keys no adopter holds — a flashed image would lock them out.
 - `README.md` still advertises the old image's `iotmaster` / `123qweASD` credentials.

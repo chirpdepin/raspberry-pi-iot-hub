@@ -1,0 +1,11 @@
+[Unit]
+Description=Restart the IoT Hub Thread Border Router after its radio reappeared
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+
+# Triggered by the udev rule when /dev/thread is (re)created. See
+# iot-hub-zigbee-restart.service for why this is necessary rather than relying
+# on Docker to follow the symlink.
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'systemctl is-active --quiet iot-hub-thread.service && systemctl restart iot-hub-thread.service || true'

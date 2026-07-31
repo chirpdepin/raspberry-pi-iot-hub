@@ -1,0 +1,26 @@
+# Mosquitto MQTT broker for the IoT Hub.
+# Installed to /opt/iot-hub/mqtt/docker-compose.yml by scripts/install-radios.sh.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    container_name: mosquitto
+    restart: unless-stopped
+
+    # Host networking so the broker is reachable on 127.0.0.1 by everything else
+    # on the device without a bridge network. Combined with the loopback-only
+    # listener in mosquitto.conf, this keeps it off the LAN.
+    network_mode: host
+
+    volumes:
+      - /etc/iot-hub/mqtt:/mosquitto/config
+      - /var/lib/iot-hub/mqtt/data:/mosquitto/data
+
+    # The image runs as the "mosquitto" user (uid 1883); the install script
+    # owns the data directory to match.
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-t", "$$SYS/broker/uptime", "-C", "1", "-W", "3"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

@@ -1,0 +1,69 @@
+# IoT Hub radio dongles — Zigbee / Thread USB coordinators.
+# Installed to /etc/udev/rules.d/99-iot-hub-radios.rules by scripts/install-radios.sh
+#
+# Three jobs:
+#   1. Stop ModemManager probing the coordinator (it sends AT commands at a
+#      Zigbee NCP and can wedge it, or just hold the port during startup).
+#   2. Give the dialout group access, so nothing runs as root.
+#   3. Create STABLE role symlinks /dev/zigbee and /dev/thread, so that
+#      ttyUSB0/ttyUSB1 enumeration order — which is boot- and replug-dependent
+#      — can never swap two dongles' roles.
+#
+# Deliberately NOT an exhaustive VID:PID table. New coordinators ship
+# constantly, and 10c4:ea60 is a generic CP2102 used by thousands of unrelated
+# products, so matching it alone would happily label a random USB-serial
+# adapter as the Zigbee radio. Roles come from identity (serial number, then
+# vendor/model string), never from the bridge chip alone.
+
+ACTION=="remove", GOTO="iot_hub_radios_end"
+SUBSYSTEM!="tty", GOTO="iot_hub_radios_end"
+
+# ---------------------------------------------------------------------------
+# Layer 1: keep ModemManager away, and grant dialout access.
+#
+# Matched broadly by USB-serial bridge vendor. Safe: none of these vendors make
+# cellular modems, so excluding them from modem probing costs nothing and
+# removes a whole class of "the coordinator worked yesterday" failures.
+# ---------------------------------------------------------------------------
+
+# 10c4 Silicon Labs  CP2102/CP2102N  - SONOFF Dongle Plus MG24 and ZBDongle-P,
+#                                      SLZB-07, Home Assistant SkyConnect /
+#                                      Connect ZBT-1, most SLZB-06 variants
+# 1a86 WCH           CH340/CH9102    - SONOFF ZBDongle-E (Dongle Plus V2)
+# 0403 FTDI          FT232R/FT230X   - ConBee, ConBee II, RaspBee
+# 1cf1 dresden elek. native CDC      - ConBee III
+# 1915 Nordic        native CDC      - nRF52840 dongle (OpenThread RCP)
+# 0451 Texas Instr.  native CDC      - CC2531/CC2538 legacy sticks
+# 303a Espressif     native CDC      - ESP32-S3 based, e.g. SLZB-06U over USB
+ATTRS{idVendor}=="10c4|1a86|0403|1cf1|1915|0451|303a", \
+    ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", \
+    GROUP="dialout", MODE="0660", ENV{IOT_HUB_RADIO_CANDIDATE}="1"
+
+ENV{IOT_HUB_RADIO_CANDIDATE}!="1", GOTO="iot_hub_radios_end"
+
+# ---------------------------------------------------------------------------
+# Layer 2: role assignment.
+#
+# The map at /etc/iot-hub/radios.conf is authoritative and is keyed on the USB
+# serial number, so a role follows the physical dongle across ports, reboots
+# and replugs. detect-radios.sh writes an entry automatically the first time it
+# sees a single unambiguous coordinator, so the common one-dongle case needs no
+# human step.
+#
+# IMPORTANT: PROGRAM output is matched against RESULT. The helper prints the
+# role ("zigbee" or "thread") or nothing at all.
+# ---------------------------------------------------------------------------
+
+PROGRAM="/usr/local/bin/iot-hub-radio-role %E{ID_SERIAL_SHORT} %E{ID_VENDOR} %E{ID_MODEL}"
+
+RESULT=="zigbee", SYMLINK+="zigbee", ENV{IOT_HUB_RADIO_ROLE}="zigbee"
+RESULT=="thread", SYMLINK+="thread", ENV{IOT_HUB_RADIO_ROLE}="thread"
+
+# Restart the owning service when its radio reappears. Docker resolves a
+# symlink to its target device node when the container starts, so a replug that
+# changes the underlying ttyUSB* leaves the container holding a stale node —
+# it does not recover on its own.
+ENV{IOT_HUB_RADIO_ROLE}=="zigbee", TAG+="systemd", ENV{SYSTEMD_WANTS}+="iot-hub-zigbee-restart.service"
+ENV{IOT_HUB_RADIO_ROLE}=="thread",  TAG+="systemd", ENV{SYSTEMD_WANTS}+="iot-hub-thread-restart.service"
+
+LABEL="iot_hub_radios_end"

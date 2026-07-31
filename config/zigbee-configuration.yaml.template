@@ -1,0 +1,52 @@
+# Zigbee2MQTT configuration template.
+#
+# Rendered to /etc/iot-hub/zigbee/configuration.yaml during onboarding, with
+# __ZIGBEE_PORT__ and __ZIGBEE_ADAPTER__ substituted from
+# /etc/iot-hub/radios.env (written by detect-radios.sh).
+#
+# The rendered file's existence is what allows iot-hub-zigbee.service to start,
+# so a freshly flashed image with no configuration stays quiet instead of
+# restart-looping.
+#
+# Zigbee2MQTT rewrites this file at runtime (it stores the network key, pan_id
+# and paired devices here), so treat the rendered copy as state, not config —
+# back it up rather than regenerating it, or the Zigbee network is lost and
+# every device has to be re-paired.
+
+homeassistant:
+  enabled: false
+
+frontend:
+  enabled: true
+  # Loopback only by default. The onboarding app proxies it; exposing an
+  # unauthenticated device-control UI on the LAN is not a safe default for an
+  # image other people flash. Set host: 0.0.0.0 and add auth_token to change.
+  host: 127.0.0.1
+  port: 8080
+
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://127.0.0.1:1883
+
+serial:
+  # Always the udev role symlink, never /dev/ttyUSB*.
+  port: __ZIGBEE_PORT__
+  # ember (Silicon Labs EFR32) | zstack (TI CC2652) | deconz (ConBee) | zboss
+  adapter: __ZIGBEE_ADAPTER__
+
+advanced:
+  # Zigbee channel. 15, 20 and 25 sit between the common Wi-Fi channels and are
+  # the usual choices; 11 overlaps Wi-Fi channel 1 and is a frequent cause of
+  # "Zigbee is flaky" reports on a hub whose own Wi-Fi is in use.
+  channel: 15
+  log_level: info
+  log_output:
+    - console
+
+# Joining is off by default. Leaving a Zigbee network permanently open lets any
+# nearby device join uninvited; the app should open a time-limited join window
+# instead.
+permit_join: false
+
+devices: {}
+groups: {}

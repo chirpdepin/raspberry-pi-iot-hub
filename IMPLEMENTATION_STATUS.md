@@ -3,7 +3,12 @@
 Running record of the Ubuntu 26.04 build of the IoT Hub image. Update this file as work lands — it is
 the answer to "where did we get to?" at the start of a new session.
 
-**Last updated:** 2026-07-31
+> Context and the documentation map: **[CLAUDE.md](CLAUDE.md)**.
+> File and path reference: **[REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md)**.
+> Build guides: **[docs/ubuntu-2604.md](docs/ubuntu-2604.md)** (LoRaWAN),
+> **[docs/zigbee-thread.md](docs/zigbee-thread.md)** (Zigbee/Thread).
+
+**Last updated:** 2026-08-01
 **Target device:** `hub@iot-hub.local` (192.168.2.199) — Raspberry Pi 4B 8GB, Ubuntu 26.04 LTS Server arm64
 **Concentrator:** RAK5146 SPI (SX1303 / CORECELL) on a RAK2287/5146 Pi HAT
 **Concentrator EUI:** `0016C001FF1E96BB` (read from the chip; `0016C0` is the RAK Wireless OUI)
@@ -154,6 +159,55 @@ placeholder certificates and is the precise point where real Chirp credentials t
 
 ---
 
+---
+
+# Zigbee / Thread radios
+
+**Verified on hardware 2026-07-31** with a SONOFF Dongle Plus MG24 (`10c4:ea60`, serial
+`f620d69ac39aef11aa72ad9061ce3355`).
+
+| | Item | Notes |
+|---|---|---|
+| ✅ | Driver audit | `cp210x`, `ch341`, `ftdi_sio`, `cdc_acm`, `pl2303` **all already in the kernel** — nothing to install. The drivers were never the problem |
+| ✅ | `config/udev/99-iot-hub-radios.rules` | ModemManager exclusion, `dialout` access, role symlinks. Two-layer: MM exclusion matches broadly by bridge vendor, role assignment never matches on bridge chip alone |
+| ✅ | `scripts/iot-hub-radio-role` | udev `PROGRAM` helper; explicit map wins, brand descriptors auto-claim, generic ones are left alone |
+| ✅ | `scripts/detect-radios.sh` | Auto-mapped the MG24 → `zigbee`, derived `ZIGBEE_ADAPTER=ember` from the descriptor |
+| ✅ | Mosquitto 2.1.2 | Container healthy; `127.0.0.1:1883` |
+| ✅ | Zigbee2MQTT 2.12.1 | **Talks to the radio**: EmberZNet `7.4.5 [GA]`, EZSP v13, IEEE `0xd4fe28fffe299980`, channel 15, `bridge/state` = `online` |
+| ✅ | OTBR (digest-pinned) | Installed; unit correctly inactive with no second dongle |
+| ✅ | `install-radios.sh` | Full run from clean; wired into `install-ubuntu.sh` |
+| ✅ | Replug survival | USB unbind/bind: `/dev/zigbee` returned with `IOT_HUB_RADIO_ROLE=zigbee` intact |
+| ✅ | Broker isolation | Refused from another host on the LAN; `ss` confirms `127.0.0.1:1883` and `127.0.0.1:8080` |
+| ✅ | ModemManager | **0** probes of the dongle since boot |
+| ✅ | Fresh-boot check | All ten checks pass with no manual steps |
+| ✅ | Commit | Same branch as the LoRaWAN work; not pushed |
+
+### Findings
+
+- **Nothing needed installing for the drivers.** What breaks coordinators is the environment: ModemManager
+  probing the port, `brltty` claiming CP2102 devices, `ttyUSB*` enumeration order, and permissions.
+- **Role assignment must not key on the bridge chip.** `10c4:ea60` is a generic CP2102 on countless
+  unrelated boards. Brand descriptors auto-claim; generic ones are reported for manual mapping, because
+  silently claiming the wrong device is worse than asking.
+- **`openthread/otbr` publishes only `latest`** — pinned by digest
+  `sha256:0cfccb10c3d5f878028e07ea4f652f72fc967592ee9591978c41dcced0ede4e6` (arm64, v2026.07 build).
+- **Docker resolves device symlinks at container start**, so a replug needs a restart — handled by the
+  udev-triggered `iot-hub-{zigbee,thread}-restart.service`, which only act if the service was running.
+- **Z2M's `configuration.yaml` is state, not config.** It stores the network key and pairings; the
+  installer deliberately does not render it.
+- **MQTT topology settled**: local Mosquitto, bridged outbound to Chirp as `mqtt_cloud`. `mqtt_external`
+  would need Chirp to dial into a hub behind home NAT. Z2M is itself an MQTT client and could talk to
+  the cloud directly, but it accepts only one server — doing so would strand every other local consumer
+  and take Zigbee down with the WAN. Mosquitto over EMQX on-device: ~10 MB vs ~200 MB idle.
+
+### Left running on the test unit
+
+The MG24 now holds a **formed Zigbee network** (channel 15, 0 devices joined) and
+`/etc/iot-hub/zigbee/configuration.yaml` exists, so `iot-hub-zigbee` starts on boot. To return the unit
+to pristine unprovisioned state: `sudo systemctl stop iot-hub-zigbee && sudo rm -rf /etc/iot-hub/zigbee/*`.
+
+---
+
 ## Open blockers
 
 | | Blocker | Owner / next action |
@@ -167,6 +221,17 @@ placeholder certificates and is the precise point where real Chirp credentials t
   `ttyS0` from `serial-getty`). Documented as a one-line opt-in.
 - **Zigbee2MQTT / OTBR / Matter / Lens twin** — already documented in the `README_*.md` files; untouched
   by this work.
+
+## Licensing — needs your decision before open-sourcing
+
+`README.md` **contradicts itself**: the first half says "provided as-is under the **MIT** license", the
+second says "licensed under the **BSD 3-Clause** License. See [LICENSE]". There is **no `LICENSE` file
+in the repo at all**, and `docs/CONTRIBUTING.md` is linked but does not exist either.
+
+For a project meant to be downloaded, modified and possibly shipped in a product by Kilo Electronics,
+"no license" means no one has permission to use it. Not fixable without you: picking a license is a
+legal decision, not an editorial one. **Owner: Tim.** Next action: choose MIT or BSD-3-Clause, then the
+`LICENSE` file, the two README statements and a short `docs/CONTRIBUTING.md` follow in one small change.
 
 ## Before any image ships
 

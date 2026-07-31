@@ -1,5 +1,8 @@
 # Repository Structure
 
+> Start at **[CLAUDE.md](CLAUDE.md)** for the documentation map, product intent and the platform traps.
+> Current build state is in **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)**.
+
 ```bash
 raspberry-pi-iot-hub/
 |-- CLAUDE.md                          # Product intent, hard constraints, platform traps — read first
@@ -12,24 +15,43 @@ raspberry-pi-iot-hub/
 |
 |-- scripts/                           # Installation and maintenance
 |   |-- install-ubuntu.sh              # Idempotent installer for the Ubuntu Server build
+|   |-- install-radios.sh              # Zigbee/Thread dongles, Mosquitto, Z2M, OTBR
 |   |-- concentrator-reset.c           # GPIO chardev reset helper (replaces sysfs reset_lgw.sh)
 |   |-- reset_lgw.sh                   # Shim redirecting sx1302_hal's reset call to the helper
-|   |-- detect-concentrator.sh         # Identifies the card and writes concentrator.env
+|   |-- detect-concentrator.sh         # Identifies the LoRa card, writes concentrator.env
+|   |-- detect-radios.sh               # Identifies Zigbee/Thread dongles, writes radios.env
+|   |-- iot-hub-radio-role             # udev PROGRAM helper: serial -> zigbee|thread role
 |   |-- sx1302_hal-optional-temp-sensor.patch  # Makes the missing STTS751 non-fatal
 |   `-- fix_certs.sh                   # Certificate line-ending and permission fixer
 |
 |-- config/                            # Configuration and service definitions
-|   |-- concentrator.conf              # GPIO pin config -> /etc/iot-hub/concentrator.conf
-|   |-- iot-hub-lorawan.service        # Ubuntu unit, gated on tc.uri existing
+|   |-- README.md                      # What each template is, and its non-obvious constraints
+|   |-- concentrator.conf              # LoRa GPIO pins -> /etc/iot-hub/concentrator.conf
+|   |-- station.conf.template          # Basic Station radio config (region-free)
+|   |-- radios.conf                    # USB serial -> zigbee|thread role map
+|   |-- mosquitto.conf                 # Broker: loopback listener + commented Chirp bridge
+|   |-- zigbee-configuration.yaml.template  # Zigbee2MQTT config, rendered at onboarding
+|   |-- udev/
+|   |   `-- 99-iot-hub-radios.rules    # Role symlinks, ModemManager exclusion, dialout access
+|   |-- iot-hub-lorawan.service        # Gated on tc.uri
+|   |-- iot-hub-mqtt.service           # Mosquitto; ungated
+|   |-- iot-hub-zigbee.service         # Gated on /dev/zigbee + configuration.yaml
+|   |-- iot-hub-thread.service         # Gated on /dev/thread
+|   |-- iot-hub-zigbee-restart.service # udev-triggered replug recovery
+|   |-- iot-hub-thread-restart.service # udev-triggered replug recovery
 |   |-- basicstation.service           # Raspberry Pi OS unit (legacy, /home/iotmaster paths)
 |   |-- webconfig.service              # Web config unit (legacy, /home/iotmaster paths)
 |   `-- config.json                    # Legacy EU868 station.conf — reference only, not on any live path
 |
-|-- docker/
-|   `-- docker-compose.yml             # Basic Station container (region-agnostic)
+|-- docker/                            # One directory per service, mirroring /opt/iot-hub
+|   |-- lorawan/docker-compose.yml     # Basic Station (region-agnostic)
+|   |-- mqtt/docker-compose.yml        # Mosquitto 2.1.2
+|   |-- zigbee/docker-compose.yml      # Zigbee2MQTT 2.12.1
+|   `-- thread/docker-compose.yml      # OpenThread Border Router (digest-pinned)
 |
 |-- docs/
 |   |-- ubuntu-2604.md                 # Ubuntu Server build: GPIO chardev, temp sensor, provisioning
+|   |-- zigbee-thread.md               # Dongle support, stable device names, MQTT topology
 |   |-- hardware-setup.md              # Hardware assembly
 |   |-- software-setup.md              # Raspberry Pi OS manual install
 |   |-- configuration.md               # Region configuration reference (EU868/US915)
@@ -92,9 +114,17 @@ Repository paths do not map one-to-one onto the device. On the Ubuntu build:
 | `scripts/detect-concentrator.sh` | `/usr/local/bin/detect-concentrator.sh` |
 | `config/concentrator.conf` | `/etc/iot-hub/concentrator.conf` |
 | `config/iot-hub-lorawan.service` | `/etc/systemd/system/iot-hub-lorawan.service` |
-| `docker/docker-compose.yml` | `/opt/iot-hub/lorawan/docker-compose.yml` |
-| — (generated) | `/etc/iot-hub/concentrator.env` |
+| `docker/lorawan/docker-compose.yml` | `/opt/iot-hub/lorawan/docker-compose.yml` |
+| `docker/{mqtt,zigbee,thread}/docker-compose.yml` | `/opt/iot-hub/{mqtt,zigbee,thread}/docker-compose.yml` |
+| `scripts/iot-hub-radio-role` | `/usr/local/bin/iot-hub-radio-role` |
+| `scripts/detect-radios.sh` | `/usr/local/bin/detect-radios.sh` |
+| `config/udev/99-iot-hub-radios.rules` | `/etc/udev/rules.d/99-iot-hub-radios.rules` |
+| `config/radios.conf` | `/etc/iot-hub/radios.conf` |
+| `config/mosquitto.conf` | `/etc/iot-hub/mqtt/mosquitto.conf` |
+| — (generated) | `/etc/iot-hub/concentrator.env`, `/etc/iot-hub/radios.env` |
+| — (generated) | `/dev/zigbee`, `/dev/thread` (udev role symlinks) |
 | — (onboarding) | `/etc/iot-hub/lorawan/tc.{uri,trust,crt,key}` |
+| — (onboarding) | `/etc/iot-hub/zigbee/configuration.yaml` |
 
 The Raspberry Pi OS image instead places everything under `/home/iotmaster/`.
 

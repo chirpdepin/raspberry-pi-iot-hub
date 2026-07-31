@@ -1,0 +1,17 @@
+[Unit]
+Description=Restart the IoT Hub Zigbee gateway after its radio reappeared
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+
+# Triggered by the udev rule when /dev/zigbee is (re)created.
+#
+# Docker resolves a device symlink to its target node when the container
+# starts. If the coordinator is unplugged and comes back on a different
+# ttyUSB*, the running container is still holding the old node and will not
+# recover on its own — Zigbee2MQTT just reports the adapter as unresponsive.
+# Restarting on the udev event is what actually makes a replug survivable.
+
+[Service]
+Type=oneshot
+# Only act if the gateway was supposed to be running; this must not start a
+# service the operator has deliberately stopped.
+ExecStart=/bin/sh -c 'systemctl is-active --quiet iot-hub-zigbee.service && systemctl restart iot-hub-zigbee.service || true'

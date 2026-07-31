@@ -10,6 +10,46 @@ files inside `raspberry-pi-iot-hub/`.
 
 ---
 
+## Documentation map — start here
+
+**This file is the index. Any new document must be added to the table below**, or it will not be found.
+
+### Read first
+
+| Document | What it answers |
+|---|---|
+| **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** | **"Where did we get to?"** Per-phase state, what is verified on hardware, open blockers, and what was deliberately left out. **Must be updated with every plan execution** — see Conventions |
+| [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) | What every directory and file is, plus the repo → device path map (repo layout does **not** mirror the device) |
+| [README.md](README.md) | Product overview. Describes the **Raspberry Pi OS** image; see the banner for what does not apply on Ubuntu |
+
+### Build and operate
+
+| Document | Covers |
+|---|---|
+| [docs/ubuntu-2604.md](docs/ubuntu-2604.md) | The Ubuntu Server build: GPIO chardev reset, the temperature-sensor patch, region-from-LNS, provisioning, GNSS opt-in |
+| [docs/zigbee-thread.md](docs/zigbee-thread.md) | Zigbee/Thread dongles: supported hardware table, stable device names, network coordinators, MQTT topology, troubleshooting |
+| [config/README.md](config/README.md) | What each config template is and the constraints that cannot live inside the files themselves (JSON has no comments) |
+| [docs/hardware-setup.md](docs/hardware-setup.md) | Physical assembly |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Common issues (Raspberry Pi OS era) |
+| [docs/configuration.md](docs/configuration.md), [docs/api.md](docs/api.md), [docs/software-setup.md](docs/software-setup.md) | Region reference, webconfig HTTP API, manual Raspberry Pi OS install |
+
+### Per-protocol (Raspberry Pi OS era — each carries a correction banner)
+
+| Document | Note |
+|---|---|
+| [README_ZIGBEE.md](README_ZIGBEE.md) | Superseded by `docs/zigbee-thread.md`. Its `/dev/ttyACM0` and `adapter: zboss` are wrong for the common coordinators |
+| [README_OTBR.md](README_OTBR.md) | Superseded for install by the Docker service. Its `INFRA_IF_NAME=wlan0` and port-80 web GUI are unsafe on a hub |
+| [README_MATTER.md](README_MATTER.md) | Matter via OTBR; not yet revisited for the Ubuntu build |
+
+### Component-local
+
+| Document | Covers |
+|---|---|
+| [webconfig/README.md](webconfig/README.md) | The Go provisioning server — working predecessor of the Electron onboarding app |
+| [chirp_bridge/README.md](chirp_bridge/README.md) | The MQTT local↔cloud bridge. Slated for replacement by Mosquitto's built-in bridge |
+
+---
+
 ## What we are building and why
 
 A **redistributable, open-source community image** for a Raspberry Pi IoT hub. Somebody downloads it,
@@ -45,6 +85,39 @@ assembled. Treat everything here as shipping to strangers, not as a personal box
   first; it already does the whole flow over HTTP on `:8000`.
 
 ---
+
+## MQTT topology — decided, do not re-litigate
+
+The hub runs a **local Mosquitto broker**, and bridges **outbound** to Chirp as an `mqtt_cloud`
+connection. Chirp exposes two connector types (`bff/pkg/api/v1/connection/dto.go`):
+
+| Type | Broker | Client | Direction |
+|---|---|---|---|
+| `mqtt_cloud` | Chirp (`broker.chirpwireless.io`), issues `generated_username`/`generated_password` | the hub | outbound |
+| `mqtt_external` | you | Chirp | inbound |
+
+`mqtt_external` is wrong for this product: a hub sits behind home NAT, so Chirp could not dial in
+without a public address, a port forward or a tunnel.
+
+**Zigbee2MQTT is an MQTT client, not a broker** — it could in principle point straight at Chirp and skip
+the local broker. Four reasons it does not:
+
+1. Z2M accepts **exactly one** MQTT server. Point it at the cloud and nothing on the device — the
+   onboarding app, local automation, the Lens twin — can subscribe to Zigbee events without a round
+   trip to the internet.
+2. WAN outage would take Zigbee down entirely. With a local broker, Zigbee keeps working and the bridge
+   (`cleansession false`) queues and replays.
+3. Every other producer (LoRaWAN, camera twin, Matter) needs the same bus; one broker with one bridge
+   beats each component holding its own cloud credentials.
+4. Local control stays local — no internet round trip to switch a light in the same room.
+
+**Mosquitto, not EMQX**, on the device: ~10 MB idle against EMQX's ~200 MB Erlang baseline, on a Pi that
+also runs Basic Station, Z2M, OTBR and a camera twin. EMQX's advantage is throughput in the tens of
+thousands of messages/second; a home hub does tens. EMQX remains the right choice **in the cloud**.
+
+**MQTTX is a client, not an alternative to Mosquitto** — it is EMQX's GUI/CLI test tool. `mosquitto_pub`
+/`mosquitto_sub` fill that role here (installed, ~200 KB, scriptable, no display needed). MQTTX is built
+on MQTT.js, which is the natural library for the Electron app.
 
 ## Target platforms — two, and they are diverging
 
@@ -200,6 +273,45 @@ Two constraints that are easy to get wrong:
 
 ---
 
+## Zigbee/Thread radios — what already works, so you don't redo it
+
+**The USB drivers were never the problem.** `cp210x`, `ch341`, `ftdi_sio`, `cdc_acm` and `pl2303` are
+all in the stock Ubuntu kernel. Any guide telling you to build a Silicon Labs or WCH driver is out of
+date for this platform. What actually breaks coordinators is the environment around the driver, and all
+four causes are handled in `config/udev/99-iot-hub-radios.rules`:
+
+- **ModemManager** probes serial ports and can wedge a Zigbee NCP → `ID_MM_DEVICE_IGNORE=1`.
+- **brltty** claims CP2102 devices on Ubuntu → package held.
+- **`ttyUSB*` is enumeration-ordered**, so two dongles swap roles across a reboot → role symlinks.
+- **Permissions** → `GROUP="dialout", MODE="0660"`.
+
+**Always use `/dev/zigbee` and `/dev/thread`, never `/dev/ttyUSB*`.** Roles are pinned per USB serial in
+`/etc/iot-hub/radios.conf`, so they follow the physical dongle across ports and reboots.
+
+Role matching is deliberately two-layered: ModemManager exclusion matches broadly by bridge-chip vendor
+(safe — none are modems), but **role assignment never matches on the bridge chip alone**. `10c4:ea60` is
+a generic CP2102 found on thousands of unrelated boards; claiming one as the Zigbee radio would be worse
+than asking. Brand-specific descriptors auto-claim, generic ones are reported for manual mapping.
+
+Other things worth not rediscovering:
+
+- **`ZIGBEE_ADAPTER` in `/etc/iot-hub/radios.env`** is derived from the USB descriptor
+  (`ember`/`zstack`/`deconz`/`zboss`). The wrong adapter is the most common Z2M misconfiguration. Where
+  the descriptor is inconclusive the field is left **empty on purpose** — empty prompts a question, wrong
+  fails confusingly.
+- **Docker resolves a device symlink at container start**, so a replug onto a different `ttyUSB*` leaves
+  a stale node and Z2M reports the adapter unresponsive. `iot-hub-zigbee-restart.service` is
+  udev-triggered to handle it; it only acts if the service was already running.
+- **Zigbee2MQTT's `configuration.yaml` is state, not config.** Z2M rewrites it to store the network key,
+  PAN ID and pairings. Never regenerate it from the template on a live hub — the network is lost and
+  every device must be re-paired. Back it up with `coordinator_backup.json`.
+- **One radio cannot do Zigbee and Thread.** Different firmware; two dongles. The old
+  `README_ZIGBEE.md`/`README_OTBR.md` both claimed `/dev/ttyACM0` for the same dongle, which cannot work.
+- **Broker and Z2M frontend bind loopback only.** An anonymous broker on `0.0.0.0` would let anyone on
+  the network control every Zigbee device in the home — unacceptable for an image strangers flash.
+- **Network coordinators** (SLZB-06U, Dongle Max over PoE) need no drivers at all —
+  `port: tcp://host:6638`. mDNS already resolves via `systemd-resolved`.
+
 ## Known-stale and known-broken spots
 
 Do not treat these as intentional; do not copy their patterns.
@@ -238,12 +350,20 @@ Do not treat these as intentional; do not copy their patterns.
 
 ## Conventions
 
-- **`IMPLEMENTATION_STATUS.md` must be updated with every plan execution.** It is the answer to "where
-  did we get to?" at the start of a new session, and it is only worth reading if it is true. Update it
-  *as* steps complete, not in a batch at the end — a session that is interrupted mid-way must still
-  leave an accurate record. Mark items done only once they are **verified on the device**, not once the
-  code is written. When something is blocked, name the blocker, the owner and the next concrete action.
-  Refresh the "Last updated" date in the same edit.
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) must be updated with every plan execution.** It
+  is the answer to "where did we get to?" at the start of a new session, and it is only worth reading if
+  it is true. Update it *as* steps complete, not in a batch at the end — a session that is interrupted
+  mid-way must still leave an accurate record. Mark items done only once they are **verified on the
+  device**, not once the code is written. When something is blocked, name the blocker, the owner and the
+  next concrete action. Refresh the "Last updated" date in the same edit.
+- **Every new document must be added to the Documentation map at the top of this file**, and structural
+  changes to [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md). A document nobody can find is worse
+  than no document, because it still has to be maintained. Both files went stale once already — the
+  structure map had omitted `chirp_bridge/` and `fw/` while listing credential files that were never in
+  the repo.
+- **Keep cross-links live.** When a doc is superseded, add a banner at its top pointing at the
+  replacement rather than deleting it — the Raspberry Pi OS documents still describe the published
+  image and people are using it.
 - **US English** everywhere: code, comments, docs, commit messages.
 - Branch off `main` with a plain descriptive name. This repo has no Jira history and no `CHIRP-xxxx`
   keys — do not invent them.

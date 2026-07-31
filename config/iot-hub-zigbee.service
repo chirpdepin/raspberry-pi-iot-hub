@@ -1,0 +1,30 @@
+[Unit]
+Description=IoT Hub Zigbee gateway (Zigbee2MQTT)
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+After=docker.service iot-hub-mqtt.service
+Requires=docker.service
+Wants=iot-hub-mqtt.service
+
+# Two conditions, both of which must hold for this to be worth starting:
+#   - a coordinator is actually present (the udev role symlink exists)
+#   - the hub has been provisioned (the app has written a configuration)
+# Without them the container would restart-loop on a freshly flashed image that
+# has no dongle plugged in and no configuration yet.
+ConditionPathExists=/dev/zigbee
+ConditionPathExists=/etc/iot-hub/zigbee/configuration.yaml
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/iot-hub/zigbee
+
+# Refresh the radio inventory on every start so a swapped dongle is picked up.
+# Non-fatal: a detection failure should not stop a working configuration.
+ExecStartPre=-/usr/local/bin/detect-radios.sh
+
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

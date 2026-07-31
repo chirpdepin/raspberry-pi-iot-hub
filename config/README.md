@@ -6,10 +6,37 @@ Templates installed to `/etc` by `scripts/install-ubuntu.sh`. Nothing here is li
 |---|---|---|
 | `station.conf.template` | `/etc/iot-hub/station.conf.template` | Rendered to `/etc/iot-hub/lorawan/station.conf` by `detect-concentrator.sh` |
 | `concentrator.conf` | `/etc/iot-hub/concentrator.conf` | GPIO pins for `concentrator-reset` |
-| `iot-hub-lorawan.service` | `/etc/systemd/system/` | Ubuntu unit, gated on `tc.uri` |
+| `radios.conf` | `/etc/iot-hub/radios.conf` | USB serial → role map for `/dev/zigbee` and `/dev/thread` |
+| `udev/99-iot-hub-radios.rules` | `/etc/udev/rules.d/` | Role symlinks, ModemManager exclusion, `dialout` access |
+| `mosquitto.conf` | `/etc/iot-hub/mqtt/mosquitto.conf` | Broker config; loopback listener + commented Chirp bridge |
+| `zigbee-configuration.yaml.template` | `/etc/iot-hub/zigbee-configuration.yaml.template` | Rendered to `/etc/iot-hub/zigbee/configuration.yaml` during onboarding |
+| `iot-hub-lorawan.service` | `/etc/systemd/system/` | Gated on `tc.uri` |
+| `iot-hub-mqtt.service` | `/etc/systemd/system/` | Mosquitto; ungated |
+| `iot-hub-zigbee.service` | `/etc/systemd/system/` | Gated on `/dev/zigbee` **and** `configuration.yaml` |
+| `iot-hub-thread.service` | `/etc/systemd/system/` | Gated on `/dev/thread` |
+| `iot-hub-{zigbee,thread}-restart.service` | `/etc/systemd/system/` | udev-triggered; not enabled |
 | `basicstation.service` | — | Legacy Raspberry Pi OS unit (`/home/iotmaster` paths) |
 | `webconfig.service` | — | Legacy Raspberry Pi OS unit (`/home/iotmaster` paths) |
 | `config.json` | — | Legacy EU868 station.conf. Reference only, not on any live path |
+
+## radios.conf and the udev rules
+
+Roles are keyed on **USB serial number**, never on `ttyUSB*` (enumeration-ordered) or on the bridge chip
+(`10c4:ea60` is a generic CP2102 shared by thousands of unrelated products). `detect-radios.sh` writes
+the entry itself for a single recognised coordinator; with two unmapped dongles it refuses to guess.
+
+After editing by hand:
+
+```bash
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=tty
+sudo detect-radios.sh
+```
+
+## zigbee-configuration.yaml.template
+
+The rendered file is **state, not configuration** — Zigbee2MQTT rewrites it to store the network key,
+PAN ID and paired devices. Re-rendering it on a live hub destroys the Zigbee network and forces every
+device to be re-paired. Back it up together with `coordinator_backup.json`.
 
 ## station.conf.template — three things not to break
 

@@ -1,0 +1,72 @@
+#!/bin/sh
+#
+# iot-hub-radio-role — decide which role a radio dongle plays.
+#
+# Called from /etc/udev/rules.d/99-iot-hub-radios.rules as:
+#     iot-hub-radio-role <serial> <vendor> <model>
+#
+# Prints exactly one of "zigbee", "thread", or nothing at all. udev matches the
+# output with RESULT== and creates /dev/zigbee or /dev/thread accordingly.
+#
+# Runs inside udev, so it must be fast, dependency-free and side-effect-free.
+# Persisting a mapping is detect-radios.sh's job, not this script's.
+
+set -eu
+
+CONF="${IOT_HUB_RADIOS_CONF:-/etc/iot-hub/radios.conf}"
+
+SERIAL="${1:-}"
+VENDOR="${2:-}"
+MODEL="${3:-}"
+
+[ -n "$SERIAL" ] || exit 0
+
+# ---------------------------------------------------------------------------
+# 1. Explicit mapping wins, always.
+#
+# Keyed on the USB serial number so a role follows the physical dongle across
+# ports, reboots and replugs. This is what makes a two-radio hub deterministic.
+# ---------------------------------------------------------------------------
+if [ -r "$CONF" ]; then
+    role=$(
+        sed -e 's/#.*//' -e 's/[[:space:]]//g' "$CONF" 2>/dev/null |
+        awk -F= -v s="$SERIAL" '$1 == s && $2 != "" { print $2; exit }'
+    )
+    case "$role" in
+        zigbee|thread) printf '%s' "$role"; exit 0 ;;
+        ignore)        exit 0 ;;
+    esac
+fi
+
+# ---------------------------------------------------------------------------
+# 2. Otherwise fall back to brand recognition, so a first-time adopter with one
+#    dongle gets /dev/zigbee without editing anything.
+#
+# Only brand-specific descriptors qualify. A bare "Silicon Labs CP2102N USB to
+# UART Bridge Controller" is deliberately NOT matched: that descriptor is
+# shipped on countless unrelated boards, and silently claiming one as the
+# Zigbee radio would be worse than asking. detect-radios.sh reports those as
+# unidentified so they can be mapped explicitly.
+# ---------------------------------------------------------------------------
+ident=$(printf '%s %s' "$VENDOR" "$MODEL" | tr '[:upper:]' '[:lower:]')
+
+case "$ident" in
+    *sonoff*|*itead*|*zbdongle*|\
+    *smlight*|*slzb*|\
+    *conbee*|*dresden*|\
+    *skyconnect*|*nabu*|*zbt-1*|\
+    *zigstar*|*zig-star*)
+        ;;
+    *)
+        exit 0 ;;
+esac
+
+# Claim the Zigbee role only if it is genuinely free, or already ours. Without
+# this a second recognised dongle would steal /dev/zigbee from the first.
+if [ -e /dev/zigbee ]; then
+    current=$(readlink -f /dev/zigbee 2>/dev/null || true)
+    mine=$(readlink -f "/dev/${DEVNAME##*/}" 2>/dev/null || true)
+    [ -n "$current" ] && [ "$current" != "$mine" ] && exit 0
+fi
+
+printf 'zigbee'

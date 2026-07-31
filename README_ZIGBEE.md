@@ -1,5 +1,24 @@
 # Zigbee2MQTT Setup for Raspberry Pi IoT Hub
 
+> **On the Ubuntu build none of the manual steps below are needed.** Zigbee2MQTT, Mosquitto and dongle
+> support are installed by `scripts/install-radios.sh` — see **[docs/zigbee-thread.md](docs/zigbee-thread.md)**.
+> The guide below describes the older Raspberry Pi OS image and carries three errors worth knowing about:
+>
+> - **Do not use `/dev/ttyACM0`.** It is assigned in enumeration order and will point at a different
+>   device after a reboot, a replug, or once a second dongle is present. Use the stable role symlink
+>   **`/dev/zigbee`**.
+> - **This document and [README_OTBR.md](README_OTBR.md) both claim the same nRF52840 dongle on the same
+>   port.** That cannot work: Zigbee needs EmberZNet/zStack/ZBOSS firmware, Thread needs OpenThread RCP
+>   firmware, and one radio runs one firmware at a time. Running both means **two dongles**.
+> - **`adapter: zboss` is specific to an nRF52840 running ZBOSS NCP.** For the common coordinators —
+>   SONOFF Dongle Plus MG24, ZBDongle-E/P, SLZB-06/07, SkyConnect — the correct value is `ember` or
+>   `zstack`. `detect-radios.sh` reports it as `ZIGBEE_ADAPTER`; the wrong value is the most common cause
+>   of "Failed to connect to the adapter".
+>
+> Also note the Mosquitto snippet below appends `allow_anonymous true` with a literal `\n`, which
+> Mosquitto rejects, and would expose control of every Zigbee device to the whole network. The Ubuntu
+> build binds the broker to loopback instead.
+
 This guide explains how to install and configure Zigbee2MQTT on your Raspberry Pi and connect it to the Chirp Service for smart home automation.
 
 ## What is Zigbee2MQTT?

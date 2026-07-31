@@ -26,10 +26,12 @@ SX1302_HAL_REPO="https://github.com/Lora-net/sx1302_hal.git"
 
 SKIP_UPGRADE=0
 SKIP_DOCKER=0
+SKIP_RADIOS=0
 for arg in "$@"; do
     case "$arg" in
         --skip-upgrade) SKIP_UPGRADE=1 ;;
         --skip-docker)  SKIP_DOCKER=1 ;;
+        --skip-radios)  SKIP_RADIOS=1 ;;
         *) echo "unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -170,7 +172,7 @@ step "Basic Station"
 # The config directory must be writable by the container: the image generates
 # its reset script and station.conf in here on every start.
 install -d "$LORAWAN_OPT" "$LORAWAN_ETC"
-install -m 0644 "$REPO_DIR/docker/docker-compose.yml" "$LORAWAN_OPT/docker-compose.yml"
+install -m 0644 "$REPO_DIR/docker/lorawan/docker-compose.yml" "$LORAWAN_OPT/docker-compose.yml"
 
 # station.conf was rendered from config/station.conf.template during detection,
 # with the routerid filled in from the concentrator EUI. Its presence selects the
@@ -181,6 +183,12 @@ install -m 0644 "$REPO_DIR/config/iot-hub-lorawan.service" \
     /etc/systemd/system/iot-hub-lorawan.service
 systemctl daemon-reload
 systemctl enable iot-hub-lorawan.service
+
+# ---------------------------------------------------------------------------
+if [ "$SKIP_RADIOS" -eq 0 ]; then
+    step "Zigbee/Thread radios"
+    "$REPO_DIR/scripts/install-radios.sh"
+fi
 
 # ---------------------------------------------------------------------------
 step "Done"

@@ -1,5 +1,20 @@
 # OpenThread Border Router (OTBR) Setup for Raspberry Pi IoT Hub
 
+> **On the Ubuntu build OTBR is installed as a pinned Docker service** by `scripts/install-radios.sh` —
+> no source build, no `INFRA_IF_NAME` guessing. See **[docs/zigbee-thread.md](docs/zigbee-thread.md)**.
+> The source-build guide below is for the older Raspberry Pi OS image; four things in it are wrong or
+> unsafe on a hub that also runs Zigbee:
+>
+> - **Thread needs its own dongle.** This document and [README_ZIGBEE.md](README_ZIGBEE.md) both claim
+>   the same nRF52840 on `/dev/ttyACM0`, which cannot work — Thread needs OpenThread RCP firmware and
+>   Zigbee needs EmberZNet/zStack/ZBOSS, and one radio runs one firmware.
+> - **Do not use `/dev/ttyACM0`.** Use the stable role symlink **`/dev/thread`**, pinned per USB serial
+>   in `/etc/iot-hub/radios.conf`, so the two radios can never swap.
+> - **`INFRA_IF_NAME=wlan0` is hardcoded below.** The installer resolves the actual default-route
+>   interface instead; an image other people flash cannot assume Wi-Fi.
+> - **The web GUI binds port 80**, which collides with the hub's own configuration interface. The Docker
+>   service runs with `WEB_GUI=0` and exposes the REST API on `:8081` for the onboarding app.
+
 This guide explains how to install and configure OpenThread Border Router on your Raspberry Pi to connect Thread devices to your network.
 
 ## What is OpenThread Border Router?

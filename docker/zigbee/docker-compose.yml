@@ -1,0 +1,31 @@
+# Zigbee2MQTT for the IoT Hub.
+# Installed to /opt/iot-hub/zigbee/docker-compose.yml by scripts/install-radios.sh.
+#
+# The coordinator is passed in as /dev/zigbee, the stable udev role symlink —
+# never as /dev/ttyUSB0, which changes with enumeration order and would silently
+# point at a different device (or at the LoRaWAN card) after a replug.
+#
+# Docker resolves that symlink to its target device node when the container
+# starts, so a replug that lands on a different ttyUSB* leaves this container
+# holding a stale node. The udev rule triggers iot-hub-zigbee-restart.service to
+# handle that rather than pretending it hot-plugs.
+
+services:
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:2.12.1
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    network_mode: host
+
+    devices:
+      - /dev/zigbee:/dev/zigbee
+
+    volumes:
+      - /etc/iot-hub/zigbee:/app/data
+      # Zigbee2MQTT timestamps its logs and device last-seen values; without the
+      # host timezone the frontend shows UTC regardless of the user's locale.
+      - /run/systemd/journal:/run/systemd/journal:ro
+      - /etc/localtime:/etc/localtime:ro
+
+    environment:
+      - TZ

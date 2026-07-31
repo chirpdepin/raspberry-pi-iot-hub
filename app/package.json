@@ -1,0 +1,16 @@
+{
+  "name": "chirp-hub",
+  "version": "0.1.0",
+  "description": "Desktop app that sets up cameras, LoRaWAN and Zigbee/Thread on a Chirp IoT Hub without a terminal",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "check:boundaries": "tsx scripts/check-boundaries.ts",
+    "check:boundaries:self-test": "tsx scripts/check-boundaries.ts --self-test"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^7.0.2"
+  }
+}

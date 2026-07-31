@@ -1,0 +1,40 @@
+name: Chirp Hub boundaries
+
+# The four contracts in app/electron.md are only real if CI enforces them.
+# This runs on every change to the app so a violation is caught in review, not
+# months later when someone tries to swap a theme colour or move to Ubuntu Core.
+
+on:
+  push:
+    paths:
+      - 'app/**'
+      - '.github/workflows/app-boundaries.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - '.github/workflows/app-boundaries.yml'
+  workflow_dispatch:
+
+jobs:
+  boundaries:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      # Run the self-test first. If the checker itself is broken, a green
+      # "boundaries clean" below would be meaningless.
+      - name: Verify the checker works
+        run: npm run check:boundaries:self-test
+
+      - name: Check boundaries
+        run: npm run check:boundaries

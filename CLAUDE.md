@@ -29,6 +29,7 @@ files inside `raspberry-pi-iot-hub/`.
 | [docs/ubuntu-2604.md](docs/ubuntu-2604.md) | The Ubuntu Server build: GPIO chardev reset, the temperature-sensor patch, region-from-LNS, provisioning, GNSS opt-in |
 | [docs/zigbee-thread.md](docs/zigbee-thread.md) | Zigbee/Thread dongles: supported hardware table, stable device names, network coordinators, MQTT topology, troubleshooting |
 | [config/README.md](config/README.md) | What each config template is and the constraints that cannot live inside the files themselves (JSON has no comments) |
+| [app/electron.md](app/electron.md) | **Chirp Hub desktop app** — architecture, the three contracts (SOLID, non-technical user, Ubuntu Core portability), every screen and flow with real API fields, Twin distribution, ui-kit gotchas |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | The non-negotiable rules (region-agnostic, ship unprovisioned, stable device names, pinned images), testing bar, style |
 | [LICENSE](LICENSE) | MIT, Copyright (c) 2025-2026 Chirp |
 | [docs/hardware-setup.md](docs/hardware-setup.md) | Physical assembly |
@@ -349,6 +350,106 @@ Do not treat these as intentional; do not copy their patterns.
   not carry them into a new one.
 
 ---
+
+## The Chirp Hub app (`app/`) — three contracts, enforced
+
+Full design record: **[app/electron.md](app/electron.md)**. The summary that matters here:
+
+**Nothing in the app is written in Go, and TinyGo is ruled out.** Node covers it (`dockerode`,
+`serialport`, plus the existing `detect-*.sh` scripts). TinyGo targets microcontrollers and WASM with a
+cut-down stdlib; a Pi 4 is a full Go target anyway, so the question never arises. A Go sidecar would be a
+second toolchain for no gain.
+
+### Contract 1 — SOLID
+
+| | Rule | Enforcement |
+|---|---|---|
+| **S** | One use case = one operation = one directory | `camera-add` creates a Twin; it does not discover, remove or update. A use case needing a second verb in its name is two use cases |
+| **O** | Extend by **registry entry**, never by editing a `switch` | New Zigbee dongle = a table row; new camera vendor = a `SourceProfile` entry. Adding hardware must touch no existing file |
+| **L** | One contract per port | `DockerRuntime` and a future `PodmanRuntime` substitutable with no use case aware |
+| **I** | Narrow ports | `CameraDiscoveryPort`, `ContainerRuntimePort`, `ImageStorePort`, `PrivilegedRunnerPort`, `ChirpDevicePort`, `PathsPort`. **Never** one `SystemPort` god interface |
+| **D** | Ports declared by the **consuming use case**, implemented in `adapters/`, wired only in `index.ts` | The same consumer-side-interface rule the monorepo's Go services follow |
+
+**The test that keeps it honest:** every use case must be unit-testable with fake ports — no Docker, no
+camera, no network, no Electron. If one cannot be, the layering is wrong; fix the layering, don't mock
+harder.
+
+`app/scripts/check-boundaries.ts` runs in CI and **fails** on: a `domain/` file importing outside
+`domain/` · a `usecase/` file importing `adapters/`, `electron` or a Node built-in · a renderer file
+importing `main/` or `dockerode` · a use case directory with no `usecase.test.ts`.
+
+> **State these gates inside every phase of work, not once at the top.** A principle stated once in a
+> long plan stops influencing the work several phases later — that is a known failure mode here, and the
+> reason the plan repeats all three contracts in all 11 phases.
+
+### Contract 2 — the non-technical user
+
+They have never opened a terminal and do not know what a container, MQTT, EUI, RTSP or a coordinator is.
+
+1. **No jargon in the primary path** — "Connecting to your camera…", never "Starting container
+   lens-twin-3". "Cameras", not "Twins". The word "container" appears nowhere in the UI.
+2. **Never show a raw error** — every failure maps to a cause and a next action; raw text lives behind
+   `[Technical details]`.
+3. **Sensible defaults; nothing asked that can be detected** — EUI, Zigbee adapter type, RTSP path,
+   region and LNS URL are all detected or derived.
+4. **Every screen states the next action** — one primary button. An empty state that doesn't say what to
+   do next is a bug.
+5. **Show proof it worked** — a frame from their camera, their bulb blinking, an uplink counter ticking.
+6. **Never leave them stuck** — always a retry, a fallback, or `[Export diagnostics]`.
+
+### Contract 3 — portability (Ubuntu Core readiness)
+
+**Ubuntu Core is snap-based, not Docker-based** — read-only root, no `apt`, transactional updates,
+strict confinement, hardware via gadget-snap slots (`gpio-chardev`, `spi`, `i2c`, `serial-port`). Docker
+runs there as a *confined snap*, but it is not the foundation. A move is a goal, not a commitment; these
+four rules keep it cheap and three fall out of Contract 1 anyway:
+
+1. **No hardcoded system paths** — `/etc/iot-hub`, `/usr/local/bin`, `/var/lib/iot-hub` all come from
+   `PathsPort`. On Core they become `$SNAP_DATA` / `$SNAP_COMMON`.
+2. **All privileged operations behind `PrivilegedRunnerPort`** — pkexec/UAC today, interface connections
+   on Core. No use case shells out directly, ever.
+3. **All container operations behind `ContainerRuntimePort`.**
+4. **The UI must work fullscreen with no window chrome** — Core has no desktop, only Ubuntu Frame
+   (Wayland kiosk). In-app back/title, touch targets, 1024×600 minimum.
+
+Survives a Core move untouched: `domain/`, every use case, every port, the renderer, the ui-kit
+integration. Replaced: `install-*.sh` → `snapcraft.yaml`, udev rules → gadget slots, systemd units → snap
+daemons, `dtparam=spi=on` → a custom gadget snap, labwc → Ubuntu Frame.
+
+### Contract 4 — single source of truth, nothing hardcoded
+
+Every value appearing in more than one place, or that anyone might want to change later, has **exactly
+one definition**. This is what makes a rebrand, a cloud re-point or a new language a one-file change.
+
+| Value | One source of truth | Never |
+|---|---|---|
+| Colors, spacing, radii, typography | ui-kit `getTheme({ variant: 'chirp' })` + `chirpPalette` | A hex code or raw `px` in a component |
+| Breakpoints | the theme's `xs sm md xm lg xl xxl` | A hardcoded `@media` query |
+| User-facing text | `renderer/locales/<lang>/*.json` | A string literal in JSX |
+| Ports, timeouts, retries | `main/config/defaults.ts` | An inline `5000` |
+| Image tags and digests | `main/config/images.ts` | A tag in both a compose file and a use case |
+| Filesystem paths | `PathsPort` | `/etc/iot-hub/...` outside the adapter |
+| IPC channel names | one typed channel map | Magic strings at both ends that drift |
+| API shapes | one zod schema; types via `z.infer` | A hand-written `interface` saying the same thing twice |
+| Supported hardware | one registry data file each | A `switch` (also Contract 1's **O**) |
+| Endpoints, LNS URL pattern | `main/config/endpoints.ts` | A URL built inline in three use cases |
+
+**The theme especially:** the app must match Chirp branding and follow it when it changes. A hex code
+committed into a component is a color that will be wrong after the next rebrand and will not be found by
+searching for the new one.
+
+`check-boundaries.ts` also fails on: hex/`rgb()` literals in `renderer/` outside the theme setup · raw
+`px` in `sx`/`styled` outside `theme.spacing()` · bare JSX text nodes · `/etc/`, `/usr/local/`,
+`/var/lib/` outside `adapters/paths/` · an image tag outside `config/images.ts`.
+
+### ui-kit — two version pins and three gotchas
+
+`react-router-dom` **6.30.4** (not 7.x) and `date-fns` **2.x** (not 4.x) are **deliberate exceptions to
+"use the latest version"**, forced by ui-kit peer ranges. Newer breaks the kit; do not "fix" them.
+
+Never import the kit's **root entry** (it pulls `map-utils.ts`, which reads `import.meta.env`) — use
+`/shell`, `/primitives`, `/theme`, `/icons`, `/locales`. `dist/style.css` references fonts that are not in
+`dist/`, so copy the woff2 files locally. `chirpPalette` is not exported; re-declare the cast.
 
 ## Conventions
 

@@ -222,6 +222,58 @@ to pristine unprovisioned state: `sudo systemctl stop iot-hub-zigbee && sudo rm 
 - **Zigbee2MQTT / OTBR / Matter / Lens twin** — already documented in the `README_*.md` files; untouched
   by this work.
 
+---
+
+# Chirp Hub desktop app (`app/`)
+
+Design record: **[app/electron.md](app/electron.md)**. Built in 11 phases, each ending in a commit, each
+carrying its own **SOLID · UX · Portability · Single-source-of-truth** gate — a constraint stated once at
+the top of a long plan stops influencing the work several phases later.
+
+**Goal:** a non-technical person sets up cameras, LoRaWAN and Zigbee from a Raspberry Pi with a screen,
+using no terminal. Finish line is Phase 11: all three live and reaching Chirp at once.
+
+| | Phase | State |
+|---|---|---|
+| ✅ | 1 · Docs and enforcement | `app/electron.md`, `CLAUDE.md` contracts, `check-boundaries.ts` + CI |
+| ⬜ | 2 · Scaffold, ui-kit, shell | |
+| ⬜ | 3 · Domain, ports, capabilities, Docker | |
+| ⬜ | 4 · Dashboard and empty states | |
+| ⬜ | 5 · LoRaWAN gateway | |
+| ⬜ | 6 · Zigbee | |
+| ⬜ | 7 · Twin build pipeline | 🚧 needs Lens-team repo permissions |
+| ⬜ | 8 · Cameras | |
+| ⬜ | 9 · Pi desktop image | |
+| ⬜ | 10 · Capacity benchmark and packaging | |
+| ⬜ | 11 · End-to-end wiring, live three-way test | |
+
+### Phase 1 — done 2026-08-01
+
+- **`app/electron.md`** — architecture, all four contracts, the complete screen-by-screen spec with real
+  API fields (`POST /nodes/nonminer/{band}/{gatewayId}`, `GET /nodes/signed-cert/{gateway_id}`,
+  `connection_create`, `device_provision_mqtt`), Twin distribution, ui-kit gotchas, blockers.
+- **`CLAUDE.md`** — four contract sections + `app/electron.md` in the documentation map.
+- **`app/scripts/check-boundaries.ts`** — 7 enforced rules across all four contracts.
+- **`.github/workflows/app-boundaries.yml`** — runs the self-test *first*, so a green "boundaries clean"
+  cannot be produced by a broken checker.
+
+**SOLID gate — passed, and demonstrated rather than assumed.** `--self-test` plants a violation of every
+rule and asserts each is caught, then asserts a clean tree passes. All 7 fire correctly:
+`domain-is-pure`, `usecase-depends-on-ports`, `usecase-has-test`, `renderer-has-no-node`,
+`no-hardcoded-color`, `no-hardcoded-path`, `no-inline-image-tag`.
+
+**UX gate — passed.** The six user-contract rules are recorded with a worked example each, so later
+phases check against something concrete instead of a slogan.
+
+**Portability gate — passed.** The four portability rules and the full Ubuntu-Core impact table are
+recorded — including the correction that **Core is snap-based, not Docker-based**, and that what survives
+a move is `domain/`, the use cases, the ports and the renderer, while `install-*.sh`, udev rules, systemd
+units and `dtparam=spi=on` are replaced.
+
+**Single-source-of-truth gate — passed.** Contract 4 added at your request, with a value→owner table
+(theme, `locales/`, `config/defaults.ts`, `config/images.ts`, `PathsPort`, zod schemas, registries) and
+three of its rules already machine-checked.
+
 ## Licensing — resolved 2026-08-01
 
 **MIT**, `Copyright (c) 2025-2026 Chirp` — holder and start year taken from the existing notice in

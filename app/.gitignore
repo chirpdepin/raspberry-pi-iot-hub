@@ -1,4 +1,6 @@
-node_modules/
-dist/
-out/
+app/node_modules/
+app/out/
 .boundary-selftest/
+dist/
+node_modules/
+out/

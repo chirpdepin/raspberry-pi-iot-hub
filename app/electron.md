@@ -191,14 +191,30 @@ troubleshooting story depends on knowing which of the two failed.
 | @mui/material | 9.2.0 | ui-kit peer |
 | @chirpwireless/ui-kit | 1.0.0 | git dependency **pinned to a commit SHA**; `dist/` is committed, so no registry auth |
 | TanStack Query / zod / dockerode | 5.101.4 / 4.4.3 / 5.0.1 | zod validates every IPC and HTTP boundary |
-| Vite / Vitest / TypeScript | 8.2.0 / 4.1.10 / 7.0.2 | TS 7 is the new native compiler; fall back to 5.x if MUI v9 types misbehave |
+| Vite / Vitest / TypeScript | 8.2.0 / 4.1.10 / **7.0.2** | TS 7 verified against the real stack before pinning — see below |
 
 **Two deliberate exceptions to "use the latest version", both forced by ui-kit peer ranges:**
 
 - `react-router-dom` **6.30.4**, not 7.18.2 — ui-kit's peer is `^6.26.1`
 - `date-fns` **2.x**, not 4.x — ui-kit's peer is `^2.30.0`
 
-Using the newest would break the kit. Do not "fix" these.
+Using the newest would break the kit. Do not "fix" these. **Everything else is on the current latest.**
+
+### TypeScript 7 — tested, not assumed
+
+The earlier draft of this document said "fall back to 5.x if MUI v9 types misbehave". That fallback was
+**not needed and must not be applied without new evidence.** Verified 2026-08-01 against the real stack —
+TS 7.0.2 (the stable `latest` tag, not a preview) with MUI 9.2.0, React 19.2.8, `@types/react` 19.2.18
+and the ui-kit installed from its committed `dist/`:
+
+- MUI v9 `createTheme`, `ThemeProvider`, `sx` callbacks reading theme tokens — clean
+- React 19 hooks and generic components under `strict` + `noUncheckedIndexedAccess` — clean
+- ui-kit subpath imports (`/primitives`, `/shell`, `/theme`) — clean
+- the **37 ui-kit `dist/*.d.ts` files that import via `../../node_modules/@mui/material/...`** — covered
+  by `skipLibCheck: true`, which is why that flag is set in both tsconfigs and should stay
+
+Total: **zero type errors**. The only error the probe produced was genuine API misuse on my side —
+ui-kit's `Button` requires `size` and `variant` — which is the type system working, not failing.
 
 ### ui-kit gotchas — all three cost real time if rediscovered
 

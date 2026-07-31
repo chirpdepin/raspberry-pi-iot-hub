@@ -236,7 +236,7 @@ using no terminal. Finish line is Phase 11: all three live and reaching Chirp at
 | | Phase | State |
 |---|---|---|
 | ✅ | 1 · Docs and enforcement | `app/electron.md`, `CLAUDE.md` contracts, `check-boundaries.ts` + CI |
-| ⬜ | 2 · Scaffold, ui-kit, shell | |
+| ✅ | 2 · Scaffold, ui-kit, shell | Electron 43 + React 19 + MUI 9 + ui-kit; 22/22 smoke checks |
 | ⬜ | 3 · Domain, ports, capabilities, Docker | |
 | ⬜ | 4 · Dashboard and empty states | |
 | ⬜ | 5 · LoRaWAN gateway | |
@@ -273,6 +273,49 @@ units and `dtparam=spi=on` are replaced.
 **Single-source-of-truth gate — passed.** Contract 4 added at your request, with a value→owner table
 (theme, `locales/`, `config/defaults.ts`, `config/images.ts`, `PathsPort`, zod schemas, registries) and
 three of its rules already machine-checked.
+
+### Phase 2 — done 2026-08-01
+
+Electron 43.2.0 / React 19.2.8 / MUI 9.2.0 / ui-kit 1.0.0 (pinned to commit `542ddde`, the tree
+chirp-frontend consumes). Three-process split with `contextIsolation`, `nodeIntegration: false` and
+`sandbox: true`. Six-item navigation, theme toggle, i18n, HashRouter.
+
+**SOLID gate — passed.** The renderer holds no business logic; `preload` exposes a typed API rather than
+raw `ipcRenderer`; no component imports from `main/`. Boundary checker green.
+
+**UX gate — passed.** Labels are plain English ("Cameras", not "Twins"), and the smoke test asserts that
+`container`, `Twin`, `Z2M`, `dockerode` and `ttyUSB` appear nowhere in the rendered UI.
+
+**Portability gate — passed.** Verified at **both** 1024×600 and 1440×900, with no horizontal overflow at
+either.
+
+**Single-source-of-truth gate — passed.** Colours and spacing from the ui-kit theme, strings from
+`locales/`, nav from a registry, IPC channel names from `shared/ipc.ts`, window sizes from
+`config/defaults.ts`.
+
+#### Five real defects found by building and running it, not by reading it
+
+1. **TypeScript 7 was downgraded without evidence and then restored.** The plan allowed a fallback to
+   5.x "if MUI v9 types misbehave"; I applied it pre-emptively. Tested properly: TS 7.0.2 typechecks MUI
+   9, React 19, generics and the ui-kit subpaths with **zero errors**. TS 7 does remove `baseUrl`, so
+   path mappings must be relative — that is the only change it required.
+2. **`electron` was being bundled into the main process.** `externalizeDepsPlugin()` only externalizes
+   `dependencies`, and electron is a devDependency, so the bundler inlined its npm helper and the app
+   died with a misleading "Electron failed to install correctly". Fixed with an explicit `external`.
+3. **The preload was built as ESM.** A sandboxed renderer can only load a **CommonJS** preload; an ESM one
+   is ignored silently, so `window.chirpHub` never appeared. Now emitted as `.cjs`.
+4. **The shell covered the whole screen on a Pi touchscreen.** The ui-kit treats **anything below 1248px
+   as mobile** — its Sidebar becomes a full-screen overlay there. A hand-rolled flex row also failed to
+   offset the fixed-position Drawer. Now uses the kit's `BaseLayout` with responsive open/closed state.
+   **Every DOM assertion passed while this was broken; only the screenshot caught it** — which is why the
+   smoke test now checks both viewports and captures PNGs.
+5. **npm 11 blocks install scripts by default**, so Electron's binary was never downloaded. Approved
+   explicitly, recorded in `allowScripts` in `package.json`.
+
+Also: the ui-kit's peer set is internally inconsistent — it peers `@nivo/line@0.88`, which caps React
+below 19, while itself requiring React 19. npm 7+ auto-installs peers and fails; `legacy-peer-deps=true`
+in `app/.npmrc` restores the correct semantics for a library with a large optional peer surface. This is
+why chirp-frontend gets away with the same set under Yarn 1.
 
 ## Licensing — resolved 2026-08-01
 

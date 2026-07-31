@@ -77,8 +77,8 @@ function importsIn(lines: string[]): { spec: string; line: number }[] {
     lines.forEach((text, i) => {
         if (isComment(text)) return;
         for (const re of patterns) {
-            const m = text.match(re);
-            if (m) found.push({ spec: m[1], line: i + 1 });
+            const spec = text.match(re)?.[1];
+            if (spec) found.push({ spec, line: i + 1 });
         }
     });
     return found;
@@ -100,7 +100,7 @@ const NODE_BUILTINS = new Set([
 ]);
 
 const isNodeBuiltin = (spec: string) =>
-    spec.startsWith('node:') || NODE_BUILTINS.has(spec.split('/')[0]);
+    spec.startsWith('node:') || NODE_BUILTINS.has(spec.split('/')[0] ?? spec);
 
 // ---------------------------------------------------------------------------
 // Contract 1 — SOLID layering
@@ -188,7 +188,9 @@ const rules: Rule[] = [
     {
         id: 'no-hardcoded-color',
         why: 'Colors live in the ui-kit theme so a rebrand is one change. A hex committed into a component is a color that will be wrong after the next rebrand and will not be found by searching for the new one.',
-        applies: (p) => p.startsWith('renderer/') && !p.includes('renderer/theme/'),
+        // The theme setup file is where colour literals are legitimate — it is the
+        // one place that adapts ui-kit tokens. Everything else must read the theme.
+        applies: (p) => p.startsWith('renderer/') && !p.includes('/theme/'),
         check: (p, lines) => {
             const out: Violation[] = [];
             lines.forEach((text, i) => {

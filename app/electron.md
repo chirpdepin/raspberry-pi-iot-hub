@@ -177,8 +177,29 @@ Component (View) → useFeatureLogic (Business) → useEntityQuery/Mutation (Cac
 | **One component per file** | Extract sub-components; lift reusable helpers to module scope or `helpers/` |
 | **`useEffect` last** | Hooks → derived values → handlers → `useEffect` → `return`. Prefer doing the work in the handler over reacting to state |
 | **Prettier is the source of truth** | Single quotes including JSX attributes, semicolons, 2-space indent, `es5` trailing commas, `printWidth` 120, always-parenthesised arrow params. Config copied verbatim from chirp-frontend |
+| **Linter: oxlint, not ESLint** | See below — ESLint cannot run here at all |
 | **Import order** | builtin/external → internal aliases → relative, blank line between groups, alphabetised within |
 | **Comments** | English, only where there is business logic, and they explain **why** |
+
+### The linter: oxlint, because ESLint cannot run on TypeScript 7
+
+`typescript-eslint` peers `>=4.8.4 <6.1.0`. TypeScript **7.0.2 is the current stable release** (and
+typechecks this whole stack cleanly), while TypeScript 6 is still beta — so typescript-eslint supports
+neither, and without its parser ESLint cannot read a `.ts` file at all.
+
+**oxlint** solves it: Rust-based with its own parser, it never invokes `tsc`, so the TypeScript version
+is irrelevant to it. It reads ESLint-v8-style config, so the rules transfer almost verbatim, and it runs
+in milliseconds. It enforces the rules that matter here — `typescript/no-explicit-any`,
+`import/no-default-export`, `no-restricted-imports` (the ui-kit and MUI-primitive boundaries),
+`react-hooks/rules-of-hooks` and `react-hooks/exhaustive-deps`.
+
+Four rules are switched off deliberately, each for a concrete reason: `react/react-in-jsx-scope` (React
+19 uses the automatic JSX runtime), the three `react-perf/jsx-no-new-*` rules (`sx={(theme) => …}` is the
+idiomatic MUI pattern, not a performance bug), `import/no-unassigned-import` (`fonts.css` is a deliberate
+side-effect import) and `unicorn/require-module-specifiers` (`export {}` is required to make a `.d.ts` a
+module for `declare global`).
+
+`eslint.config.js.pending` is kept so ESLint is one `npm install` away once typescript-eslint catches up.
 
 **Deviations from chirp-frontend, and why:**
 

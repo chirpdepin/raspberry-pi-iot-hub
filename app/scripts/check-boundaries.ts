@@ -120,6 +120,13 @@ const isNodeBuiltin = (spec: string) => spec.startsWith('node:') || NODE_BUILTIN
 // Contract 1 — SOLID layering
 // ---------------------------------------------------------------------------
 
+/** Import group: 0 external, 1 internal alias, 2 relative. */
+const importGroupOf = (spec: string): number => {
+  if (spec.startsWith('.')) return 2;
+  if (spec.startsWith('@renderer/') || spec.startsWith('@main/') || spec.startsWith('@shared/')) return 1;
+  return 0;
+};
+
 const rules: Rule[] = [
   {
     id: 'domain-is-pure',
@@ -301,7 +308,7 @@ const rules: Rule[] = [
     why: 'These MUI primitives have ui-kit wrappers carrying Chirp branding. Importing MUI directly yields a component that silently ignores the theme and drifts from the rest of the product.',
     applies: (p) => p.startsWith('renderer/') && !p.endsWith('/style.ts') && !p.endsWith('/style.tsx'),
     check: (p, lines) => {
-      const wrapped = [
+      const wrapped = new Set([
         'Button',
         'IconButton',
         'TextField',
@@ -314,7 +321,7 @@ const rules: Rule[] = [
         'Modal',
         'Table',
         'Autocomplete',
-      ];
+      ]);
       const out: Violation[] = [];
       lines.forEach((text, i) => {
         if (isComment(text)) return;
@@ -322,7 +329,7 @@ const rules: Rule[] = [
         if (!m || !m[1]) return;
         const named = m[1].split(',').map((s) => s.trim().split(/\s+as\s+/)[0]?.trim() ?? '');
         for (const name of named) {
-          if (wrapped.includes(name)) {
+          if (wrapped.has(name)) {
             out.push({
               rule: 'no-mui-primitive',
               file: p,
@@ -370,18 +377,12 @@ const rules: Rule[] = [
     why: "Imports are grouped external -> internal alias -> relative, with a blank line between groups. This is chirp-frontend's import/order rule, enforced here because typescript-eslint does not yet support TypeScript 7 and so cannot parse these files at all.",
     applies: (p) => p.startsWith('renderer/') || p.startsWith('main/') || p.startsWith('preload/'),
     check: (p, lines) => {
-      const groupOf = (spec: string): number => {
-        if (spec.startsWith('.')) return 2;
-        if (spec.startsWith('@renderer/') || spec.startsWith('@main/') || spec.startsWith('@shared/')) return 1;
-        return 0;
-      };
-
       const out: Violation[] = [];
       let previousGroup = -1;
       let previousLine = -1;
 
       for (const { spec, line } of importsIn(lines)) {
-        const group = groupOf(spec);
+        const group = importGroupOf(spec);
 
         if (previousGroup !== -1 && group < previousGroup) {
           out.push({
@@ -524,8 +525,9 @@ function run(srcRoot: string): Violation[] {
 function report(violations: Violation[]): void {
   const byRule = new Map<string, Violation[]>();
   for (const v of violations) {
-    if (!byRule.has(v.rule)) byRule.set(v.rule, []);
-    byRule.get(v.rule)!.push(v);
+    const existing = byRule.get(v.rule);
+    if (existing) existing.push(v);
+    else byRule.set(v.rule, [v]);
   }
   for (const [ruleId, vs] of byRule) {
     const rule = rules.find((r) => r.id === ruleId);

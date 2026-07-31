@@ -33,8 +33,14 @@ jobs:
 
       # Run the self-test first. If the checker itself is broken, a green
       # "boundaries clean" below would be meaningless.
+      - name: Lint
+        run: npm run lint
+
       - name: Verify the checker works
         run: npm run check:boundaries:self-test
 
       - name: Check boundaries
         run: npm run check:boundaries
+
+      - name: Typecheck
+        run: npm run typecheck

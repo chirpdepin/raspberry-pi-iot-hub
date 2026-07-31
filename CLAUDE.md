@@ -461,6 +461,10 @@ in [app/electron.md](app/electron.md).
 - **`useEffect` last** in a component, and prefer the event handler over reacting to state.
 - **Prettier is the source of truth** — config copied verbatim from chirp-frontend (single quotes incl.
   JSX, 2-space, `printWidth` 120).
+- **Lint with `oxlint`, not ESLint.** `typescript-eslint` peers `>=4.8.4 <6.1.0`, so it supports neither
+  TypeScript 7 (current stable, used here) nor TypeScript 6 (still beta) — without its parser ESLint
+  cannot read a `.ts` file at all. oxlint is Rust-based with its own parser, never invokes `tsc`, reads
+  ESLint-v8-style config, and runs in milliseconds. `eslint.config.js.pending` waits for the ecosystem.
 
 **Three deviations, each deliberate:** npm with `legacy-peer-deps` rather than Yarn 1 (Electron tooling
 is npm-first, and the ui-kit's peers are self-contradictory either way) · **MUI v9, not v7** — v9 removed

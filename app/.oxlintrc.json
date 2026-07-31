@@ -1,0 +1,108 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "react",
+    "import",
+    "unicorn",
+    "oxc"
+  ],
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "out/**",
+    "dist/**",
+    "node_modules/**",
+    ".boundary-selftest/**"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "no-console": "off",
+    "import/no-default-export": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react/react-in-jsx-scope": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react-perf/jsx-no-jsx-as-prop": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-named-as-default-member": "off",
+    "unicorn/require-module-specifiers": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/renderer/**/*.ts",
+        "src/renderer/**/*.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@chirpwireless/ui-kit",
+                "message": "Import from a subpath (/primitives, /shell, /layouts, /theme, /icons, /locales). The root entry pulls map-utils.ts, which reads import.meta.env and drags mapbox and turf into the bundle."
+              },
+              {
+                "name": "@mui/material",
+                "importNames": [
+                  "Button",
+                  "IconButton",
+                  "TextField",
+                  "Checkbox",
+                  "Switch",
+                  "Tabs",
+                  "Tab",
+                  "Tooltip",
+                  "Dialog",
+                  "Modal",
+                  "Table",
+                  "Autocomplete"
+                ],
+                "message": "Use the wrapper from @chirpwireless/ui-kit/primitives \u2014 importing MUI's directly yields a component that silently ignores the Chirp theme."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "**/style.ts",
+        "**/style.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/**/*.ts",
+        "tests/**/*.mjs",
+        "electron.vite.config.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "import/no-default-export": "off"
+      }
+    },
+    {
+      "files": [
+        "tests/**/*.mjs"
+      ],
+      "rules": {
+        "no-await-in-loop": "off"
+      }
+    }
+  ]
+}

@@ -14,9 +14,9 @@
     "test": "vitest run",
     "check:boundaries": "tsx scripts/check-boundaries.ts",
     "check:boundaries:self-test": "tsx scripts/check-boundaries.ts --self-test",
-    "check": "npm run check:boundaries:self-test && npm run check:boundaries && npm run typecheck && npm run build && npm run test:smoke",
+    "check": "npm run lint && npm run check:boundaries:self-test && npm run check:boundaries && npm run typecheck && npm run build && npm run test:smoke",
     "test:smoke": "electron tests/smoke.mjs",
-    "lint": "echo \"ESLint is pending typescript-eslint support for TypeScript 7 \u2014 see eslint.config.js.pending. The substantive rules are enforced by check:boundaries.\"",
+    "lint": "oxlint",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\" \"scripts/**/*.ts\" \"tests/**/*.mjs\" \"*.ts\""
   },
   "dependencies": {
@@ -56,6 +56,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "oxlint": "^1.76.0",
     "prettier": "^3.9.6",
     "tsx": "^4.20.6",
     "typescript": "7.0.2",
@@ -65,7 +66,8 @@
   "comments": {
     "react-router-dom": "PINNED to 6.30.4, NOT 7.x. The ui-kit peer range is ^6.26.1 and RouterLink/Link/GeneralInfoCard import from it directly. A deliberate exception to 'use the latest version' \u2014 see app/electron.md.",
     "typescript": "7.0.2, the current stable release. The fallback to 5.x described in electron.md was NOT needed: TS 7 typechecks MUI v9, React 19, generics, sx callbacks and the ui-kit subpath imports with zero errors \u2014 including the 37 ui-kit dist .d.ts files that reference node_modules paths, which skipLibCheck covers. Verified 2026-08-01 before pinning.",
-    "@chirpwireless/ui-kit": "Pinned to a commit SHA rather than a branch so builds are reproducible. 542ddde is v1.0.0 with MUI v9 peers and a committed dist/, the same tree chirp-frontend consumes."
+    "@chirpwireless/ui-kit": "Pinned to a commit SHA rather than a branch so builds are reproducible. 542ddde is v1.0.0 with MUI v9 peers and a committed dist/, the same tree chirp-frontend consumes.",
+    "oxlint": "oxlint instead of ESLint: typescript-eslint peers >=4.8.4 <6.1.0, so it supports neither TypeScript 7 (current stable, used here) nor TypeScript 6 (still beta), and cannot parse these files at all. oxlint is Rust-based with its own parser, never invokes tsc, and reads ESLint v8-style config. eslint.config.js.pending is kept for when typescript-eslint catches up."
   },
   "allowScripts": {
     "core-js-pure@3.49.0": true,

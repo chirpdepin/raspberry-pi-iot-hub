@@ -17,6 +17,10 @@ export const IPC = {
   dockerStatus: 'docker:status',
   /** App metadata for the Settings screen. */
   appInfo: 'app:info',
+  /** Launch the platform's official Docker installer. Never called implicitly. */
+  dockerInstall: 'docker:install',
+  /** Host facts plus per-capability availability and reasons. */
+  hostDetails: 'host:details',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -59,9 +63,35 @@ export interface DockerStatus {
   version: string | null;
 }
 
+export interface HostDetails {
+  host: {
+    hostname: string;
+    platform: string;
+    arch: string;
+    isRaspberryPi: boolean;
+    totalMemoryBytes: number;
+    cpuCount: number;
+  };
+  capabilities: Record<
+    'cameras' | 'lorawan' | 'zigbee' | 'thread',
+    {
+      name: 'cameras' | 'lorawan' | 'zigbee' | 'thread';
+      available: boolean;
+      /** English text used directly as an i18n key. Undefined when available. */
+      reason?: string;
+    }
+  >;
+}
+
+/** Mirrors domain/errors.ts, redeclared here because shared/ may not import main/. */
+export type IpcResult<T> =
+  { ok: true; value: T } | { ok: false; error: { code: string; message: string; technicalDetail?: string } };
+
 /** The surface `preload` exposes on `window.chirpHub`. */
 export interface ChirpHubApi {
   getAppInfo(): Promise<AppInfo>;
   getHostCapabilities(): Promise<HostCapabilities>;
+  getHostDetails(): Promise<HostDetails>;
   getDockerStatus(): Promise<DockerStatus>;
+  installDocker(): Promise<IpcResult<void>>;
 }

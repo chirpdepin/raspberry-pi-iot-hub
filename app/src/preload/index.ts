@@ -16,7 +16,9 @@ import { IPC, type ChirpHubApi } from '../shared/ipc';
 const api: ChirpHubApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
   getHostCapabilities: () => ipcRenderer.invoke(IPC.hostCapabilities),
+  getHostDetails: () => ipcRenderer.invoke(IPC.hostDetails),
   getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
+  installDocker: () => ipcRenderer.invoke(IPC.dockerInstall),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

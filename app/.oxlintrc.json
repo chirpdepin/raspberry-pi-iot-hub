@@ -89,7 +89,8 @@
       "files": [
         "scripts/**/*.ts",
         "tests/**/*.mjs",
-        "electron.vite.config.ts"
+        "electron.vite.config.ts",
+        "vitest.config.ts"
       ],
       "rules": {
         "typescript/no-explicit-any": "off",

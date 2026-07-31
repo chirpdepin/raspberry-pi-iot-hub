@@ -237,7 +237,7 @@ using no terminal. Finish line is Phase 11: all three live and reaching Chirp at
 |---|---|---|
 | ✅ | 1 · Docs and enforcement | `app/electron.md`, `CLAUDE.md` contracts, `check-boundaries.ts` + CI |
 | ✅ | 2 · Scaffold, ui-kit, shell | Electron 43 + React 19 + MUI 9 + ui-kit; 22/22 smoke checks |
-| ⬜ | 3 · Domain, ports, capabilities, Docker | |
+| ✅ | 3 · Domain, ports, capabilities, Docker | 9 use-case tests, no Docker/radio/Electron needed |
 | ⬜ | 4 · Dashboard and empty states | |
 | ⬜ | 5 · LoRaWAN gateway | |
 | ⬜ | 6 · Zigbee | |
@@ -316,6 +316,47 @@ Also: the ui-kit's peer set is internally inconsistent — it peers `@nivo/line@
 below 19, while itself requiring React 19. npm 7+ auto-installs peers and fails; `legacy-peer-deps=true`
 in `app/.npmrc` restores the correct semantics for a library with a large optional peer surface. This is
 why chirp-frontend gets away with the same set under Yarn 1.
+
+### Phase 3 — done 2026-08-01
+
+`domain/` (host, capabilities, typed errors, `Result`), two use cases with ports declared by the
+consumer, four adapters, the IPC layer and the composition root.
+
+**SOLID gate — passed, and demonstrated.** **9 use-case tests run with fake ports — no Docker, no radio,
+no network, no Electron.** That is the proof the layering is real: `host-capabilities` and
+`docker-ensure` each declare their ports in their own `contract.ts`, adapters implement them, and
+`index.ts` is the only file naming a concrete type. Five narrow ports (`HostInfoPort`,
+`ContainerRuntimePort`, `RadioDiscoveryPort`, `ContainerRuntimeControlPort`, `PathsPort`) rather than one
+`SystemPort`.
+
+**UX gate — passed.** Every unavailable capability carries a **reason**, asserted by a test that fails if
+any capability is `false` with no explanation. "Docker missing" and "Docker stopped" are deliberately
+different messages with different actions — a test asserts they never collapse into one, because sending
+someone to reinstall software they already have is worse than saying nothing.
+
+**Portability gate — passed.** `PathsPort` is the single owner of every filesystem path; the boundary
+checker fails the build on `/etc/`, `/usr/local/` or `/var/lib/` appearing anywhere else. Linux and
+desktop layouts are separate implementations, so Ubuntu Core's `$SNAP_DATA` is a third one — not a code
+change.
+
+**Single-source-of-truth gate — passed.** Reason strings are English text used directly as i18n keys.
+Radio detection **reads what `detect-radios.sh` already wrote** rather than re-implementing dongle
+detection in TypeScript, which would have created a second source of truth disagreeing with the udev
+rules and systemd units.
+
+Verified against real hardware, both directions:
+
+| | This desktop (x64, no radios) | The Pi |
+|---|---|---|
+| cameras | ✅ available (Docker 29.1.3) | ✅ Docker 29.1.3 |
+| lorawan | ✅ absent, with the RAK5146 explanation | ✅ `GATEWAY_EUI=0016C001FF1E96BB` |
+| zigbee | ✅ absent, with the dongle explanation | ✅ `/dev/zigbee` present |
+| thread | ✅ absent, with the second-radio explanation | ✅ correctly absent |
+
+One design note worth keeping: the Docker adapter probes with `docker version --format
+'{{.Server.Version}}'` rather than a socket connect, because only that distinguishes **missing binary**
+(ENOENT) from **installed but daemon down** (non-zero exit). A socket probe reports both as "cannot
+connect", which would collapse the two screens the UX gate requires to stay separate.
 
 ### Chirp frontend conventions applied — 2026-08-01
 

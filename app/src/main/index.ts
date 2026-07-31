@@ -1,51 +1,17 @@
 import { app, shell, BrowserWindow } from 'electron';
 import { join } from 'node:path';
 
-import { createDockerRuntime } from './adapters/container/docker-runtime';
-import { createHostInfo } from './adapters/discovery/host-info';
-import { createRadioDiscovery } from './adapters/discovery/radio-discovery';
-import { createPaths } from './adapters/paths/paths';
+import { buildDependencies } from './composition';
 import { DEV_SERVER_ENV, WINDOW } from './config/defaults';
 import { registerIpcHandlers } from './ipc/register';
 
 /**
- * Composition root.
+ * Application entry point.
  *
- * Contract 1 (D): the ONLY file allowed to name concrete implementations. Every
- * use case receives ports; this is where those ports are given bodies. Swapping
- * Docker for Podman, or Linux paths for Ubuntu Core's $SNAP_DATA, is a change to
- * these few lines and nothing else.
+ * The dependency graph itself lives in composition.ts so it can be built without
+ * this file's side effects — that is what lets the smoke test drive the real
+ * adapters and use cases instead of stubs.
  */
-
-const buildDependencies = () => {
-  const paths = createPaths(process.platform);
-
-  const containerRuntime = createDockerRuntime({
-    platform: process.platform,
-    openExternal: async (url) => shell.openExternal(url),
-  });
-
-  return {
-    hostCapabilities: {
-      hostInfo: createHostInfo(),
-      radios: createRadioDiscovery(paths),
-      // host-capabilities wants a plain boolean pair; docker-ensure wants the
-      // three-state view. Same adapter, adapted at the seam rather than widening
-      // either port to satisfy both (Contract 1 I).
-      containerRuntime: {
-        async status() {
-          const status = await containerRuntime.status();
-          return {
-            installed: status.state !== 'missing',
-            running: status.state === 'ready',
-            version: status.version,
-          };
-        },
-      },
-    },
-    docker: { runtime: containerRuntime },
-  };
-};
 
 const createWindow = (): BrowserWindow => {
   const window = new BrowserWindow({

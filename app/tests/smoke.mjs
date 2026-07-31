@@ -13,6 +13,13 @@
  */
 
 import { app, BrowserWindow } from 'electron';
+
+// The REAL dependency graph and IPC handlers, so this exercises the true path:
+// renderer -> preload -> IPC -> use case -> adapter. Stubbing them here would
+// leave the integration between those layers untested, which is precisely the
+// integration most likely to be wrong.
+import { buildDependencies } from '../out/main/composition.js';
+import { registerIpcHandlers } from '../out/main/ipc.js';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -93,7 +100,19 @@ async function testViewport({ name, width, height, expectPermanentSidebar }) {
   check('main content area is visible', layout.mainVisible);
 
   const bodyTextEarly = await window.webContents.executeJavaScript(`document.body.innerText`);
-  check('dashboard content is readable', bodyTextEarly.includes('Everything on this device'));
+  // The dashboard must render its device card and a capability card for each
+  // hardware section — not merely a heading.
+  check('device card rendered', bodyTextEarly.includes('This device'));
+  check(
+    'a capability card is shown for each section',
+    ['Cameras', 'LoRaWAN Gateway', 'Zigbee', 'Thread'].every((label) => bodyTextEarly.includes(label))
+  );
+  // Contract 2 rule 4: an unavailable capability explains itself rather than
+  // rendering an empty box.
+  check(
+    'unavailable capabilities explain themselves',
+    /RAK5146|Zigbee coordinator|own radio|needs Docker/.test(bodyTextEarly)
+  );
 
   // Contract 3: nothing may overflow horizontally at either size.
   const overflow = await window.webContents.executeJavaScript(
@@ -113,6 +132,8 @@ async function testViewport({ name, width, height, expectPermanentSidebar }) {
 }
 
 async function run() {
+  registerIpcHandlers(buildDependencies());
+
   console.log('\nSmoke test — real window, real DOM:');
 
   for (const viewport of VIEWPORTS) {

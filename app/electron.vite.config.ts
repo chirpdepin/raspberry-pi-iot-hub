@@ -15,7 +15,13 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/main/index.ts') },
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // Built separately so tests can import the real dependency graph
+          // without index.ts opening a window as a side effect.
+          composition: resolve(__dirname, 'src/main/composition.ts'),
+          ipc: resolve(__dirname, 'src/main/ipc/register.ts'),
+        },
         // `electron` MUST stay external. externalizeDepsPlugin only
         // externalizes `dependencies`, and electron is a devDependency —
         // so without this the bundler inlines the npm package's Node-side

@@ -1,8 +1,7 @@
-import i18n from 'i18next';
+import i18n, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import uiKitResources from '@chirpwireless/ui-kit/locales';
 
-import en from './locales/en/translation.json';
+import { resources, uiKitResourcesByLanguage, SUPPORTED_LANGUAGES } from './locales/resources';
 
 /**
  * i18next, owned by this app.
@@ -11,32 +10,29 @@ import en from './locales/en/translation.json';
  * it is not exported from any subpath — which is fortunate, because cookies do
  * not work under file://. We own the instance and merge only the kit's `uiKit`
  * namespace, the same way chirp-frontend does.
- *
- * Contract 4: every user-facing string is a key. Adding a language is a new JSON
- * file plus a row here — no code changes.
  */
 
-type UiKitResources = Record<string, { uiKit: Record<string, unknown> }>;
-const kit = uiKitResources as unknown as UiKitResources;
+const withUiKit = () => {
+  const merged: Resource = {};
 
-export const SUPPORTED_LANGUAGES = ['en'] as const;
-export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+  for (const language of SUPPORTED_LANGUAGES) {
+    merged[language] = {
+      ...resources[language],
+      uiKit: uiKitResourcesByLanguage[language]?.uiKit ?? {},
+    };
+  }
+
+  return merged;
+};
 
 void i18n.use(initReactI18next).init({
-    lng: 'en',
-    fallbackLng: 'en',
-    defaultNS: 'translation',
-    ns: ['translation', 'uiKit'],
-    interpolation: {
-        // React already escapes; double-escaping mangles apostrophes.
-        escapeValue: false,
-    },
-    resources: {
-        en: {
-            translation: en,
-            uiKit: kit['en']?.uiKit ?? {},
-        },
-    },
+  lng: 'en',
+  fallbackLng: 'en',
+  defaultNS: 'common',
+  ns: ['common', 'uiKit'],
+  // React already escapes output; double-escaping mangles apostrophes.
+  interpolation: { escapeValue: false },
+  resources: withUiKit(),
 });
 
-export default i18n;
+export { i18n };

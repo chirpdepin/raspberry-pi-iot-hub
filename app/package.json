@@ -15,7 +15,9 @@
     "check:boundaries": "tsx scripts/check-boundaries.ts",
     "check:boundaries:self-test": "tsx scripts/check-boundaries.ts --self-test",
     "check": "npm run check:boundaries:self-test && npm run check:boundaries && npm run typecheck && npm run build && npm run test:smoke",
-    "test:smoke": "electron tests/smoke.mjs"
+    "test:smoke": "electron tests/smoke.mjs",
+    "lint": "echo \"ESLint is pending typescript-eslint support for TypeScript 7 \u2014 see eslint.config.js.pending. The substantive rules are enforced by check:boundaries.\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json}\" \"scripts/**/*.ts\" \"tests/**/*.mjs\" \"*.ts\""
   },
   "dependencies": {
     "@chirpwireless/ui-kit": "git+https://github.com/chirpwireless/ui-kit.git#542ddde4e0d7ceecada5ae3de32b4611dd22f2c0",
@@ -51,6 +53,10 @@
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.6",
     "tsx": "^4.20.6",
     "typescript": "7.0.2",
     "vite": "^8.2.0",

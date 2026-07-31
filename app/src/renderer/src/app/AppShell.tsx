@@ -31,64 +31,64 @@ import { useResponsiveLayout } from './useResponsiveLayout';
  * exist comes from the navigation registry; what each does lives in its page.
  */
 export const AppShell = ({ children }: { children: ReactNode }) => {
-    const { t } = useTranslation();
-    const location = useLocation();
-    const { isMobile, isSidebarOpen, openSidebar, closeSidebar } = useResponsiveLayout();
+  const { t } = useTranslation();
+  const location = useLocation();
+  const { isMobile, isSidebarOpen, openSidebar, closeSidebar } = useResponsiveLayout();
 
-    const groups = useMemo<SidebarItem[][]>(() => {
-        const toItem = (item: (typeof NAV_ITEMS)[number]): SidebarItem => ({
-            id: item.id,
-            name: t(item.labelKey),
-            href: item.path,
-            // Exact for the dashboard, prefix for the rest, so /cameras/add keeps
-            // Cameras highlighted.
-            match: item.path === '/' ? /^\/$/ : new RegExp(`^${item.path}`),
-        });
+  const groups = useMemo<SidebarItem[][]>(() => {
+    const toItem = (item: (typeof NAV_ITEMS)[number]): SidebarItem => ({
+      id: item.id,
+      name: t(item.label),
+      href: item.path,
+      // Exact for the dashboard, prefix for the rest, so /cameras/add keeps
+      // Cameras highlighted.
+      match: item.path === '/' ? /^\/$/ : new RegExp(`^${item.path}`),
+    });
 
-        // Two groups so the kit draws a divider before Settings, separating
-        // "things you set up" from "how the app itself behaves".
-        return [
-            NAV_ITEMS.filter((item) => item.id !== 'settings').map(toItem),
-            NAV_ITEMS.filter((item) => item.id === 'settings').map(toItem),
-        ];
-    }, [t]);
+    // Two groups so the kit draws a divider before Settings, separating
+    // "things you set up" from "how the app itself behaves".
+    return [
+      NAV_ITEMS.filter((item) => item.id !== 'settings').map(toItem),
+      NAV_ITEMS.filter((item) => item.id === 'settings').map(toItem),
+    ];
+  }, [t]);
 
-    return (
-        <BaseLayout
-            isSidebarOpen={isSidebarOpen}
-            isSidebarCollapsed={false}
-            header={<Header onMenuOpen={openSidebar} showMenuButton />}
-            sidebar={
-                <Sidebar
-                    groups={groups}
-                    isOpen={isSidebarOpen}
-                    isCollapsed={false}
-                    isMobile={isMobile}
-                    onCollapseToggle={closeSidebar}
-                    activePathname={location.pathname}
-                    linkComponent={SidebarLink}
-                    // On a small screen the sidebar covers the content, so
-                    // choosing a destination must also dismiss it — otherwise the
-                    // user taps a link and appears to go nowhere.
-                    onItemClick={() => {
-                        if (isMobile) closeSidebar();
-                    }}
-                    bottomSlot={<ThemeToggle />}
-                />
-            }
-        >
-            <Box
-                component="main"
-                sx={(theme) => ({
-                    flex: 1,
-                    minWidth: 0,
-                    // Contract 4: spacing from the theme scale (base 4), never raw px.
-                    padding: theme.spacing(6),
-                    overflowY: 'auto',
-                })}
-            >
-                {children}
-            </Box>
-        </BaseLayout>
-    );
+  return (
+    <BaseLayout
+      isSidebarOpen={isSidebarOpen}
+      isSidebarCollapsed={false}
+      header={<Header onMenuOpen={openSidebar} showMenuButton />}
+      sidebar={
+        <Sidebar
+          groups={groups}
+          isOpen={isSidebarOpen}
+          isCollapsed={false}
+          isMobile={isMobile}
+          onCollapseToggle={closeSidebar}
+          activePathname={location.pathname}
+          linkComponent={SidebarLink}
+          // On a small screen the sidebar covers the content, so
+          // choosing a destination must also dismiss it — otherwise the
+          // user taps a link and appears to go nowhere.
+          onItemClick={() => {
+            if (isMobile) closeSidebar();
+          }}
+          bottomSlot={<ThemeToggle />}
+        />
+      }
+    >
+      <Box
+        component='main'
+        sx={(theme) => ({
+          flex: 1,
+          minWidth: 0,
+          // Contract 4: spacing from the theme scale (base 4), never raw px.
+          padding: theme.spacing(6),
+          overflowY: 'auto',
+        })}
+      >
+        {children}
+      </Box>
+    </BaseLayout>
+  );
 };

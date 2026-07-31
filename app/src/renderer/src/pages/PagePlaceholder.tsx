@@ -1,26 +1,43 @@
-import { useTranslation } from 'react-i18next';
+import { PageWrapper, StackRowJB } from '@chirpwireless/ui-kit/primitives';
 import { Stack, Typography } from '@mui/material';
+import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import type { NavItem } from '../config/navigation';
+
+interface PagePlaceholderProps {
+  item: NavItem;
+}
 
 /**
- * Shared scaffold for the six sections until each grows its real content in
- * Phases 4–8.
+ * Shared page scaffold until each section grows its real content in Phases 4–8.
  *
- * Contract 2 rule 1: the heading and subtitle are plain English describing what
- * the section is *for*, not what it is made of. Contract 4: both are translation
- * keys, never literals.
+ * Follows the chirp page layout convention: `PageWrapper`, a `StackRowJB` header
+ * row with `Typography variant='h2'`, and a 24px-gap body Stack — so these
+ * screens already sit correctly when real content replaces the placeholder.
+ *
+ * Note chirp-frontend documents this as `<Stack gap='24px' width='100%'>`, which
+ * is MUI v7 syntax. MUI v9 removed system props from Stack, so the same values
+ * go through `sx`.
  */
-export const PagePlaceholder = ({ section }: { section: string }) => {
-    const { t } = useTranslation();
+export const PagePlaceholder = memo<PagePlaceholderProps>(({ item }) => {
+  const { t } = useTranslation();
 
-    return (
-        <Stack spacing={2}>
-            <Typography variant="h4">{t(`pages.${section}.title`)}</Typography>
-            <Typography variant="body1" sx={(theme) => ({ color: theme.palette.text.secondary })}>
-                {t(`pages.${section}.subtitle`)}
-            </Typography>
-            <Typography variant="body2" sx={(theme) => ({ color: theme.palette.text.disabled })}>
-                {t('placeholder.underConstruction')}
-            </Typography>
-        </Stack>
-    );
-};
+  return (
+    <PageWrapper>
+      <Stack sx={{ gap: '24px', width: '100%' }}>
+        <StackRowJB>
+          <Typography variant='h2'>{t(item.label)}</Typography>
+        </StackRowJB>
+
+        <Typography variant='body1' sx={(theme) => ({ color: theme.palette.text.secondary })}>
+          {t(item.subtitle)}
+        </Typography>
+
+        <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.disabled })}>
+          {t('This section is being built.')}
+        </Typography>
+      </Stack>
+    </PageWrapper>
+  );
+});

@@ -442,6 +442,31 @@ searching for the new one.
 `px` in `sx`/`styled` outside `theme.spacing()` · bare JSX text nodes · `/etc/`, `/usr/local/`,
 `/var/lib/` outside `adapters/paths/` · an image tag outside `config/images.ts`.
 
+### Contract 5 — Chirp frontend conventions
+
+From **`chirp-frontend/CLAUDE.md`**, so code reads the same across the web app and this one. Full detail
+in [app/electron.md](app/electron.md).
+
+- **Layered:** Component → business hook → cache hook (TanStack Query) → IPC transport. **No `useQuery`
+  or IPC call inside a component.**
+- **Named exports only**, **no `any`** (not even `as any`).
+- **i18n: the key IS the English text**, and all five languages (`en`, `de`, `es`, `fr`, `pt`) live in
+  `locales/resources/{namespace}.json`, keyed by language first. A dotted key like `pages.zigbee.title`
+  is wrong — a missing translation must degrade to readable English, not to an identifier.
+- **UI-kit import boundary:** `Button`, `IconButton`, `TextField`, `Checkbox`, `Switch`, `Tabs`, `Tab`,
+  `Tooltip`, `Dialog`, `Modal`, `Table`, `Autocomplete` come from `@chirpwireless/ui-kit/primitives`,
+  never `@mui/material`. Layout/typography from MUI is fine. Only `style.ts(x)` is exempt.
+- **Page layout:** `PageWrapper` + `StackRowJB` header with `Typography variant='h2'` + 24px-gap body.
+- **Modals by conditional rendering**, not an `open` prop.
+- **`useEffect` last** in a component, and prefer the event handler over reacting to state.
+- **Prettier is the source of truth** — config copied verbatim from chirp-frontend (single quotes incl.
+  JSX, 2-space, `printWidth` 120).
+
+**Three deviations, each deliberate:** npm with `legacy-peer-deps` rather than Yarn 1 (Electron tooling
+is npm-first, and the ui-kit's peers are self-contradictory either way) · **MUI v9, not v7** — v9 removed
+system props from `Stack`, so chirp-frontend's documented `<Stack gap='24px' width='100%'>` does not
+compile and those values go through `sx` · English, not Russian, for user communication in this repo.
+
 ### ui-kit — two version pins and three gotchas
 
 `react-router-dom` **6.30.4** (not 7.x) and `date-fns` **2.x** (not 4.x) are **deliberate exceptions to

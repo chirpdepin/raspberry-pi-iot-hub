@@ -11,67 +11,67 @@ import react from '@vitejs/plugin-react';
  * time too.
  */
 export default defineConfig({
-    main: {
-        plugins: [externalizeDepsPlugin()],
-        build: {
-            rollupOptions: {
-                input: { index: resolve(__dirname, 'src/main/index.ts') },
-                // `electron` MUST stay external. externalizeDepsPlugin only
-                // externalizes `dependencies`, and electron is a devDependency —
-                // so without this the bundler inlines the npm package's Node-side
-                // helper (getElectronPath, which shells out to download a binary)
-                // instead of leaving the import to resolve to Electron's runtime
-                // built-in. The app then fails at launch with a confusing
-                // "Electron failed to install correctly".
-                external: ['electron'],
-            },
-        },
-        resolve: {
-            alias: {
-                '@main': resolve(__dirname, 'src/main'),
-                '@shared': resolve(__dirname, 'src/shared'),
-            },
-        },
+  main: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: { index: resolve(__dirname, 'src/main/index.ts') },
+        // `electron` MUST stay external. externalizeDepsPlugin only
+        // externalizes `dependencies`, and electron is a devDependency —
+        // so without this the bundler inlines the npm package's Node-side
+        // helper (getElectronPath, which shells out to download a binary)
+        // instead of leaving the import to resolve to Electron's runtime
+        // built-in. The app then fails at launch with a confusing
+        // "Electron failed to install correctly".
+        external: ['electron'],
+      },
     },
+    resolve: {
+      alias: {
+        '@main': resolve(__dirname, 'src/main'),
+        '@shared': resolve(__dirname, 'src/shared'),
+      },
+    },
+  },
 
-    preload: {
-        plugins: [externalizeDepsPlugin()],
-        build: {
-            rollupOptions: {
-                input: { index: resolve(__dirname, 'src/preload/index.ts') },
-                // Same reason as main — see above.
-                external: ['electron'],
-                // A sandboxed renderer can only load a CommonJS preload; ESM
-                // preloads are silently ignored, so `window.chirpHub` never
-                // appears and the failure looks like a bridge bug rather than a
-                // format one. package.json has "type": "module", so the .cjs
-                // extension is what forces CommonJS treatment here.
-                output: {
-                    format: 'cjs',
-                    entryFileNames: '[name].cjs',
-                },
-            },
+  preload: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: { index: resolve(__dirname, 'src/preload/index.ts') },
+        // Same reason as main — see above.
+        external: ['electron'],
+        // A sandboxed renderer can only load a CommonJS preload; ESM
+        // preloads are silently ignored, so `window.chirpHub` never
+        // appears and the failure looks like a bridge bug rather than a
+        // format one. package.json has "type": "module", so the .cjs
+        // extension is what forces CommonJS treatment here.
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
         },
-        resolve: {
-            alias: { '@shared': resolve(__dirname, 'src/shared') },
-        },
+      },
     },
+    resolve: {
+      alias: { '@shared': resolve(__dirname, 'src/shared') },
+    },
+  },
 
-    renderer: {
-        root: resolve(__dirname, 'src/renderer'),
-        plugins: [react()],
-        resolve: {
-            alias: {
-                '@renderer': resolve(__dirname, 'src/renderer/src'),
-                // @shared carries TYPES ONLY (the IPC contract). It must never pull
-                // runtime code from main into the renderer bundle.
-                '@shared': resolve(__dirname, 'src/shared'),
-            },
-        },
-        build: {
-            rollupOptions: {
-                input: { index: resolve(__dirname, 'src/renderer/index.html') },
-            },
-        },
+  renderer: {
+    root: resolve(__dirname, 'src/renderer'),
+    plugins: [react()],
+    resolve: {
+      alias: {
+        '@renderer': resolve(__dirname, 'src/renderer/src'),
+        // @shared carries TYPES ONLY (the IPC contract). It must never pull
+        // runtime code from main into the renderer bundle.
+        '@shared': resolve(__dirname, 'src/shared'),
+      },
     },
+    build: {
+      rollupOptions: {
+        input: { index: resolve(__dirname, 'src/renderer/index.html') },
+      },
+    },
+  },
 });

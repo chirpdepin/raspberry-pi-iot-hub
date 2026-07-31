@@ -14,41 +14,41 @@ import { WINDOW, DEV_SERVER_ENV } from './config/defaults';
  */
 
 function createWindow(): BrowserWindow {
-    const window = new BrowserWindow({
-        width: WINDOW.defaultWidth,
-        height: WINDOW.defaultHeight,
-        minWidth: WINDOW.minWidth,
-        minHeight: WINDOW.minHeight,
-        show: false,
-        autoHideMenuBar: true,
-        webPreferences: {
-            preload: join(__dirname, '../preload/index.cjs'),
-            // Contract 1 and 3: the renderer gets no Node, ever. These three are
-            // asserted in the boundary tests, not just set here.
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-        },
-    });
+  const window = new BrowserWindow({
+    width: WINDOW.defaultWidth,
+    height: WINDOW.defaultHeight,
+    minWidth: WINDOW.minWidth,
+    minHeight: WINDOW.minHeight,
+    show: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.cjs'),
+      // Contract 1 and 3: the renderer gets no Node, ever. These three are
+      // asserted in the boundary tests, not just set here.
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
 
-    // Shown only once painted, so the user never sees an empty white frame.
-    window.on('ready-to-show', () => window.show());
+  // Shown only once painted, so the user never sees an empty white frame.
+  window.on('ready-to-show', () => window.show());
 
-    // Contract 2 rule 6: external links open in the user's own browser rather
-    // than trapping them in a chrome-less Electron window they cannot navigate.
-    window.webContents.setWindowOpenHandler(({ url }) => {
-        void shell.openExternal(url);
-        return { action: 'deny' };
-    });
+  // Contract 2 rule 6: external links open in the user's own browser rather
+  // than trapping them in a chrome-less Electron window they cannot navigate.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
 
-    const devServerUrl = process.env[DEV_SERVER_ENV];
-    if (devServerUrl) {
-        void window.loadURL(devServerUrl);
-    } else {
-        void window.loadFile(join(__dirname, '../renderer/index.html'));
-    }
+  const devServerUrl = process.env[DEV_SERVER_ENV];
+  if (devServerUrl) {
+    void window.loadURL(devServerUrl);
+  } else {
+    void window.loadFile(join(__dirname, '../renderer/index.html'));
+  }
 
-    return window;
+  return window;
 }
 
 /**
@@ -57,41 +57,32 @@ function createWindow(): BrowserWindow {
  * is the point of declaring them in shared/ipc.ts first.
  */
 function registerHandlers(): void {
-    ipcMain.handle(
-        IPC.appInfo,
-        (): AppInfo => ({
-            name: app.getName(),
-            version: app.getVersion(),
-            platform: platform(),
-            arch: arch(),
-        }),
-    );
+  ipcMain.handle(IPC.appInfo, (): AppInfo => ({
+    name: app.getName(),
+    version: app.getVersion(),
+    platform: platform(),
+    arch: arch(),
+  }));
 
-    ipcMain.handle(
-        IPC.hostCapabilities,
-        (): HostCapabilities => ({
-            lorawan: false,
-            zigbee: false,
-            thread: false,
-            cameras: false,
-        }),
-    );
+  ipcMain.handle(IPC.hostCapabilities, (): HostCapabilities => ({
+    lorawan: false,
+    zigbee: false,
+    thread: false,
+    cameras: false,
+  }));
 
-    ipcMain.handle(
-        IPC.dockerStatus,
-        (): DockerStatus => ({ installed: false, running: false, version: null }),
-    );
+  ipcMain.handle(IPC.dockerStatus, (): DockerStatus => ({ installed: false, running: false, version: null }));
 }
 
 void app.whenReady().then(() => {
-    registerHandlers();
-    createWindow();
+  registerHandlers();
+  createWindow();
 
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') app.quit();
 });

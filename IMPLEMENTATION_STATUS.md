@@ -317,6 +317,36 @@ below 19, while itself requiring React 19. npm 7+ auto-installs peers and fails;
 in `app/.npmrc` restores the correct semantics for a library with a large optional peer surface. This is
 why chirp-frontend gets away with the same set under Yarn 1.
 
+### Chirp frontend conventions applied — 2026-08-01
+
+`chirp-frontend/CLAUDE.md` was read after Phase 2 and its rules applied retroactively to Phases 1 and 2,
+as **Contract 5**. Real changes, not cosmetic:
+
+| Was | Now |
+|---|---|
+| Dotted i18n keys (`pages.zigbee.title`), English only | **Key = the English text**, all five languages (`en`, `de`, `es`, `fr`, `pt`) in `locales/resources/*.json`, keyed by language first |
+| 4-space, double-quoted JSX | Prettier config **copied verbatim** from chirp-frontend — single quotes incl. JSX, 2-space, `printWidth` 120 |
+| Ad-hoc page markup | `PageWrapper` + `StackRowJB` header + `Typography variant='h2'` |
+| Plain component | `memo<Props>` with named export |
+| — | ui-kit import boundary: the 12 wrapped MUI primitives must come from `/primitives` |
+
+**Phase 1's checker was extended, not just the code.** It now enforces 13 rules — added
+`no-ui-kit-root-import`, `no-mui-primitive`, `no-default-export`, `no-any`, `i18n-complete` and
+`import-order`. The self-test plants a violation of each and asserts it is caught; all 13 fire.
+`i18n-complete` is the one ESLint could never do: it checks **across** files that every language has an
+identical key set, so a key added to `en` alone fails the build rather than surfacing as English text
+inside otherwise-translated copy.
+
+**ESLint is parked, with a reason.** `typescript-eslint`'s peer range is `>=4.8.4 <6.1.0` — it supports
+neither TypeScript 7 (current stable, which we verified and use) nor TypeScript 6 (still beta). It cannot
+parse these files at all. The config is kept as `eslint.config.js.pending` and is one `npm install` away
+once support lands; meanwhile the substantive rules live in the boundary checker, which needs no TS
+parser because it is line-based.
+
+**Two documented deviations from chirp-frontend:** npm with `legacy-peer-deps` rather than Yarn 1
+(Electron tooling is npm-first), and **MUI v9 rather than v7** — v9 removed system props from `Stack`, so
+the documented `<Stack gap='24px' width='100%'>` does not compile and those values go through `sx`.
+
 ## Licensing — resolved 2026-08-01
 
 **MIT**, `Copyright (c) 2025-2026 Chirp` — holder and start year taken from the existing notice in

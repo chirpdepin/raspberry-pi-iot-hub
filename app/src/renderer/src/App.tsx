@@ -16,34 +16,30 @@ import './i18n';
  */
 
 const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            // Hardware and container state is polled deliberately by the screens
-            // that need it; nothing should refetch merely because a window
-            // regained focus on a kiosk that never loses it.
-            refetchOnWindowFocus: false,
-            retry: 1,
-        },
+  defaultOptions: {
+    queries: {
+      // Hardware and container state is polled deliberately by the screens
+      // that need it; nothing should refetch merely because a window
+      // regained focus on a kiosk that never loses it.
+      refetchOnWindowFocus: false,
+      retry: 1,
     },
+  },
 });
 
 export const App = () => (
-    <QueryClientProvider client={queryClient}>
-        <ThemeModeProvider>
-            <HashRouter>
-                <AppShell>
-                    <Routes>
-                        {NAV_ITEMS.map((item) => (
-                            <Route
-                                key={item.id}
-                                path={item.path}
-                                element={<PagePlaceholder section={item.id} />}
-                            />
-                        ))}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </AppShell>
-            </HashRouter>
-        </ThemeModeProvider>
-    </QueryClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <ThemeModeProvider>
+      <HashRouter>
+        <AppShell>
+          <Routes>
+            {NAV_ITEMS.map((item) => (
+              <Route key={item.id} path={item.path} element={<PagePlaceholder item={item} />} />
+            ))}
+            <Route path='*' element={<Navigate to='/' replace />} />
+          </Routes>
+        </AppShell>
+      </HashRouter>
+    </ThemeModeProvider>
+  </QueryClientProvider>
 );

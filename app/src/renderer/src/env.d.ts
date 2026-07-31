@@ -8,9 +8,9 @@ import type { ChirpHubApi } from '@shared/ipc';
  * enforces and the reason shared/ipc.ts holds types only.
  */
 declare global {
-    interface Window {
-        chirpHub: ChirpHubApi;
-    }
+  interface Window {
+    chirpHub: ChirpHubApi;
+  }
 }
 
 export {};

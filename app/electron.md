@@ -145,6 +145,50 @@ Localisation follows from this for free: because every string is already a key, 
 new JSON file. The ui-kit ships `en, de, fr, es, ru, pt` under the `uiKit` namespace, merged into the
 app's i18next instance the same way `chirp-frontend` does it.
 
+### Contract 5 — Chirp frontend conventions
+
+Source: **`chirp-frontend/CLAUDE.md`**. Anyone moving between the web app and this desktop app should
+write the same code, so the same rules apply here.
+
+**Layered architecture in the renderer.** The renderer gets the same four layers the web app uses, which
+sits directly on top of the main-process ports:
+
+```
+Component (View) → useFeatureLogic (Business) → useEntityQuery/Mutation (Cache) → window.chirpHub.* (IPC)
+                                                                                        ↓
+                                                                   main: use case → ports → adapters
+```
+
+- Components render JSX and wire events. **No `useQuery` and no IPC call inside a component.**
+- Business hooks (`{feature}/hooks/`) hold domain logic and orchestrate cache hooks.
+- Cache hooks (`services/api/{module}/hooks/`) wrap TanStack Query and own cache keys and invalidation.
+- The transport layer is plain functions over `window.chirpHub`.
+
+| Rule | Detail |
+|---|---|
+| **Named exports only** | No default exports, and therefore no `displayName` |
+| **No `any`** | Not even `as any`. Use `unknown` plus a type guard |
+| **i18n: key = English text** | Not a dotted identifier. A missing translation then degrades to readable English rather than leaking `pages.zigbee.title` into the UI |
+| **All five languages** | `en`, `de`, `es`, `fr`, `pt`, in `locales/resources/{namespace}.json`, keyed by language first |
+| **UI-kit import boundary** | `Button`, `IconButton`, `TextField`, `Checkbox`, `Switch`, `Tabs`, `Tab`, `Tooltip`, `Dialog`, `Modal`, `Table`, `Autocomplete` come from `@chirpwireless/ui-kit/primitives`, **never** `@mui/material`. Layout/typography (`Box`, `Stack`, `Typography`, `Grid`, `Divider`, …) may come from MUI directly. Only `style.ts(x)` files are exempt |
+| **Page layout** | `PageWrapper`, a `StackRowJB` header row with `Typography variant='h2'`, a 24px-gap body Stack |
+| **Modals** | Conditional rendering — `{isOpen ? <Dialog … /> : null}` — not an `open` prop |
+| **Naming** | `handle{Action}` for handlers, `use{Entity}{Action}Query` / `…Mutation` for hooks |
+| **One component per file** | Extract sub-components; lift reusable helpers to module scope or `helpers/` |
+| **`useEffect` last** | Hooks → derived values → handlers → `useEffect` → `return`. Prefer doing the work in the handler over reacting to state |
+| **Prettier is the source of truth** | Single quotes including JSX attributes, semicolons, 2-space indent, `es5` trailing commas, `printWidth` 120, always-parenthesised arrow params. Config copied verbatim from chirp-frontend |
+| **Import order** | builtin/external → internal aliases → relative, blank line between groups, alphabetised within |
+| **Comments** | English, only where there is business logic, and they explain **why** |
+
+**Deviations from chirp-frontend, and why:**
+
+| | chirp-frontend | Here |
+|---|---|---|
+| Package manager | Yarn 1 | **npm** with `legacy-peer-deps`. Yarn 1 only tolerates the ui-kit's self-contradictory peers by accident; `legacy-peer-deps` states the intent explicitly. Electron tooling is npm-first |
+| MUI | v7 | **v9** (the ui-kit v1.0.0 peer). v9 **removed system props from `Stack`**, so the documented `<Stack gap='24px' width='100%'>` does not compile — the same values go through `sx` |
+| Router | v6 | v6 — unchanged, and pinned because the ui-kit peer requires it |
+| Language of user communication | Russian | English, matching this repo |
+
 ---
 
 ## 3. Architecture

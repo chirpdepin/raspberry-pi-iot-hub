@@ -11,12 +11,12 @@
  */
 
 export const IPC = {
-    /** Everything the app can detect about the machine it is running on. */
-    hostCapabilities: 'host:capabilities',
-    /** Docker presence, version and daemon state. */
-    dockerStatus: 'docker:status',
-    /** App metadata for the Settings screen. */
-    appInfo: 'app:info',
+  /** Everything the app can detect about the machine it is running on. */
+  hostCapabilities: 'host:capabilities',
+  /** Docker presence, version and daemon state. */
+  dockerStatus: 'docker:status',
+  /** App metadata for the Settings screen. */
+  appInfo: 'app:info',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -30,38 +30,38 @@ export type IpcChannel = (typeof IPC)[keyof typeof IPC];
 // ---------------------------------------------------------------------------
 
 export interface AppInfo {
-    name: string;
-    version: string;
-    /**
-     * Plain strings, not `NodeJS.Platform`. This module is imported by the
-     * renderer, which is compiled with `types: []` and has no Node typings — and
-     * should not, since referencing them here would be the type-level version of
-     * the very dependency the boundary checker forbids.
-     */
-    platform: string;
-    arch: string;
+  name: string;
+  version: string;
+  /**
+   * Plain strings, not `NodeJS.Platform`. This module is imported by the
+   * renderer, which is compiled with `types: []` and has no Node typings — and
+   * should not, since referencing them here would be the type-level version of
+   * the very dependency the boundary checker forbids.
+   */
+  platform: string;
+  arch: string;
 }
 
 export interface HostCapabilities {
-    /** True when this machine has a LoRaWAN concentrator fitted. */
-    lorawan: boolean;
-    /** True when a supported Zigbee coordinator is attached. */
-    zigbee: boolean;
-    /** True when a second radio is present for Thread. */
-    thread: boolean;
-    /** True when cameras can run here — i.e. a working container runtime. */
-    cameras: boolean;
+  /** True when this machine has a LoRaWAN concentrator fitted. */
+  lorawan: boolean;
+  /** True when a supported Zigbee coordinator is attached. */
+  zigbee: boolean;
+  /** True when a second radio is present for Thread. */
+  thread: boolean;
+  /** True when cameras can run here — i.e. a working container runtime. */
+  cameras: boolean;
 }
 
 export interface DockerStatus {
-    installed: boolean;
-    running: boolean;
-    version: string | null;
+  installed: boolean;
+  running: boolean;
+  version: string | null;
 }
 
 /** The surface `preload` exposes on `window.chirpHub`. */
 export interface ChirpHubApi {
-    getAppInfo(): Promise<AppInfo>;
-    getHostCapabilities(): Promise<HostCapabilities>;
-    getDockerStatus(): Promise<DockerStatus>;
+  getAppInfo(): Promise<AppInfo>;
+  getHostCapabilities(): Promise<HostCapabilities>;
+  getDockerStatus(): Promise<DockerStatus>;
 }

@@ -19,31 +19,31 @@ import { useMediaQuery, useTheme } from '@mui/material';
  * which reads `import.meta.env` and drags mapbox/turf into the bundle).
  */
 export interface ResponsiveLayout {
-    /** Below the kit's `lg` breakpoint — sidebar overlays and needs a toggle. */
-    isMobile: boolean;
-    isSidebarOpen: boolean;
-    openSidebar: () => void;
-    closeSidebar: () => void;
+  /** Below the kit's `lg` breakpoint — sidebar overlays and needs a toggle. */
+  isMobile: boolean;
+  isSidebarOpen: boolean;
+  openSidebar: () => void;
+  closeSidebar: () => void;
 }
 
 export const useResponsiveLayout = (): ResponsiveLayout => {
-    const theme = useTheme();
-    const isBelowMd = useMediaQuery(theme.breakpoints.down('md'));
-    const isMdToLg = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-    const isMobile = isBelowMd || isMdToLg;
+  const theme = useTheme();
+  const isBelowMd = useMediaQuery(theme.breakpoints.down('md'));
+  const isMdToLg = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isMobile = isBelowMd || isMdToLg;
 
-    const [isSidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [isSidebarOpen, setSidebarOpen] = useState(!isMobile);
 
-    // Follow the viewport: permanent on a desktop, closed by default on a small
-    // screen so the user sees content rather than a full-screen menu.
-    useEffect(() => {
-        setSidebarOpen(!isMobile);
-    }, [isMobile]);
+  // Follow the viewport: permanent on a desktop, closed by default on a small
+  // screen so the user sees content rather than a full-screen menu.
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
-    return {
-        isMobile,
-        isSidebarOpen,
-        openSidebar: () => setSidebarOpen(true),
-        closeSidebar: () => setSidebarOpen(false),
-    };
+  return {
+    isMobile,
+    isSidebarOpen,
+    openSidebar: () => setSidebarOpen(true),
+    closeSidebar: () => setSidebarOpen(false),
+  };
 };

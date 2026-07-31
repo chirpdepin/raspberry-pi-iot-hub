@@ -14,40 +14,40 @@ import { buildTheme, readStoredMode, storeMode, type ThemeMode } from './index';
  */
 
 interface ThemeModeContextValue {
-    mode: ThemeMode;
-    toggle: () => void;
+  mode: ThemeMode;
+  toggle: () => void;
 }
 
 const ThemeModeContext = createContext<ThemeModeContextValue | null>(null);
 
 export const ThemeModeProvider = ({ children }: { children: ReactNode }) => {
-    const [mode, setMode] = useState<ThemeMode>(readStoredMode);
+  const [mode, setMode] = useState<ThemeMode>(readStoredMode);
 
-    const toggle = useCallback(() => {
-        setMode((current) => {
-            const next: ThemeMode = current === 'dark' ? 'light' : 'dark';
-            storeMode(next);
-            return next;
-        });
-    }, []);
+  const toggle = useCallback(() => {
+    setMode((current) => {
+      const next: ThemeMode = current === 'dark' ? 'light' : 'dark';
+      storeMode(next);
+      return next;
+    });
+  }, []);
 
-    const theme = useMemo(() => buildTheme(mode), [mode]);
-    const value = useMemo(() => ({ mode, toggle }), [mode, toggle]);
+  const theme = useMemo(() => buildTheme(mode), [mode]);
+  const value = useMemo(() => ({ mode, toggle }), [mode, toggle]);
 
-    return (
-        <ThemeModeContext.Provider value={value}>
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                {children}
-            </ThemeProvider>
-        </ThemeModeContext.Provider>
-    );
+  return (
+    <ThemeModeContext.Provider value={value}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </ThemeModeContext.Provider>
+  );
 };
 
 export const useThemeMode = (): ThemeModeContextValue => {
-    const context = useContext(ThemeModeContext);
-    if (!context) {
-        throw new Error('useThemeMode must be used inside ThemeModeProvider');
-    }
-    return context;
+  const context = useContext(ThemeModeContext);
+  if (!context) {
+    throw new Error('useThemeMode must be used inside ThemeModeProvider');
+  }
+  return context;
 };

@@ -1,0 +1,105 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import importPlugin from 'eslint-plugin-import';
+
+/**
+ * Lint rules mirroring chirp-frontend's conventions, so anyone moving between
+ * the web app and this desktop app writes the same code.
+ *
+ * The rules that matter most here are the ui-kit import boundary and the ban on
+ * `any` — both are Contract 4 (single source of truth) expressed as lint: a
+ * locally-reimplemented Button is a second source of truth for what a button
+ * looks like, and `any` is a second source of truth for what a payload contains.
+ */
+export default tseslint.config(
+  { ignores: ['out/**', 'dist/**', 'node_modules/**', '.boundary-selftest/**'] },
+
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks, import: importPlugin },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+
+      // No `any`, ever — define the type or use `unknown` with a guard.
+      '@typescript-eslint/no-explicit-any': 'error',
+
+      // Named exports only. Default exports make a symbol renameable at every
+      // import site, which defeats grep and rename-refactors.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportDefaultDeclaration',
+          message: 'Named exports only — see chirp-frontend conventions.',
+        },
+      ],
+
+      // Import order: builtin/external, internal aliases, relative — blank line
+      // between groups, alphabetised inside a group.
+      'import/order': [
+        'error',
+        {
+          groups: [['builtin', 'external'], ['internal'], ['parent', 'sibling', 'index']],
+          'newlines-between': 'always',
+          alphabetize: { order: 'asc', caseInsensitive: true },
+        },
+      ],
+
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+
+  {
+    // The ui-kit import boundary. These MUI primitives have ui-kit wrappers that
+    // carry Chirp branding; importing MUI's directly produces a component that
+    // silently ignores the theme and drifts from the rest of the product.
+    files: ['src/renderer/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mui/material',
+              importNames: [
+                'Button',
+                'IconButton',
+                'TextField',
+                'Checkbox',
+                'Switch',
+                'Tabs',
+                'Tab',
+                'Tooltip',
+                'Dialog',
+                'Modal',
+                'Table',
+                'Autocomplete',
+              ],
+              message: 'Use the wrapper from @chirpwireless/ui-kit/primitives instead.',
+            },
+            {
+              name: '@chirpwireless/ui-kit',
+              message:
+                "Import from a subpath (/primitives, /shell, /layouts, /theme, /icons, /locales). The root entry pulls map-utils.ts, which reads import.meta.env and drags mapbox/turf into the bundle.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    // style.ts files are the one place allowed to reach for MUI primitives
+    // directly, matching chirp-frontend.
+    files: ['**/style.ts', '**/style.tsx'],
+    rules: { 'no-restricted-imports': 'off' },
+  },
+
+  {
+    files: ['scripts/**/*.ts', 'tests/**/*.mjs', 'electron.vite.config.ts'],
+    rules: { 'no-console': 'off', '@typescript-eslint/no-explicit-any': 'off' },
+  }
+);

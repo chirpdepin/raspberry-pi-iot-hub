@@ -14,9 +14,9 @@ import { IPC, type ChirpHubApi } from '../shared/ipc';
  * error at both ends rather than a silent runtime no-op.
  */
 const api: ChirpHubApi = {
-    getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
-    getHostCapabilities: () => ipcRenderer.invoke(IPC.hostCapabilities),
-    getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
+  getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
+  getHostCapabilities: () => ipcRenderer.invoke(IPC.hostCapabilities),
+  getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

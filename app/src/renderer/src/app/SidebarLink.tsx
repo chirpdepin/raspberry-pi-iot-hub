@@ -21,61 +21,47 @@ import { Box } from '@mui/material';
  * chrome-less window they cannot navigate back out of (Contract 2 rule 6).
  */
 export interface SidebarLinkProps {
-    href: string;
-    isExternal?: boolean;
-    isActive?: boolean;
-    disabled?: boolean;
-    onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
-    children: ReactNode;
-    className?: string;
+  href: string;
+  isExternal?: boolean;
+  isActive?: boolean;
+  disabled?: boolean;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  children: ReactNode;
+  className?: string;
 }
 
 const linkSx = {
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
-    textDecoration: 'none',
-    color: 'inherit',
+  display: 'flex',
+  alignItems: 'center',
+  width: '100%',
+  textDecoration: 'none',
+  color: 'inherit',
 } as const;
 
-export const SidebarLink = ({
-    href,
-    isExternal,
-    disabled,
-    onClick,
-    children,
-    className,
-}: SidebarLinkProps) => {
-    if (isExternal) {
-        return (
-            <Box
-                component="a"
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={className}
-                sx={linkSx}
-            >
-                {children}
-            </Box>
-        );
-    }
-
+export const SidebarLink = ({ href, isExternal, disabled, onClick, children, className }: SidebarLinkProps) => {
+  if (isExternal) {
     return (
-        <Box
-            component={NavLink}
-            to={href}
-            className={className}
-            sx={linkSx}
-            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-                if (disabled) {
-                    event.preventDefault();
-                    return;
-                }
-                onClick?.(event);
-            }}
-        >
-            {children}
-        </Box>
+      <Box component='a' href={href} target='_blank' rel='noopener noreferrer' className={className} sx={linkSx}>
+        {children}
+      </Box>
     );
+  }
+
+  return (
+    <Box
+      component={NavLink}
+      to={href}
+      className={className}
+      sx={linkSx}
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        onClick?.(event);
+      }}
+    >
+      {children}
+    </Box>
+  );
 };

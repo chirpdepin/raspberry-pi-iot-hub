@@ -20,22 +20,22 @@ const STORAGE_KEY = 'chirp-hub.theme-mode';
 export const DEFAULT_MODE: ThemeMode = 'dark';
 
 export function readStoredMode(): ThemeMode {
-    try {
-        const stored = window.localStorage.getItem(STORAGE_KEY);
-        return stored === 'light' || stored === 'dark' ? stored : DEFAULT_MODE;
-    } catch {
-        // Storage can be unavailable in a sandboxed or first-run renderer.
-        // A missing preference is not an error — fall back to the default.
-        return DEFAULT_MODE;
-    }
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === 'light' || stored === 'dark' ? stored : DEFAULT_MODE;
+  } catch {
+    // Storage can be unavailable in a sandboxed or first-run renderer.
+    // A missing preference is not an error — fall back to the default.
+    return DEFAULT_MODE;
+  }
 }
 
 export function storeMode(mode: ThemeMode): void {
-    try {
-        window.localStorage.setItem(STORAGE_KEY, mode);
-    } catch {
-        // Losing the preference is acceptable; failing to render is not.
-    }
+  try {
+    window.localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    // Losing the preference is acceptable; failing to render is not.
+  }
 }
 
 /**
@@ -54,12 +54,12 @@ export const buildTheme = (mode: ThemeMode): Theme => getTheme({ mode, variant: 
  * If the kit ever exports it, delete this and import theirs.
  */
 export interface ChirpPaletteExtras {
-    neutral: Record<string, string>;
-    borders: Record<string, string>;
-    alerts: Record<string, string>;
-    primaryColors: Record<string, string>;
-    shadow: string;
+  neutral: Record<string, string>;
+  borders: Record<string, string>;
+  alerts: Record<string, string>;
+  primaryColors: Record<string, string>;
+  shadow: string;
 }
 
 export const chirpPalette = (theme: Theme): Palette & ChirpPaletteExtras =>
-    theme.palette as unknown as Palette & ChirpPaletteExtras;
+  theme.palette as unknown as Palette & ChirpPaletteExtras;

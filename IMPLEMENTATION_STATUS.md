@@ -472,3 +472,45 @@ Recorded in `docs/platform-findings.md`, with the three platform-side defects.
 | Provision it in Chirp | ✅ Device created on the Cloud MQTT connector, topic `<prefix>/zigbee2mqtt/{deviceId}`, `state` mapped |
 | Prove the MQTT path | ✅ Publishing the real payload past the expired certificate made Chirp resolve the device, parse the JSON and offer exactly `state`/`brightness`/`linkquality`. **Only the certificate is in the way** |
 | Camera Twins | ⏸ Deferred — no published Twin image, and testing needs a Lens login |
+
+### GUI parity — what the live run did NOT prove
+
+The live run was done through the Chirp **web console** and the command line. That
+verified the *values* the app uses, but most of those steps **have no GUI path in
+the app yet**, so they are specified rather than proven.
+
+**Verified to match reality** — these are now correct in code because the live run
+corrected them:
+
+| | Checked against |
+|---|---|
+| `LORAWAN_REGIONS` | the console's own region picker |
+| `lnsUrlForRegion` | the URL the console displayed after registering |
+| `CERT_ZIP_ENTRIES`, `isPemOfType` | the real certificate ZIP (`tc.key` is PKCS#1) |
+| MQTT remote prefix source | the connector's `topic_prefix` |
+| `bridgeTopicLines` output | the stanza actually installed on the Pi |
+
+**No GUI path exists yet** — a user cannot do these in the app today:
+
+| Step | State |
+|---|---|
+| Sign in to Chirp | **Missing entirely.** No OAuth flow; `shell.openExternal` is used only by the Docker installer. Everything Chirp-side is therefore unreachable from the app |
+| Create the Cloud MQTT connector | No code path. `ensureConnection` is an honest error stub |
+| Provision a Zigbee device into Chirp | `provisionDevice` is an honest error stub |
+| Write the Mosquitto bridge stanza | `bridgeTopicLines` is implemented and tested, but **nothing calls it** — no adapter writes the config |
+| Register a camera with Lens | Stub, blocked on the Lens API |
+
+**Implemented but never exercised against the live API:**
+
+- `gateway-register` → `POST /nodes/nonminer/{band}/{gatewayId}` and the
+  certificate download. Unit-tested against a fixture ZIP; the real endpoint was
+  driven through the console instead.
+- `gateway-provision` → writes `tc.*` and starts the unit. The file handling is
+  real, but it would install the same incomplete `tc.trust` Chirp ships, so it
+  would hit finding 1 exactly as the manual run did.
+
+**A design consequence found today:** `zigbee-device-link-chirp` proposes sensor
+mappings from the observed payload, but Chirp **silently discards a mapping that
+has no normalized key**, and the normalized-key picker is empty until a metric
+exists. So the use case must **create the metric first, then map** — otherwise it
+will report success and store nothing, which is precisely what happened by hand.

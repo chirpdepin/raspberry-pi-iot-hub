@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { CapacityPayload } from '@shared/ipc';
 
+import { LAYOUT } from '../../config/defaults';
+
 interface CapacityBarProps {
   capacity: CapacityPayload;
 }
@@ -24,8 +26,8 @@ export const CapacityBar = memo<CapacityBarProps>(({ capacity }) => {
   const fraction = Math.min(1, capacity.current / Math.max(1, capacity.recommended));
 
   return (
-    <Stack sx={{ gap: '6px', width: '100%' }}>
-      <Stack direction='row' sx={{ justifyContent: 'space-between', gap: '16px' }}>
+    <Stack sx={{ gap: LAYOUT.gapMd, width: '100%' }}>
+      <Stack direction='row' sx={{ justifyContent: 'space-between', gap: LAYOUT.gapXxl }}>
         <Typography variant='body2'>
           {capacity.current} {t('of about')} {capacity.recommended} {t('cameras on this device')}
         </Typography>
@@ -39,8 +41,8 @@ export const CapacityBar = memo<CapacityBarProps>(({ capacity }) => {
 
       <Stack
         sx={(theme) => ({
-          height: '6px',
-          borderRadius: '3px',
+          height: LAYOUT.gapMd,
+          borderRadius: LAYOUT.radiusSm,
           backgroundColor: theme.palette.action.hover,
           overflow: 'hidden',
         })}

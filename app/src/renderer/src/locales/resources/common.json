@@ -157,7 +157,10 @@
     "Use Add device to pair your first one.": "Use Add device to pair your first one.",
     "Use Add camera to set up your first one.": "Use Add camera to set up your first one.",
     "Plug in a Zigbee dongle first.": "Plug in a Zigbee dongle first.",
-    "Cameras need Docker, which is not running.": "Cameras need Docker, which is not running."
+    "Cameras need Docker, which is not running.": "Cameras need Docker, which is not running.",
+    "Gateway": "Gateway",
+    "This computer has no LoRaWAN concentrator.": "This computer has no LoRaWAN concentrator.",
+    "Working…": "Working…"
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -317,7 +320,10 @@
     "Use Add device to pair your first one.": "Verwenden Sie „Gerät hinzufügen“, um Ihr erstes Gerät zu koppeln.",
     "Use Add camera to set up your first one.": "Verwenden Sie „Kamera hinzufügen“, um Ihre erste Kamera einzurichten.",
     "Plug in a Zigbee dongle first.": "Schließen Sie zuerst einen Zigbee-Stick an.",
-    "Cameras need Docker, which is not running.": "Kameras benötigen Docker, das nicht läuft."
+    "Cameras need Docker, which is not running.": "Kameras benötigen Docker, das nicht läuft.",
+    "Gateway": "Gateway",
+    "This computer has no LoRaWAN concentrator.": "Dieser Computer hat keinen LoRaWAN-Konzentrator.",
+    "Working…": "Wird ausgeführt…"
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -477,7 +483,10 @@
     "Use Add device to pair your first one.": "Usa «Añadir dispositivo» para vincular el primero.",
     "Use Add camera to set up your first one.": "Usa «Añadir cámara» para configurar la primera.",
     "Plug in a Zigbee dongle first.": "Primero conecta un adaptador Zigbee.",
-    "Cameras need Docker, which is not running.": "Las cámaras necesitan Docker, que no está en ejecución."
+    "Cameras need Docker, which is not running.": "Las cámaras necesitan Docker, que no está en ejecución.",
+    "Gateway": "Pasarela",
+    "This computer has no LoRaWAN concentrator.": "Este equipo no tiene concentrador LoRaWAN.",
+    "Working…": "Trabajando…"
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -637,7 +646,10 @@
     "Use Add device to pair your first one.": "Utilisez « Ajouter un appareil » pour coupler le premier.",
     "Use Add camera to set up your first one.": "Utilisez « Ajouter une caméra » pour configurer la première.",
     "Plug in a Zigbee dongle first.": "Branchez d’abord une clé Zigbee.",
-    "Cameras need Docker, which is not running.": "Les caméras nécessitent Docker, qui n’est pas en cours d’exécution."
+    "Cameras need Docker, which is not running.": "Les caméras nécessitent Docker, qui n’est pas en cours d’exécution.",
+    "Gateway": "Passerelle",
+    "This computer has no LoRaWAN concentrator.": "Cet ordinateur n’a pas de concentrateur LoRaWAN.",
+    "Working…": "En cours…"
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -797,6 +809,9 @@
     "Use Add device to pair your first one.": "Use «Adicionar dispositivo» para emparelhar o primeiro.",
     "Use Add camera to set up your first one.": "Use «Adicionar câmara» para configurar a primeira.",
     "Plug in a Zigbee dongle first.": "Ligue primeiro um adaptador Zigbee.",
-    "Cameras need Docker, which is not running.": "As câmaras precisam do Docker, que não está em execução."
+    "Cameras need Docker, which is not running.": "As câmaras precisam do Docker, que não está em execução.",
+    "Gateway": "Gateway",
+    "This computer has no LoRaWAN concentrator.": "Este computador não tem concentrador LoRaWAN.",
+    "Working…": "A trabalhar…"
   }
 }

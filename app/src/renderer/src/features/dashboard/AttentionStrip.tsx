@@ -3,6 +3,8 @@ import { Stack, Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LAYOUT } from '../../config/defaults';
+
 import type { AttentionItem } from './hooks/useDashboard';
 
 interface AttentionStripProps {
@@ -22,12 +24,12 @@ export const AttentionStrip = memo<AttentionStripProps>(({ items }) => {
   if (items.length === 0) return null;
 
   return (
-    <Stack sx={{ gap: '8px' }}>
+    <Stack sx={{ gap: LAYOUT.gapLg }}>
       {items.map((item) => (
         <Card key={item.id}>
           <Stack
             direction='row'
-            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '4px' }}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: LAYOUT.gapXxl, padding: LAYOUT.gapSm }}
           >
             <Typography variant='body1'>{t(item.message)}</Typography>
 

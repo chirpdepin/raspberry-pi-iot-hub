@@ -49,6 +49,20 @@ export const LAYOUT = {
   headerTitleGap: '4px',
   /** Gap between page actions when a screen has more than one. Alarm uses 12px. */
   headerActionGap: '12px',
+  /**
+   * The spacing scale, named by size.
+   *
+   * These are the values that were scattered as literals across a dozen
+   * components until `no-raw-spacing` found them. Named rather than numbered so
+   * a call site reads as intent, and changing one changes every use.
+   */
+  gapXs: '2px',
+  gapSm: '4px',
+  gapMd: '6px',
+  gapLg: '8px',
+  gapXl: '12px',
+  gapXxl: '16px',
+
   /** Dashboard card grid gap. */
   cardGap: '16px',
   /** Minimum card width before the grid wraps — keeps 1024px to two columns. */
@@ -80,6 +94,13 @@ export const LAYOUT = {
 
   /** Readable line length for a form column, so fields do not stretch. */
   formMaxWidth: '640px',
+  /** A narrow form column — the wizard's credential and name steps. */
+  narrowFormMaxWidth: '420px',
+  /** The gateway setup form and its progress list. */
+  setupFormMaxWidth: '480px',
+  /** Corner radius on inline media and progress bars. */
+  radiusSm: '3px',
+  radiusMd: '8px',
   /** Empty-state icon, matching chirp's 56x56 Chirp mark. */
   emptyIconSize: 56,
   /** Empty-state block height, so a mostly-empty page still has weight. */

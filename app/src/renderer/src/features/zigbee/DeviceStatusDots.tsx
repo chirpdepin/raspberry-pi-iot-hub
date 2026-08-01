@@ -3,6 +3,8 @@ import { Stack, Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LAYOUT } from '../../config/defaults';
+
 interface DeviceStatusDotsProps {
   connectedToHub: boolean;
   connectedToChirp: boolean;
@@ -37,11 +39,11 @@ export const DeviceStatusDots = memo<DeviceStatusDotsProps>(({ connectedToHub, c
   const { t } = useTranslation();
 
   return (
-    <Stack direction='row' sx={{ gap: '16px', alignItems: 'center' }}>
+    <Stack direction='row' sx={{ gap: LAYOUT.gapXxl, alignItems: 'center' }}>
       <Tooltip
         title={t(connectedToHub ? 'This device is reporting to the hub.' : 'The hub has not heard from this device.')}
       >
-        <Stack direction='row' sx={{ gap: '6px', alignItems: 'center' }}>
+        <Stack direction='row' sx={{ gap: LAYOUT.gapMd, alignItems: 'center' }}>
           <Dot on={connectedToHub} />
           <Typography variant='body2'>{t('Connected to hub')}</Typography>
         </Stack>
@@ -50,7 +52,7 @@ export const DeviceStatusDots = memo<DeviceStatusDotsProps>(({ connectedToHub, c
       <Tooltip
         title={t(connectedToChirp ? 'Readings are reaching Chirp.' : 'This device has not been added to Chirp yet.')}
       >
-        <Stack direction='row' sx={{ gap: '6px', alignItems: 'center' }}>
+        <Stack direction='row' sx={{ gap: LAYOUT.gapMd, alignItems: 'center' }}>
           <Dot on={connectedToChirp} />
           <Typography variant='body2'>{t('Connected to Chirp')}</Typography>
         </Stack>

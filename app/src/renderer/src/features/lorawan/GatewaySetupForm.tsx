@@ -3,6 +3,8 @@ import { MenuItem, Stack, Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LAYOUT } from '../../config/defaults';
+
 interface GatewaySetupFormProps {
   name: string;
   region: string;
@@ -26,7 +28,7 @@ export const GatewaySetupForm = memo<GatewaySetupFormProps>(
     const { t } = useTranslation();
 
     return (
-      <Stack sx={{ gap: '16px', maxWidth: '480px' }}>
+      <Stack sx={{ gap: LAYOUT.gapXxl, maxWidth: LAYOUT.setupFormMaxWidth }}>
         <TextField
           label={t('Gateway name')}
           value={name}
@@ -35,7 +37,7 @@ export const GatewaySetupForm = memo<GatewaySetupFormProps>(
           fullWidth
         />
 
-        <Stack sx={{ gap: '4px' }}>
+        <Stack sx={{ gap: LAYOUT.gapSm }}>
           <Select
             label={t('Region')}
             value={region}

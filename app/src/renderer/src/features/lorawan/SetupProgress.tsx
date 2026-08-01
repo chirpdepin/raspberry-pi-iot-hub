@@ -3,6 +3,8 @@ import { LinearProgress, Stack, Typography } from '@mui/material';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LAYOUT } from '../../config/defaults';
+
 import { STEP_LABEL, type SetupStep } from './hooks/useGatewaySetup';
 
 interface SetupProgressProps {
@@ -31,13 +33,13 @@ export const SetupProgress = memo<SetupProgressProps>(({ step, errorMessage, tec
 
   if (step === 'failed') {
     return (
-      <Stack sx={{ gap: '8px' }}>
+      <Stack sx={{ gap: LAYOUT.gapLg }}>
         <Typography variant='body1' sx={(theme) => ({ color: theme.palette.error.main })}>
           {t(errorMessage ?? 'Something went wrong.')}
         </Typography>
 
         {technicalDetail ? (
-          <Stack sx={{ gap: '4px', alignItems: 'flex-start' }}>
+          <Stack sx={{ gap: LAYOUT.gapSm, alignItems: 'flex-start' }}>
             <Button variant='text' size='small' onClick={handleToggleDetail}>
               {t('Technical details')}
             </Button>
@@ -65,7 +67,7 @@ export const SetupProgress = memo<SetupProgressProps>(({ step, errorMessage, tec
   }
 
   return (
-    <Stack sx={{ gap: '8px', maxWidth: '480px' }}>
+    <Stack sx={{ gap: LAYOUT.gapLg, maxWidth: LAYOUT.setupFormMaxWidth }}>
       <Typography variant='body1'>{t(STEP_LABEL[step])}</Typography>
       <LinearProgress />
     </Stack>

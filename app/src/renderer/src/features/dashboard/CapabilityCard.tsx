@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { LAYOUT } from '../../config/defaults';
 import type { CapabilityCard as CapabilityCardModel } from './hooks/useDashboard';
 
 interface CapabilityCardProps {
@@ -25,8 +26,8 @@ export const CapabilityCard = memo<CapabilityCardProps>(({ card }) => {
 
   return (
     <Card onClick={handleOpen} sx={{ cursor: 'pointer', height: '100%' }}>
-      <Stack sx={{ gap: '8px', padding: '4px', height: '100%' }}>
-        <Stack direction='row' sx={{ alignItems: 'center', gap: '8px' }}>
+      <Stack sx={{ gap: LAYOUT.gapLg, padding: LAYOUT.gapSm, height: '100%' }}>
+        <Stack direction='row' sx={{ alignItems: 'center', gap: LAYOUT.gapLg }}>
           <Box
             sx={(theme) => ({
               width: 8,

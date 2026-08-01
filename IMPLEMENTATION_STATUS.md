@@ -615,3 +615,45 @@ three platforms.
   Desktop limitation, not ours. The app detects and explains, and a network
   coordinator (`tcp://…`) works everywhere. Wiring the network transport into the
   UI is not done yet.
+
+## Tables and fixed header actions (2026-08-01)
+
+The dongle was detected but the Zigbee screen still showed the centred empty
+state beside it, with the actions floating mid-page.
+
+| | |
+|---|---|
+| **Actions** | Always in the header, every state, following Chirp's **Alarm** screen. An action that cannot work yet is disabled with a tooltip giving the reason, never hidden — hiding it changes the shape of the header |
+| **Empty states** | Carry no buttons. This **closed** the gap recorded last round: `EmptyState` rendered a secondary button only when given a label *and* a handler, and two screens passed only the label |
+| **Tables** | Always rendered, owning their empty state via `renderEmptyBlock` — the **SIM cards** idiom. No page branches between empty and populated |
+| **Columns** | Data, in a `columns.tsx` per feature. A new column is a row; a cell renders what it is handed and never reaches for IPC |
+| **Screens** | Zigbee → Coordinator + Devices tables · LoRaWAN → Gateway table · Cameras → table replacing the row cards |
+
+Replaced and deleted rather than left orphaned: `CameraRow`, `DeviceRow`,
+`ConcentratorDetails`.
+
+### `no-raw-spacing` — "nothing hardcoded", enforced
+
+`CLAUDE.md` claimed the boundary checker failed on *"raw px in `sx`/`styled`"*.
+**It never did** — the checker had 13 rules and that was not one. So the value
+most likely to be hardcoded was the one nothing was checking.
+
+The rule now exists, and on its first run it found **40 hardcoded values across
+10 files**. They are now a named scale in `LAYOUT` (`gapXs`…`gapXxl`, the form
+widths, the radii), so a call site reads as intent and changing one changes
+every use. The rule is in `--self-test`, which plants a violation of every rule
+and asserts it is caught, so it is proven to fire.
+
+### A kit contract worth knowing
+
+The kit's `Table` renders its empty block only when
+`rows.length === 0 && isLoading === false` — a **strict** comparison. Leaving
+`isLoading` undefined yields a table with a header and nothing beneath it, which
+is exactly what appeared first time. `DataTable` defaults it to `false`.
+
+### Still open
+
+- 🚧 Thread screen still uses the generic `CapabilityPage`; it gets its Border
+  router and Devices tables when the Thread runtime is wired up.
+- 🚧 `no-bare-jsx-text` — the second rule `CLAUDE.md` claims — is still not
+  implemented. Untranslated strings remain review-caught rather than build-caught.

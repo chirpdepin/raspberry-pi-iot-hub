@@ -68,10 +68,10 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
         ) : null}
 
         {step === 'discover' ? (
-          <Stack sx={{ gap: '16px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXxl }}>
             <Typography variant='body1'>{t('Chirp Hub can find cameras on your network automatically.')}</Typography>
 
-            <Stack direction='row' sx={{ gap: '12px' }}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
               <Button variant='primary' size='medium' onClick={onScan} disabled={isScanning}>
                 {t(isScanning ? 'Scanning…' : 'Scan for cameras')}
               </Button>
@@ -86,7 +86,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
               </Typography>
             ) : null}
 
-            <Stack sx={{ gap: '12px', maxWidth: '420px' }}>
+            <Stack sx={{ gap: LAYOUT.gapXl, maxWidth: LAYOUT.narrowFormMaxWidth }}>
               <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
                 {t('Know the camera’s address? Add it directly.')}
               </Typography>
@@ -98,7 +98,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
                 onChange={(event) => setManualAddress(event.target.value)}
               />
 
-              <Stack direction='row' sx={{ gap: '12px' }}>
+              <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
                 <Button
                   variant='secondary'
                   size='medium'
@@ -114,9 +114,9 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
               <Card key={camera.xaddr}>
                 <Stack
                   direction='row'
-                  sx={{ justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '8px' }}
+                  sx={{ justifyContent: 'space-between', alignItems: 'center', gap: LAYOUT.gapXxl, padding: LAYOUT.gapLg }}
                 >
-                  <Stack sx={{ gap: '2px' }}>
+                  <Stack sx={{ gap: LAYOUT.gapXs }}>
                     <Typography variant='body1'>
                       {[camera.manufacturer, camera.model].filter(Boolean).join(' ') || t('Camera')}
                     </Typography>
@@ -135,7 +135,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
         ) : null}
 
         {step === 'connect' && config ? (
-          <Stack sx={{ gap: '16px', maxWidth: '420px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXxl, maxWidth: LAYOUT.narrowFormMaxWidth }}>
             <Typography variant='body1'>{t('Enter the camera’s username and password.')}</Typography>
 
             <TextField
@@ -155,7 +155,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
               }
             />
 
-            <Stack direction='row' sx={{ gap: '12px' }}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
               <Button variant='secondary' size='medium' onClick={() => onBack('discover')}>
                 {t('Back')}
               </Button>
@@ -167,12 +167,12 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
         ) : null}
 
         {step === 'preview' && frame ? (
-          <Stack sx={{ gap: '16px', maxWidth: '640px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXxl, maxWidth: LAYOUT.formMaxWidth }}>
             <Typography variant='body1'>{t('This is what the camera sees right now.')}</Typography>
 
-            <img src={frame.frameDataUrl} alt={t('Camera preview')} style={{ width: '100%', borderRadius: '8px' }} />
+            <img src={frame.frameDataUrl} alt={t('Camera preview')} style={{ width: '100%', borderRadius: LAYOUT.radiusMd }} />
 
-            <Stack direction='row' sx={{ gap: '12px' }}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
               <Button variant='secondary' size='medium' onClick={() => onBack('connect')}>
                 {t('Back')}
               </Button>
@@ -184,14 +184,14 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
         ) : null}
 
         {step === 'settings' && config ? (
-          <Stack sx={{ gap: '16px', maxWidth: '420px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXxl, maxWidth: LAYOUT.narrowFormMaxWidth }}>
             <TextField
               label={t('Camera name')}
               value={config.displayName}
               onChange={(event) => onChange({ displayName: event.target.value })}
             />
 
-            <Stack direction='row' sx={{ gap: '12px' }}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
               <Button variant='secondary' size='medium' onClick={() => onBack('preview')}>
                 {t('Back')}
               </Button>
@@ -203,10 +203,10 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
         ) : null}
 
         {step === 'done' ? (
-          <Stack sx={{ gap: '16px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXxl }}>
             <Typography variant='body1'>{t('Your camera is set up and recording.')}</Typography>
 
-            <Stack direction='row' sx={{ gap: '12px' }}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapXl }}>
               <Button variant='primary' size='medium' onClick={onFinish}>
                 {t('Finish')}
               </Button>

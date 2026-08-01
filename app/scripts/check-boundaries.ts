@@ -239,6 +239,38 @@ const rules: Rule[] = [
     },
   },
   {
+    id: 'no-raw-spacing',
+    why: 'Spacing lives in LAYOUT so a screen cannot drift from the rest. This app already sat 72px inset where chirp sits at 24px, because one component set its own padding and nothing checked.',
+    // config/defaults.ts is where the values are defined, and the theme file
+    // adapts kit tokens. Tests may assert concrete pixels — that is how the
+    // metrics are proven.
+    applies: (p) =>
+      p.startsWith('renderer/') &&
+      !p.endsWith('config/defaults.ts') &&
+      !p.includes('/theme/') &&
+      !p.includes('/assets/') &&
+      !p.endsWith('.test.ts') &&
+      !p.endsWith('.test.tsx'),
+    check: (p, lines) => {
+      const out: Violation[] = [];
+      lines.forEach((text, i) => {
+        if (isComment(text)) return;
+        // A px literal in a style position. Bare numbers are left alone: MUI
+        // reads those through the theme's spacing scale, which is the point.
+        const px = text.match(/(?:padding|margin|gap|width|height|top|left|right|bottom|radius)[A-Za-z]*\s*:\s*'(\d+)px'/i);
+        if (px) {
+          out.push({
+            rule: 'no-raw-spacing',
+            file: p,
+            line: i + 1,
+            detail: `hardcoded ${px[1]}px — add it to LAYOUT in config/defaults.ts`,
+          });
+        }
+      });
+      return out;
+    },
+  },
+  {
     id: 'no-hardcoded-path',
     why: 'System paths come from PathsPort so the same code runs on Ubuntu Server today and Ubuntu Core later, where these become $SNAP_DATA.',
     // Tests are exempt: asserting that PathsPort produces "/etc/iot-hub/..." is
@@ -568,6 +600,7 @@ function selfTest(): number {
   write('main/usecase/camera-remove/usecase.ts', 'export {};\n'); // deliberately no test
   write('renderer/pages/Cameras.tsx', "const c = '#FF4D14';\nconst d = require('fs');\n");
   write('main/adapters/store/config.ts', "const p = '/etc/iot-hub/radios.env';\n");
+  write('renderer/src/features/Row.tsx', "const sx = { padding: '13px' };\nvoid sx;\n");
   write('main/usecase/zigbee-start/usecase.ts', "const img = 'koenkk/zigbee2mqtt:2.12.1';\n");
   write('main/usecase/zigbee-start/usecase.test.ts', 'export {};\n');
   write('renderer/src/pages/Root.tsx', "import { Kit } from '@chirpwireless/ui-kit';\nexport default Kit;\n");
@@ -587,6 +620,7 @@ function selfTest(): number {
     'renderer-has-no-node',
     'no-hardcoded-color',
     'no-hardcoded-path',
+    'no-raw-spacing',
     'no-inline-image-tag',
     'no-ui-kit-root-import',
     'no-mui-primitive',

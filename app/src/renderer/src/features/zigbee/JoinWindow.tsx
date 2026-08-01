@@ -3,7 +3,7 @@ import { CircularProgress, Stack, Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { JOIN_WINDOW_SECONDS } from '../../config/defaults';
+import { JOIN_WINDOW_SECONDS, LAYOUT } from '../../config/defaults';
 
 interface JoinWindowProps {
   secondsRemaining: number;
@@ -26,8 +26,8 @@ export const JoinWindow = memo<JoinWindowProps>(({ secondsRemaining, onStop }) =
 
   return (
     <Card>
-      <Stack sx={{ gap: '12px', padding: '8px' }}>
-        <Stack direction='row' sx={{ gap: '12px', alignItems: 'center' }}>
+      <Stack sx={{ gap: LAYOUT.gapXl, padding: LAYOUT.gapLg }}>
+        <Stack direction='row' sx={{ gap: LAYOUT.gapXl, alignItems: 'center' }}>
           <Stack sx={{ position: 'relative', display: 'inline-flex' }}>
             <CircularProgress variant='determinate' value={progress} size={40} />
             <Stack
@@ -42,7 +42,7 @@ export const JoinWindow = memo<JoinWindowProps>(({ secondsRemaining, onStop }) =
             </Stack>
           </Stack>
 
-          <Stack sx={{ gap: '2px' }}>
+          <Stack sx={{ gap: LAYOUT.gapXs }}>
             <Typography variant='body1'>{t('Searching for new devices…')}</Typography>
             <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
               {t('For a bulb: turn it off and on 5 times in a row until it flashes.')}

@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { AppInfo, DockerStatus, HostDetails } from '@shared/ipc';
 
+import { LAYOUT } from '../../config/defaults';
+
 interface DeviceCardProps {
   host?: HostDetails['host'];
   appInfo?: AppInfo;
@@ -40,11 +42,11 @@ export const DeviceCard = memo<DeviceCardProps>(({ host, appInfo, docker }) => {
 
   return (
     <Card sx={{ height: '100%' }}>
-      <Stack sx={{ gap: '8px', padding: '4px' }}>
+      <Stack sx={{ gap: LAYOUT.gapLg, padding: LAYOUT.gapSm }}>
         <Typography variant='h6'>{t('This device')}</Typography>
 
         {rows.map((row) => (
-          <Stack key={row.label} direction='row' sx={{ justifyContent: 'space-between', gap: '16px' }}>
+          <Stack key={row.label} direction='row' sx={{ justifyContent: 'space-between', gap: LAYOUT.gapXxl }}>
             <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
               {t(row.label)}
             </Typography>

@@ -1,0 +1,126 @@
+# Multi-arch build and public release for lens-twin.
+#
+# THIS FILE BELONGS IN THE lens-twin REPOSITORY, not here. It is kept in this
+# repo as a template because lens-twin has no CI at all today - no .github
+# directory, and every manifest reads
+#   image: lens/twin:local  # ... when CI publishes
+# while lens-core and lens-bridge both publish to ghcr.io.
+#
+# Installing it needs write access to chirpwireless/lens-twin, which is why this
+# is a template rather than an active workflow. See app/electron.md.
+#
+# Why tarballs on a public release rather than a private registry: Twin is
+# closed-source, but pushing adopters toward a private registry means every user
+# needs credentials for a repo they cannot read. Publishing the BUILT IMAGE as a
+# release asset on the public raspberry-pi-iot-hub repo keeps the source closed
+# while keeping the download open - the same place the SD image link already
+# lives.
+
+name: Twin release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, e.g. 2.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            platform: linux/arm64
+          - arch: amd64
+            platform: linux/amd64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The Dockerfile's build context is the workspace parent, and the repo
+          # must be checked out as twin/.
+          path: twin
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Resolve version
+        id: version
+        run: echo "value=${{ inputs.version || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          docker buildx build \
+            --platform ${{ matrix.platform }} \
+            --file twin/Dockerfile \
+            --tag lens-twin:${{ steps.version.outputs.value }} \
+            --load \
+            .
+
+      # docker save produces a portable tarball the app can `docker load`
+      # without any registry involved. zstd because a ~150 MB image is a real
+      # download on a domestic connection.
+      - name: Export and compress
+        run: |
+          docker save lens-twin:${{ steps.version.outputs.value }} \
+            | zstd -T0 -19 -o lens-twin-${{ steps.version.outputs.value }}-${{ matrix.arch }}.tar.zst
+          sha256sum lens-twin-*.tar.zst > lens-twin-${{ matrix.arch }}.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: twin-${{ matrix.arch }}
+          path: |
+            lens-twin-*.tar.zst
+            lens-twin-*.sha256
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts, merge-multiple: true }
+
+      # The manifest is the app's update feed. Checksums are not optional: this
+      # is an executable fetched over the network onto a user's machine.
+      - name: Build manifest
+        run: |
+          version="${{ inputs.version || github.ref_name }}"
+          version="${version#v}"
+          {
+            echo '{'
+            echo "  \"latest\": \"${version}\","
+            echo '  "releases": [{'
+            echo "    \"version\": \"${version}\","
+            echo "    \"published\": \"$(date -u +%Y-%m-%d)\","
+            echo '    "artifacts": ['
+            first=1
+            for arch in arm64 amd64; do
+              file="artifacts/lens-twin-${version}-${arch}.tar.zst"
+              [ -f "$file" ] || continue
+              [ $first -eq 0 ] && echo ','
+              first=0
+              printf '      {"arch": "%s", "url": "%s", "sha256": "%s", "size": %s}' \
+                "$arch" \
+                "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}/lens-twin-${version}-${arch}.tar.zst" \
+                "$(sha256sum "$file" | cut -d' ' -f1)" \
+                "$(stat -c%s "$file")"
+            done
+            echo
+            echo '    ]'
+            echo '  }]'
+            echo '}'
+          } > twin-manifest.json
+          cat twin-manifest.json
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/lens-twin-*.tar.zst
+            twin-manifest.json

@@ -266,7 +266,9 @@ const rules: Rule[] = [
   {
     id: 'no-inline-image-tag',
     why: 'A container image tag written in two places drifts. One definition in config/images.ts is what makes a version bump reviewable.',
-    applies: (p) => !p.startsWith('main/config/'),
+    // Tests are exempt: asserting the tag a use case returns is how that
+    // behaviour is proven, and the assertion has to name the value.
+    applies: (p) => !p.startsWith('main/config/') && !p.endsWith('.test.ts'),
     check: (p, lines) => {
       const out: Violation[] = [];
       const known = /(eclipse-mosquitto|koenkk\/zigbee2mqtt|openthread\/otbr|xoseperez\/basicstation|lens-twin)\s*[:@]/;

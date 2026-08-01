@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './app/AppShell';
 import { NAV_ITEMS, type CapabilityKey } from './config/navigation';
 import { CapabilityPage } from './pages/CapabilityPage';
+import { Cameras } from './pages/Cameras';
 import { Dashboard } from './pages/Dashboard';
 import { Lorawan } from './pages/Lorawan';
 import { Zigbee } from './pages/Zigbee';
@@ -30,6 +31,12 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Capabilities with a dedicated page. Anything absent here renders the generic
+ * capability page instead, so adding a section never edits the route table.
+ */
+const IMPLEMENTED_CAPABILITIES = new Set<CapabilityKey>(['cameras', 'lorawan', 'zigbee']);
+
 const hasCapability = (
   item: (typeof NAV_ITEMS)[number]
 ): item is (typeof NAV_ITEMS)[number] & {
@@ -44,11 +51,14 @@ export const App = () => (
           <Routes>
             <Route path='/' element={<Dashboard />} />
 
+            <Route path='/cameras' element={<Cameras />} />
             <Route path='/lorawan' element={<Lorawan />} />
             <Route path='/zigbee' element={<Zigbee />} />
 
+            {/* Sections with a real page are listed above; the rest fall back
+                to the capability-driven empty state (Contract 1 O). */}
             {NAV_ITEMS.filter(hasCapability)
-              .filter((item) => item.capability !== 'lorawan' && item.capability !== 'zigbee')
+              .filter((item) => !IMPLEMENTED_CAPABILITIES.has(item.capability))
               .map((item) => (
                 <Route key={item.id} path={item.path} element={<CapabilityPage item={item} />} />
               ))}

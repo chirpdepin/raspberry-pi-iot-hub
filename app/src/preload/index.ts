@@ -30,6 +30,15 @@ const api: ChirpHubApi = {
   stopZigbeeJoin: () => ipcRenderer.invoke(IPC.zigbeeStopJoin),
   getZigbeeDevices: () => ipcRenderer.invoke(IPC.zigbeeDevices),
   linkZigbeeDevice: (input) => ipcRenderer.invoke(IPC.zigbeeLinkChirp, input),
+
+  getSubsystemStatus: () => ipcRenderer.invoke(IPC.subsystemStatus),
+
+  discoverCameras: () => ipcRenderer.invoke(IPC.cameraDiscover),
+  probeCamera: (config) => ipcRenderer.invoke(IPC.cameraProbe, config),
+  addCamera: (config) => ipcRenderer.invoke(IPC.cameraAdd, config),
+  listCameras: () => ipcRenderer.invoke(IPC.cameraList),
+  removeCamera: (input) => ipcRenderer.invoke(IPC.cameraRemove, input),
+  getCameraCapacity: () => ipcRenderer.invoke(IPC.cameraCapacity),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

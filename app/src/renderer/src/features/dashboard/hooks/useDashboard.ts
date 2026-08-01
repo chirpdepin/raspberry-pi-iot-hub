@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { NAV_ITEMS, type CapabilityKey } from '../../../config/navigation';
 import {
@@ -7,6 +8,7 @@ import {
   useHostDetailsQuery,
   useInstallDockerMutation,
 } from '../../../services/api/host/hooks/useHostDetailsQuery';
+import { useSubsystemStatusQuery } from '../../../services/api/status/hooks/useStatusQuery';
 
 /**
  * Business layer for the dashboard.
@@ -39,7 +41,9 @@ export const useDashboard = () => {
   const hostQuery = useHostDetailsQuery();
   const appInfoQuery = useAppInfoQuery();
   const dockerQuery = useDockerStatusQuery();
+  const subsystemQuery = useSubsystemStatusQuery();
   const installDocker = useInstallDockerMutation();
+  const navigate = useNavigate();
 
   // useCallback so the attention items below have a stable dependency; without
   // it the memo rebuilds on every render and the lint rule is right to object.
@@ -82,8 +86,28 @@ export const useDashboard = () => {
       });
     }
 
+    /**
+     * One row per failing subsystem, and only failing ones.
+     *
+     * The status list is gathered so that one broken subsystem cannot suppress
+     * the others, which is what makes it safe to render them all here: pulling
+     * the Zigbee dongle adds a Zigbee row and changes nothing else.
+     */
+    for (const subsystem of subsystemQuery.data ?? []) {
+      if (subsystem.state !== 'failed' || !subsystem.nextAction) continue;
+
+      const { label, route } = subsystem.nextAction;
+
+      items.push({
+        id: `subsystem-${subsystem.id}`,
+        message: subsystem.summary,
+        actionLabel: label,
+        onAction: () => navigate(route),
+      });
+    }
+
     return items;
-  }, [dockerQuery.data, handleInstallDocker]);
+  }, [dockerQuery.data, handleInstallDocker, subsystemQuery.data, navigate]);
 
   const isNothingConfigured = cards.every((card) => !card.available);
 
@@ -92,6 +116,7 @@ export const useDashboard = () => {
     appInfo: appInfoQuery.data,
     docker: dockerQuery.data,
     cards,
+    subsystems: subsystemQuery.data ?? [],
     attention,
     isNothingConfigured,
     isLoading: hostQuery.isLoading,

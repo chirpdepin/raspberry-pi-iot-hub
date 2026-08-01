@@ -35,9 +35,19 @@ export interface LensPort {
   registerTwin(input: { twinKey: string; name: string }): Promise<Result<{ bootstrapToken: string; lensUri: string }>>;
 }
 
+/**
+ * Port allocation is shared with every other subsystem, so it arrives as its
+ * own narrow port rather than as a method on the container runtime.
+ *
+ * `camera-add` is one consumer of `usecase/port-allocate`, not its owner: the
+ * host's port space is also spoken for by the MQTT broker, Zigbee2MQTT and the
+ * Thread border router, and a Twin must not be handed any of theirs.
+ */
+export interface PortAllocationPort {
+  allocate(): Promise<Result<number>>;
+}
+
 export interface ContainerRuntimePort {
-  /** An unused host port, so several Twins can coexist. */
-  allocatePort(): Promise<number>;
   /**
    * Writes the Twin's config.json into its volume BEFORE first start.
    *
@@ -54,11 +64,25 @@ export interface ContainerRuntimePort {
   }): Promise<Result<void>>;
 }
 
+/**
+ * Persistence of the camera record.
+ *
+ * The container alone is not enough: it carries no display name, and its
+ * config.json holds the camera password. Reading names back out of container
+ * configs would mean handling that secret on every list refresh, so the record
+ * the UI needs is stored separately and deliberately holds no credentials.
+ */
+export interface CameraRecordPort {
+  save(camera: Camera): Promise<void>;
+}
+
 export interface CameraAddPorts {
   discovery: CameraDiscoveryPort;
   images: ImageEnsurePort;
   lens: LensPort;
   containers: ContainerRuntimePort;
+  ports: PortAllocationPort;
+  records: CameraRecordPort;
 }
 
 export interface CameraAddResult {

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { shell } from 'electron';
 
 import { domainError, err } from './domain/errors';
@@ -13,7 +15,25 @@ import { createZigbee2MqttClient } from './adapters/mqtt/zigbee2mqtt-client';
 import { createZigbeeService } from './adapters/mqtt/zigbee-service';
 import { createPrivilegedRunner } from './adapters/privileged/privileged-runner';
 import { createSessionStore } from './adapters/store/session';
+import { createPortClaims, createPortProbe } from './adapters/network/port-allocator';
+import { createServiceState } from './adapters/system/service-state';
+import { createCameraProbe, createLorawanProbe, createZigbeeProbe } from './adapters/status/subsystem-probes';
+import { createCredentialsCheck, createTwinInventory } from './adapters/status/inventory';
+import { createCameraStore } from './adapters/store/cameras';
+import { createTwinRuntime } from './adapters/camera/twin-runtime';
+import { createImageStore } from './adapters/images/image-store';
+import { IMAGES } from './config/images';
+import { handleTwinImageEnsure } from './usecase/twin-image-ensure/usecase';
+import { handlePortAllocate } from './usecase/port-allocate/usecase';
 import type { IpcDependencies } from './ipc/register';
+
+/**
+ * One allocator, shared by every subsystem that needs a host port. Module scope
+ * because it depends on nothing built per-composition — and because there must
+ * be exactly one, or the reserved-port table is honoured inconsistently
+ * (Phase 11 SOLID gate).
+ */
+const allocatePort = () => handlePortAllocate({ probe: createPortProbe(), claims: createPortClaims() });
 
 /**
  * Builds the real dependency graph, with **no side effects**.
@@ -27,13 +47,15 @@ import type { IpcDependencies } from './ipc/register';
 export const buildDependencies = (): IpcDependencies => {
   const paths = createPaths(process.platform);
   const privileged = createPrivilegedRunner();
+  const services = createServiceState(process.platform);
 
   const zigbeeService = createZigbeeService({
     paths,
     startService: (name) => privileged.startService(name),
-    // Service state is read via the same systemd the units use; a stub here
-    // would report "running" for a stack that is not.
-    isServiceActive: async () => false,
+    // Reading unit state is unprivileged, so it does not go through the
+    // privileged runner — a dashboard refresh must never raise a password
+    // prompt.
+    isServiceActive: (name) => services.isActive(name),
   });
 
   const zigbee2mqtt = createZigbee2MqttClient();
@@ -42,6 +64,28 @@ export const buildDependencies = (): IpcDependencies => {
     platform: process.platform,
     openExternal: async (url) => shell.openExternal(url),
   });
+
+  const concentrator = createConcentratorDiscovery(paths);
+
+  const images = createImageStore({ paths });
+
+  /**
+   * The image tag the runtime should use for discovery and for new Twins.
+   *
+   * Resolved from the same use case that downloads it, so discovery can never
+   * run against a tag that was never loaded.
+   */
+  let resolvedImageTag = `${IMAGES.twin}:latest`;
+  const twinRuntime = createTwinRuntime({ paths, imageTag: () => resolvedImageTag });
+
+  const ensureTwinImage = async (onProgress?: (received: number, total: number) => void) => {
+    const result = await handleTwinImageEnsure({ images, arch: () => process.arch }, onProgress);
+    if (result.ok) resolvedImageTag = result.value;
+    return result;
+  };
+
+  const cameraStore = createCameraStore();
+  const twinInventory = createTwinInventory();
 
   return {
     hostCapabilities: {
@@ -62,7 +106,7 @@ export const buildDependencies = (): IpcDependencies => {
       },
     },
     docker: { runtime: containerRuntime },
-    gatewayDetect: { concentrator: createConcentratorDiscovery(paths) },
+    gatewayDetect: { concentrator },
     gatewayRegister: {
       chirp: createChirpGatewayClient({ auth: createSessionStore(), unzip: readZipEntries }),
     },
@@ -99,6 +143,66 @@ export const buildDependencies = (): IpcDependencies => {
         provisionDevice: async () => err(domainError('unknown', 'Not available yet.')),
       },
       payloads: zigbee2mqtt.payloads,
+    },
+    cameraDiscover: { discovery: twinRuntime.discovery },
+    cameraAdd: {
+      discovery: twinRuntime.discovery,
+      images: { ensure: ensureTwinImage },
+      lens: {
+        // A v4 UUID: the Twin Key is immutable and must be unique across every
+        // hub, so it is generated locally rather than handed out by a server
+        // the hub may not be able to reach.
+        newTwinKey: () => randomUUID(),
+        // The Lens registration API is not wired up yet — see the blocked list
+        // in app/electron.md. An honest failure here is better than a Twin that
+        // starts and silently never reaches Chirp.
+        registerTwin: async () =>
+          err(
+            domainError(
+              'unknown',
+              'Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.'
+            )
+          ),
+      },
+      containers: twinRuntime.containers,
+      ports: { allocate: allocatePort },
+      records: cameraStore,
+    },
+    cameraList: {
+      records: cameraStore,
+      state: {
+        running: async () => (await twinInventory()).filter((twin) => twin.running).map((twin) => twin.id),
+      },
+    },
+    cameraRemove: { containers: twinRuntime.removal, records: cameraStore },
+    capacity: {
+      capacity: {
+        host: () => createHostInfo().read(),
+        cameraCount: async () => (await cameraStore.all()).length,
+      },
+    },
+    subsystemStatus: {
+      /**
+       * Built from each subsystem's own adapters and nothing else. The probes
+       * share no state, so a fault in one cannot propagate — the guarantee the
+       * use case's `allSettled` then makes good on even if a probe throws.
+       */
+      probes: [
+        createLorawanProbe({
+          concentratorPresent: async () => (await concentrator.read()) !== null,
+          credentialsPresent: createCredentialsCheck(paths.lorawanCredentialsDir()),
+          serviceState: (unit) => services.state(unit),
+        }),
+        createZigbeeProbe({
+          coordinatorPresent: async () => (await zigbeeService.coordinator()) !== null,
+          serviceState: (unit) => services.state(unit),
+          pairedCount: async () => (await zigbee2mqtt.zigbee.devices()).length,
+        }),
+        createCameraProbe({
+          runtimeReady: async () => (await containerRuntime.status()).state === 'ready',
+          twins: twinInventory,
+        }),
+      ],
     },
   };
 };

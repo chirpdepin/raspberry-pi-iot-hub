@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { createServer } from 'node:net';
 import { promisify } from 'node:util';
 
 import { domainError, err, ok, type Result } from '../../domain/errors';
@@ -11,6 +10,7 @@ import {
   type DiscoveredCamera,
 } from '../../domain/camera';
 import type { CameraDiscoveryPort, ContainerRuntimePort } from '../../usecase/camera-add/contract';
+import type { TwinRemovalPort } from '../../usecase/camera-remove/contract';
 import type { PathsPort } from '../paths/paths';
 
 const run = promisify(execFile);
@@ -31,17 +31,11 @@ const run = promisify(execFile);
 
 const DISCOVERY_CONTAINER_TIMEOUT_MS = 20_000;
 
-/** Host ports for Twin web UIs. Above the ephemeral range on most systems. */
-const PORT_RANGE_START = 18_080;
-const PORT_RANGE_END = 18_180;
-
-const isPortFree = (port: number): Promise<boolean> =>
-  new Promise((resolve) => {
-    const server = createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => server.close(() => resolve(true)));
-    server.listen(port, '127.0.0.1');
-  });
+/**
+ * Port allocation used to live here. It now belongs to `usecase/port-allocate`,
+ * because the host's port space is shared with the MQTT broker, Zigbee2MQTT and
+ * the Thread border router — none of which this adapter knows about.
+ */
 
 export interface TwinRuntimeDeps {
   paths: PathsPort;
@@ -49,6 +43,13 @@ export interface TwinRuntimeDeps {
 }
 
 export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
+  /**
+   * Where Twin data lives. Derived once so creation and deletion cannot build
+   * the path differently — the version of this bug that deletes the wrong
+   * directory is not one worth risking.
+   */
+  const camerasDir = (): string => paths.serviceDir('lorawan').replace(/lorawan$/, 'cameras');
+
   const discovery: CameraDiscoveryPort = {
     async discover(timeoutMs: number): Promise<DiscoveredCamera[]> {
       try {
@@ -129,19 +130,9 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
   };
 
   const containers: ContainerRuntimePort = {
-    async allocatePort(): Promise<number> {
-      for (let port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
-        if (await isPortFree(port)) return port;
-      }
-
-      // Falling back to the range start is wrong, so surface it as a real
-      // failure by returning a port the caller will fail to bind.
-      return PORT_RANGE_START;
-    },
-
     async createTwin({ id, imageTag: tag, hostPort, config }): Promise<Result<void>> {
       try {
-        const configDir = `${paths.serviceDir('lorawan').replace(/lorawan$/, 'cameras')}/${id}/config`;
+        const configDir = `${camerasDir()}/${id}/config`;
 
         // Pre-seed config.json into the volume BEFORE the container first runs.
         await run('mkdir', ['-p', configDir]);
@@ -174,5 +165,41 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
     },
   };
 
-  return { discovery, containers };
+  const removal: TwinRemovalPort = {
+    async remove(id: string): Promise<Result<void>> {
+      try {
+        // -f because a recording Twin will not stop on its own signal quickly,
+        // and the user has already confirmed they want it gone.
+        await run('docker', ['rm', '-f', id]);
+        return ok(undefined);
+      } catch (error) {
+        return err(
+          domainError(
+            'unknown',
+            "Couldn't remove this camera. It may already be gone — refresh and check.",
+            error instanceof Error ? error.message : String(error)
+          )
+        );
+      }
+    },
+
+    async purgeData(id: string): Promise<Result<void>> {
+      try {
+        // Only ever the one Twin's own directory. `camerasDir` is built the
+        // same way it is at creation, so this cannot reach outside it.
+        await run('rm', ['-rf', `${camerasDir()}/${id}`]);
+        return ok(undefined);
+      } catch (error) {
+        return err(
+          domainError(
+            'unknown',
+            "The camera was removed, but its recordings couldn't be deleted.",
+            error instanceof Error ? error.message : String(error)
+          )
+        );
+      }
+    },
+  };
+
+  return { discovery, containers, removal };
 };

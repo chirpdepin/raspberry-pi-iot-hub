@@ -41,6 +41,25 @@ export const IPC = {
   zigbeeDevices: 'zigbee:devices',
   /** Provision one device into Chirp. */
   zigbeeLinkChirp: 'zigbee:linkChirp',
+
+  /**
+   * Per-subsystem health, gathered so one failing subsystem cannot blank the
+   * others. Feeds the dashboard's Needs-attention strip.
+   */
+  subsystemStatus: 'subsystem:status',
+
+  /** ONVIF discovery, with vendor defaults pre-filled. */
+  cameraDiscover: 'camera:discover',
+  /** Frame probe — the picture that proves the credentials work. */
+  cameraProbe: 'camera:probe',
+  /** Create the Twin. */
+  cameraAdd: 'camera:add',
+  /** Configured cameras and whether each is recording. */
+  cameraList: 'camera:list',
+  /** Remove a Twin, optionally with its recordings. */
+  cameraRemove: 'camera:remove',
+  /** How many cameras this hardware should run. */
+  cameraCapacity: 'camera:capacity',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -64,6 +83,63 @@ export interface AppInfo {
    */
   platform: string;
   arch: string;
+}
+
+/**
+ * One subsystem's health. Mirrors `main/domain/subsystem.ts`, restated here
+ * because the renderer cannot import from `main/`.
+ */
+export interface SubsystemStatusPayload {
+  id: 'lorawan' | 'zigbee' | 'cameras';
+  state: 'running' | 'not-configured' | 'unavailable' | 'failed';
+  summary: string;
+  nextAction?: { label: string; route: string };
+  technicalDetail?: string;
+}
+
+export interface DiscoveredCameraPayload {
+  xaddr: string;
+  address: string;
+  manufacturer: string | null;
+  model: string | null;
+  suggestedRtspPath: string;
+  suggestedOnvifPort: number;
+}
+
+export interface CameraConfigPayload {
+  displayName: string;
+  address: string;
+  credentials: { username: string; password: string };
+  rtspPath: string;
+  onvifPort: number;
+  recording: 'motion' | 'continuous';
+  retentionDays: number;
+}
+
+export interface CameraPayload {
+  id: string;
+  displayName: string;
+  address: string;
+  hostPort: number;
+  recording: 'motion' | 'continuous';
+  online: boolean;
+}
+
+export interface CameraProbePayload {
+  /** A data: URL. Contract 2 rule 5 — the proof it worked. */
+  frameDataUrl: string;
+  codec: string;
+  width: number;
+  height: number;
+}
+
+export interface CapacityPayload {
+  current: number;
+  recommended: number;
+  maximum: number;
+  /** False when the figures are an estimate rather than a benchmark. */
+  measured: boolean;
+  warning?: string;
 }
 
 export interface HostCapabilities {
@@ -174,4 +250,14 @@ export interface ChirpHubApi {
   stopZigbeeJoin(): Promise<IpcResult<void>>;
   getZigbeeDevices(): Promise<ZigbeeDeviceInfo[]>;
   linkZigbeeDevice(input: ZigbeeLinkInput): Promise<IpcResult<void>>;
+
+  /** Per-subsystem health for the dashboard's Needs-attention strip. */
+  getSubsystemStatus(): Promise<SubsystemStatusPayload[]>;
+
+  discoverCameras(): Promise<DiscoveredCameraPayload[]>;
+  probeCamera(config: CameraConfigPayload): Promise<IpcResult<CameraProbePayload>>;
+  addCamera(config: CameraConfigPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
+  listCameras(): Promise<CameraPayload[]>;
+  removeCamera(input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>>;
+  getCameraCapacity(): Promise<CapacityPayload>;
 }

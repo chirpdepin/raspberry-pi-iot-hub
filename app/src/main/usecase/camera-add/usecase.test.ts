@@ -21,11 +21,16 @@ type EnsureMock = ReturnType<typeof vi.fn<ImageEnsurePort['ensure']>>;
 
 const ports = (overrides: { ensureFails?: boolean; registerFails?: boolean } = {}) => {
   const createTwin: CreateTwinMock = vi.fn(async () => ok(undefined));
+  const save = vi.fn(async () => undefined);
   const ensure: EnsureMock = vi.fn(async () =>
     overrides.ensureFails ? err<string>(domainError('unknown', 'Download failed.')) : ok('lens-twin:2.1.0')
   );
 
-  const value: CameraAddPorts & { createTwin: CreateTwinMock; ensure: EnsureMock } = {
+  const value: CameraAddPorts & {
+    createTwin: CreateTwinMock;
+    ensure: EnsureMock;
+    save: typeof save;
+  } = {
     discovery: {
       discover: async () => [],
       probe: async () => ok({ frameDataUrl: 'data:image/jpeg;base64,x', codec: 'H264', width: 640, height: 360 }),
@@ -38,9 +43,14 @@ const ports = (overrides: { ensureFails?: boolean; registerFails?: boolean } = {
           ? err(domainError('unknown', 'Lens unavailable.'))
           : ok({ bootstrapToken: 'one-time-token', lensUri: 'https://lens.chirpwireless.io' }),
     },
-    containers: { allocatePort: async () => 18081, createTwin },
+    containers: { createTwin },
+    // Camera-add is one consumer of the shared allocator, so here it is just
+    // another fake — which is the point of hoisting it out of the runtime.
+    ports: { allocate: async () => ok(18081) },
+    records: { save },
     createTwin,
     ensure,
+    save,
   };
 
   return value;
@@ -132,5 +142,25 @@ describe('camera-add', () => {
     for (const step of steps) {
       expect(step).not.toMatch(/docker|container|twin|rtsp|onvif/i);
     }
+  });
+
+  it('saves the camera only after its container exists', async () => {
+    const p = ports();
+    await handleCameraAdd(p, config);
+
+    expect(p.save).toHaveBeenCalledTimes(1);
+    // A record written before the container would survive a failed start and
+    // leave a camera the user can neither open nor remove.
+    expect(p.save.mock.invocationCallOrder[0]).toBeGreaterThan(p.createTwin.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('saves nothing when the Twin could not be created', async () => {
+    const p = ports();
+    p.createTwin.mockResolvedValueOnce(err(domainError('unknown', 'no space left')));
+
+    const result = await handleCameraAdd(p, config);
+
+    expect(result.ok).toBe(false);
+    expect(p.save).not.toHaveBeenCalled();
   });
 });

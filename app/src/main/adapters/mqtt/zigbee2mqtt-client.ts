@@ -3,6 +3,7 @@ import mqtt, { type MqttClient } from 'mqtt';
 import { domainError, err, ok, type Result } from '../../domain/errors';
 import type { ZigbeeCoordinator, ZigbeeDevice } from '../../domain/zigbee';
 import { adapterFor } from '../../config/zigbee-adapters';
+import { BROKER_URL, LOCAL_TOPICS } from '../../config/mqtt';
 import type { PermitJoinPort } from '../../usecase/zigbee-permit-join/contract';
 import type { ObservedPayloadPort } from '../../usecase/zigbee-device-link-chirp/contract';
 import type { Zigbee2MqttPort } from '../../usecase/zigbee-device-list/contract';
@@ -19,8 +20,12 @@ import type { Zigbee2MqttPort } from '../../usecase/zigbee-device-list/contract'
  * static database that cannot cover devices nobody has modelled.
  */
 
-const BROKER_URL = 'mqtt://127.0.0.1:1883';
-const BASE_TOPIC = 'zigbee2mqtt';
+/**
+ * Broker and base topic come from config/mqtt.ts, which is where the namespace
+ * shared with camera and hub telemetry is decided. A second copy here is how
+ * two producers end up publishing into the same tree.
+ */
+const BASE_TOPIC = LOCAL_TOPICS.zigbee;
 
 /** How long to wait for the bridge to answer before deciding it is not running. */
 const BRIDGE_TIMEOUT_MS = 3_000;

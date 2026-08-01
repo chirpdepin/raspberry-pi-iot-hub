@@ -14,10 +14,14 @@ const ports = (removeFails = false) => {
   );
   const purgeData: PurgeMock = vi.fn(async () => ok(undefined));
 
-  const value: CameraRemovePorts & { remove: RemoveMock; purgeData: PurgeMock } = {
+  const forget = vi.fn(async () => undefined);
+
+  const value: CameraRemovePorts & { remove: RemoveMock; purgeData: PurgeMock; forget: typeof forget } = {
     containers: { remove, purgeData },
+    records: { remove: forget },
     remove,
     purgeData,
+    forget,
   };
 
   return value;
@@ -48,5 +52,23 @@ describe('camera-remove', () => {
     // Otherwise a half-removed camera loses its footage while still running.
     expect(result.ok).toBe(false);
     expect(p.purgeData).not.toHaveBeenCalled();
+  });
+
+  it('forgets the camera so the list cannot outlive the container', async () => {
+    const p = ports();
+    await handleCameraRemove(p, 'twin-abc');
+
+    expect(p.forget).toHaveBeenCalledWith('twin-abc');
+  });
+
+  it('keeps the camera visible when the container could not be removed', async () => {
+    const p = ports(true);
+
+    const result = await handleCameraRemove(p, 'twin-abc');
+
+    expect(result.ok).toBe(false);
+    // Still listed, so the user can retry rather than losing sight of a
+    // container that is still running.
+    expect(p.forget).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,10 @@ import {
   type DockerStatus,
   type GatewayRegisterInput,
   type HostCapabilities,
+  type CameraConfigPayload,
+  type CapacityPayload,
   type LnsCredentialsPayload,
+  type SubsystemStatusPayload,
   type ZigbeeLinkInput,
 } from '../../shared/ipc';
 import type { LorawanRegion } from '../domain/gateway';
@@ -28,6 +31,18 @@ import { handleZigbeePermitJoin, handleZigbeeStopJoin } from '../usecase/zigbee-
 import type { ZigbeeStartPorts } from '../usecase/zigbee-start/contract';
 import { handleZigbeeStart } from '../usecase/zigbee-start/usecase';
 import { handleHostCapabilities } from '../usecase/host-capabilities/usecase';
+import type { CameraAddPorts } from '../usecase/camera-add/contract';
+import { handleCameraAdd } from '../usecase/camera-add/usecase';
+import type { CameraDiscoverPorts } from '../usecase/camera-discover/contract';
+import { handleCameraDiscover } from '../usecase/camera-discover/usecase';
+import type { CameraListPorts } from '../usecase/camera-list/contract';
+import { handleCameraList } from '../usecase/camera-list/usecase';
+import type { CameraRemovePorts } from '../usecase/camera-remove/contract';
+import { handleCameraRemove } from '../usecase/camera-remove/usecase';
+import type { CapacityAdvisePorts } from '../usecase/capacity-advise/contract';
+import { handleCapacityAdvise } from '../usecase/capacity-advise/usecase';
+import type { SubsystemStatusPorts } from '../usecase/subsystem-status/contract';
+import { handleSubsystemStatus } from '../usecase/subsystem-status/usecase';
 
 /**
  * One handler per use case — the only main↔renderer surface.
@@ -47,6 +62,12 @@ export interface IpcDependencies {
   zigbeePermitJoin: ZigbeePermitJoinPorts;
   zigbeeDeviceList: ZigbeeDeviceListPorts;
   zigbeeLinkChirp: ZigbeeLinkChirpPorts;
+  subsystemStatus: SubsystemStatusPorts;
+  cameraDiscover: CameraDiscoverPorts;
+  cameraAdd: CameraAddPorts;
+  cameraList: CameraListPorts;
+  cameraRemove: CameraRemovePorts;
+  capacity: CapacityAdvisePorts;
 }
 
 export const registerIpcHandlers = (deps: IpcDependencies): void => {
@@ -109,6 +130,29 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   ipcMain.handle(IPC.zigbeeLinkChirp, async (_event, input: ZigbeeLinkInput) =>
     handleZigbeeLinkChirp(deps.zigbeeLinkChirp, input)
   );
+
+  ipcMain.handle(
+    IPC.subsystemStatus,
+    async (): Promise<SubsystemStatusPayload[]> => handleSubsystemStatus(deps.subsystemStatus)
+  );
+
+  ipcMain.handle(IPC.cameraDiscover, async () => handleCameraDiscover(deps.cameraDiscover));
+
+  ipcMain.handle(IPC.cameraProbe, async (_event, config: CameraConfigPayload) =>
+    deps.cameraAdd.discovery.probe(config)
+  );
+
+  ipcMain.handle(IPC.cameraAdd, async (_event, config: CameraConfigPayload) =>
+    handleCameraAdd(deps.cameraAdd, config)
+  );
+
+  ipcMain.handle(IPC.cameraList, async () => handleCameraList(deps.cameraList));
+
+  ipcMain.handle(IPC.cameraRemove, async (_event, input: { id: string; keepRecordings: boolean }) =>
+    handleCameraRemove(deps.cameraRemove, input.id, { keepRecordings: input.keepRecordings })
+  );
+
+  ipcMain.handle(IPC.cameraCapacity, async (): Promise<CapacityPayload> => handleCapacityAdvise(deps.capacity));
 
   ipcMain.handle(IPC.hostDetails, async () => {
     const { host, capabilities } = await handleHostCapabilities(deps.hostCapabilities);

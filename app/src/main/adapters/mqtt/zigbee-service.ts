@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { ok, type Result } from '../../domain/errors';
 import type { ZigbeeCoordinator } from '../../domain/zigbee';
 import { adapterFor } from '../../config/zigbee-adapters';
+import { SERVICES } from '../../config/services';
 import type { ZigbeeServicePort } from '../../usecase/zigbee-start/contract';
 import type { PathsPort } from '../paths/paths';
 
@@ -44,7 +45,6 @@ export interface ZigbeeServiceDeps {
   isServiceActive(name: string): Promise<boolean>;
 }
 
-const SERVICE_NAME = 'iot-hub-zigbee';
 
 export const createZigbeeService = ({
   paths,
@@ -68,12 +68,12 @@ export const createZigbeeService = ({
     };
   },
 
-  isRunning: () => isServiceActive(SERVICE_NAME),
+  isRunning: () => isServiceActive(SERVICES.zigbee),
 
   async start(): Promise<Result<void>> {
     // configuration.yaml is rendered by the installer from its template; the
     // unit gates on its existence. Starting the unit is all that is needed here.
-    const started = await startService(SERVICE_NAME);
+    const started = await startService(SERVICES.zigbee);
     return started.ok ? ok(undefined) : started;
   },
 });

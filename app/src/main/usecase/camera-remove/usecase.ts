@@ -18,6 +18,10 @@ export const handleCameraRemove = async (
   const removed = await ports.containers.remove(id);
   if (!removed.ok) return err(removed.error);
 
+  // After the container is gone, so a failed removal leaves the camera visible
+  // and retryable rather than orphaning a container the user can no longer see.
+  await ports.records.remove(id);
+
   if (options.keepRecordings ?? true) {
     return ok(undefined);
   }

@@ -52,6 +52,21 @@ const VIEWPORTS = [
   { name: 'desktop 1440x900', width: 1440, height: 900, expectPermanentSidebar: true },
 ];
 
+/**
+ * One distinctive phrase per route, asserted against `main` rather than the
+ * whole body — the sidebar repeats every section name, so a body-text check
+ * passes on a page that rendered nothing at all.
+ *
+ * None of these strings appears in the navigation.
+ */
+const PAGE_CONTENT = {
+  '/cameras': ['No cameras yet', 'needs Docker'],
+  '/lorawan': ['No LoRaWAN radio', 'Gateway EUI', 'Register with Chirp'],
+  '/zigbee': ['No Zigbee coordinator', 'Start Zigbee'],
+  '/thread': ['needs its own radio', 'Start Thread'],
+  '/settings': ['being built'],
+};
+
 async function testViewport({ name, width, height, expectPermanentSidebar }) {
   console.log(`\n— ${name} —`);
 
@@ -191,6 +206,84 @@ async function run() {
   // Contract 2 rule 1: no jargon leaked into the UI.
   const leaked = FORBIDDEN_JARGON.filter((word) => bodyText.includes(word));
   check('no jargon in the UI', leaked.length === 0, leaked.join(', '));
+
+  // ---------------------------------------------------------------------
+  // Phase 11: every section the user can reach must actually render.
+  //
+  // A route that resolves to a blank page passes every other check here —
+  // the nav link exists, React mounted, the theme applied — so each page is
+  // navigated to and asserted on its own content.
+  // ---------------------------------------------------------------------
+  console.log('\n— pages —');
+
+  for (const [route, expected] of Object.entries(PAGE_CONTENT)) {
+    await window.webContents.executeJavaScript(`window.location.hash = '#${route}'`);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    const text = await window.webContents.executeJavaScript(
+      `document.querySelector('main')?.innerText ?? ''`
+    );
+    check(
+      `${route} renders its own content`,
+      expected.some((phrase) => text.includes(phrase)),
+      text.slice(0, 60).replaceAll('\n', ' ')
+    );
+
+    const pageOverflow = await window.webContents.executeJavaScript(
+      `document.documentElement.scrollWidth > document.documentElement.clientWidth`
+    );
+    check(`${route} does not overflow horizontally`, pageOverflow === false);
+  }
+
+  // The IPC surface is what the pages actually call. A channel added to the
+  // preload but never registered in main fails here rather than as an
+  // unhandled rejection the user sees as a page that does nothing.
+  console.log('\n— ipc —');
+
+  const ipcResults = await window.webContents.executeJavaScript(`(async () => {
+        const calls = {
+            getSubsystemStatus: () => window.chirpHub.getSubsystemStatus(),
+            listCameras: () => window.chirpHub.listCameras(),
+            getCameraCapacity: () => window.chirpHub.getCameraCapacity(),
+        };
+        const out = {};
+        for (const [name, call] of Object.entries(calls)) {
+            try { out[name] = { ok: true, value: await call() }; }
+            catch (error) { out[name] = { ok: false, error: String(error) }; }
+        }
+        return out;
+    })()`);
+
+  for (const [name, result] of Object.entries(ipcResults)) {
+    check(`${name} answers over IPC`, result.ok, result.ok ? '' : result.error.slice(0, 80));
+  }
+
+  /**
+   * The partial-failure guarantee, end to end: all three subsystems are
+   * reported even on a machine where none of them is set up. One missing entry
+   * means a probe took the others down with it.
+   */
+  const subsystems = ipcResults.getSubsystemStatus?.value ?? [];
+  check(
+    'all three subsystems report independently',
+    ['lorawan', 'zigbee', 'cameras'].every((id) => subsystems.some((s) => s.id === id)),
+    subsystems.map((s) => `${s.id}=${s.state}`).join(' ')
+  );
+  check(
+    'every failing subsystem offers a next action',
+    subsystems.filter((s) => s.state === 'failed').every((s) => Boolean(s.nextAction)),
+    subsystems.filter((s) => s.state === 'failed').map((s) => s.id).join(', ') || 'none failing'
+  );
+
+  // The capacity figures must say when they are an estimate rather than a
+  // measurement — presenting a guess as a benchmark turns a dropped recording
+  // into what looks like a product defect.
+  const capacity = ipcResults.getCameraCapacity?.value;
+  check(
+    'capacity advice states whether it was measured',
+    capacity !== undefined && typeof capacity.measured === 'boolean',
+    capacity ? `recommended ${capacity.recommended}, measured ${capacity.measured}` : ''
+  );
 
   window.destroy();
 

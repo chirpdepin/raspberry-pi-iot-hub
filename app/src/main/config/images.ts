@@ -16,6 +16,16 @@ export const IMAGES = {
 } as const;
 
 /**
+ * Prefix for Twin container names.
+ *
+ * `camera-add` builds a container name from it and the inventory probe filters
+ * on it, so the two must agree — they did not when each spelled it out
+ * separately, and a rename would have made every camera silently invisible to
+ * the dashboard.
+ */
+export const TWIN_CONTAINER_PREFIX = 'twin-';
+
+/**
  * The Twin update feed.
  *
  * Twin is closed-source, so it is published as a `docker save` tarball on the

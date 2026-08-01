@@ -1,5 +1,6 @@
 import { err, ok, type Result } from '../../domain/errors';
 import { rtspUrl, type CameraConfig } from '../../domain/camera';
+import { TWIN_CONTAINER_PREFIX } from '../../config/images';
 
 import type { CameraAddPorts, CameraAddResult } from './contract';
 
@@ -34,8 +35,13 @@ export const handleCameraAdd = async (
   const registered = await ports.lens.registerTwin({ twinKey, name: config.displayName });
   if (!registered.ok) return err(registered.error);
 
-  const hostPort = await ports.containers.allocatePort();
-  const id = `twin-${twinKey.slice(0, 8)}`;
+  // Before the container is created, not after: a Twin that cannot be given a
+  // port must fail here with an explanation rather than half-exist.
+  const port = await ports.ports.allocate();
+  if (!port.ok) return err(port.error);
+
+  const hostPort = port.value;
+  const id = `${TWIN_CONTAINER_PREFIX}${twinKey.slice(0, 8)}`;
 
   onProgress?.('Connecting to your camera…');
 
@@ -74,14 +80,18 @@ export const handleCameraAdd = async (
 
   onProgress?.('Linking to Chirp…');
 
-  return ok({
-    camera: {
-      id,
-      displayName: config.displayName,
-      address: config.address,
-      hostPort,
-      recording: config.recording,
-      online: true,
-    },
-  });
+  const camera = {
+    id,
+    displayName: config.displayName,
+    address: config.address,
+    hostPort,
+    recording: config.recording,
+    online: true,
+  };
+
+  // Saved only after the container exists. Recording a camera that failed to
+  // start would leave a permanent entry the user cannot fix or remove.
+  await ports.records.save(camera);
+
+  return ok({ camera });
 };

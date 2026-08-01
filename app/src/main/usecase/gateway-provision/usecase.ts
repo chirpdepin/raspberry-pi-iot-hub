@@ -2,10 +2,9 @@ import { err, ok, type Result } from '../../domain/errors';
 import { isPemOfType, normalisePem, type LnsCredentials } from '../../domain/gateway';
 import { domainError } from '../../domain/errors';
 
+import { SERVICES } from '../../config/services';
 import type { GatewayProvisionPorts } from './contract';
 
-/** The unit gates on tc.uri existing, so it is written LAST — see below. */
-const SERVICE_NAME = 'iot-hub-lorawan';
 
 /**
  * Installs credentials and starts the gateway.
@@ -60,7 +59,7 @@ export const handleGatewayProvision = async (
 
   onProgress?.('Starting the gateway…');
 
-  const started = await ports.privileged.startService(SERVICE_NAME);
+  const started = await ports.privileged.startService(SERVICES.lorawan);
   if (!started.ok) return err(started.error);
 
   return ok(undefined);

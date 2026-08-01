@@ -1,5 +1,4 @@
-import type { RadioRole } from '../../domain/radio';
-import type { IdentifiedSerialDevice } from '../../adapters/discovery/serial';
+import type { IdentifiedSerialDevice, RadioRole } from '../../domain/radio';
 
 /**
  * Which attached radio plays which role.

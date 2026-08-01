@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RadioRole } from '../../domain/radio';
-import type { IdentifiedSerialDevice } from '../../adapters/discovery/serial';
+import type { IdentifiedSerialDevice, RadioRole } from '../../domain/radio';
 
 import type { RadioRolesPorts } from './contract';
 import { handleRadioRoles } from './usecase';

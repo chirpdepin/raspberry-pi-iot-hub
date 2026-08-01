@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -31,6 +32,17 @@ export interface PathsPort {
   /** Stable device symlinks created by the udev rules. */
   radioDevice(role: 'zigbee' | 'thread'): string;
 }
+
+/**
+ * The marker that says this is the flashed hub image rather than some Linux
+ * machine that happens to be running the app.
+ *
+ * Created by `scripts/install-ubuntu.sh`. Choosing on this rather than on the
+ * platform matters: a Linux desktop was previously handed the image's paths and
+ * would have tried to write `/etc/iot-hub`, needing root for a dongle it can
+ * already open through `dialout`.
+ */
+export const HUB_IMAGE_MARKER = '/etc/iot-hub';
 
 /**
  * Linux layout, matching what scripts/install-radios.sh and
@@ -70,5 +82,11 @@ export const createDesktopPaths = (): PathsPort => {
   };
 };
 
-export const createPaths = (platform: NodeJS.Platform): PathsPort =>
-  platform === 'linux' ? createLinuxPaths() : createDesktopPaths();
+/**
+ * Picks a layout by asking whether the hub image is installed, not by asking
+ * which OS this is.
+ *
+ * `isHubImage` is injected so the choice is testable without a filesystem.
+ */
+export const createPaths = (isHubImage: boolean = existsSync(HUB_IMAGE_MARKER)): PathsPort =>
+  isHubImage ? createLinuxPaths() : createDesktopPaths();

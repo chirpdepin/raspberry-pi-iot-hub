@@ -18,6 +18,8 @@
  * over IP and never touches USB, so cameras work on all three platforms.
  */
 
+import type { ZigbeeAdapter } from './zigbee';
+
 export type RadioTransport = 'serial' | 'network';
 
 export type RadioRole = 'zigbee' | 'thread';
@@ -30,6 +32,26 @@ export interface SerialDevice {
   model: string;
   /** USB serial number — stable across ports and reboots, so roles pin to it. */
   serial: string;
+}
+
+/**
+ * A serial device plus what the shared registries made of it.
+ *
+ * Lives here rather than beside the enumerator because use cases speak in these
+ * terms: a use case that imported it from an adapter would depend on the
+ * adapter, which is the dependency rule the boundary checker enforces — and it
+ * caught exactly that when this type started life in `adapters/`.
+ */
+export interface IdentifiedSerialDevice extends SerialDevice {
+  /** Zigbee2MQTT driver, or null when the descriptor is inconclusive. */
+  adapter: ZigbeeAdapter | null;
+  /**
+   * Whether the brand is recognised well enough to auto-claim a role.
+   *
+   * Unrecognised devices are still listed — a user with an unusual coordinator
+   * can still see it — they are just never claimed silently.
+   */
+  known: boolean;
 }
 
 /**

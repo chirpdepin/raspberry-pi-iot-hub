@@ -1,6 +1,6 @@
 import { adapterFor } from '../../../config/zigbee-adapters';
 import { isKnownBrand } from '../../../config/radio-brands';
-import type { SerialDevice } from '../../../domain/radio';
+import type { IdentifiedSerialDevice, SerialDevice } from '../../../domain/radio';
 
 import { listLinuxSerialDevices } from './linux';
 import { listMacosSerialDevices } from './macos';
@@ -25,19 +25,6 @@ const ENUMERATORS: Record<string, SerialEnumerator> = {
   darwin: listMacosSerialDevices,
   win32: listWindowsSerialDevices,
 };
-
-/** A serial device plus what the shared registries make of it. */
-export interface IdentifiedSerialDevice extends SerialDevice {
-  /** Zigbee2MQTT driver, or null when the descriptor is inconclusive. */
-  adapter: ReturnType<typeof adapterFor>;
-  /**
-   * Whether the brand is recognised well enough to auto-claim a role.
-   *
-   * Unrecognised devices are still listed — a user with an unusual coordinator
-   * can still see it and assign it — they are just never claimed silently.
-   */
-  known: boolean;
-}
 
 export const identify = (device: SerialDevice): IdentifiedSerialDevice => {
   const descriptor = `${device.vendor} ${device.model}`;

@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+import { existsSync } from 'node:fs';
+
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { shell } from 'electron';
+
+/** The single template both the installer and this app render. */
+const TEMPLATE_NAME = 'zigbee-configuration.yaml.template';
 
 import { domainError, err, ok } from './domain/errors';
 
@@ -13,9 +21,10 @@ import { createRadioDiscovery } from './adapters/discovery/radio-discovery';
 import { createSerialRadioScanner } from './adapters/discovery/serial';
 import { createRadioRoleStore } from './adapters/store/radio-roles';
 import { handleRadioRoles } from './usecase/radio-roles/usecase';
-import { createPaths } from './adapters/paths/paths';
+import { createPaths, HUB_IMAGE_MARKER } from './adapters/paths/paths';
 import { createZigbee2MqttClient } from './adapters/mqtt/zigbee2mqtt-client';
 import { createZigbeeService } from './adapters/mqtt/zigbee-service';
+import { createZigbeeDockerService, readZigbeeTemplate } from './adapters/mqtt/zigbee-docker-service';
 import { createPrivilegedRunner } from './adapters/privileged/privileged-runner';
 import { createSessionStore } from './adapters/store/session';
 import { createPortClaims, createPortProbe } from './adapters/network/port-allocator';
@@ -48,7 +57,10 @@ const allocatePort = () => handlePortAllocate({ probe: createPortProbe(), claims
  * Contract 1 (D): this and index.ts are the only files naming concrete types.
  */
 export const buildDependencies = (): IpcDependencies => {
-  const paths = createPaths(process.platform);
+  // The image marker, not the platform: a Linux desktop is not the hub image
+  // and must not be handed its root-owned paths.
+  const isHubImage = existsSync(HUB_IMAGE_MARKER);
+  const paths = createPaths(isHubImage);
   const privileged = createPrivilegedRunner();
   const services = createServiceState(process.platform);
 
@@ -63,15 +75,36 @@ export const buildDependencies = (): IpcDependencies => {
       roles: createRadioRoleStore(),
     });
 
-  const zigbeeService = createZigbeeService({
-    paths,
-    startService: (name) => privileged.startService(name),
-    scanRoles,
-    // Reading unit state is unprivileged, so it does not go through the
-    // privileged runner — a dashboard refresh must never raise a password
-    // prompt.
-    isServiceActive: (name) => services.isActive(name),
-  });
+  /**
+   * Two implementations of one port (Contract 1 L). The hub image starts the
+   * stack through systemd, because its units already encode dependency order
+   * and restart policy; anywhere else there are no units, so Docker is driven
+   * directly. No use case knows which it has.
+   */
+  const zigbeeService = isHubImage
+    ? createZigbeeService({
+        paths,
+        startService: (name) => privileged.startService(name),
+        scanRoles,
+        // Reading unit state is unprivileged, so it does not go through the
+        // privileged runner — a dashboard refresh must never raise a password
+        // prompt.
+        isServiceActive: (name) => services.isActive(name),
+      })
+    : createZigbeeDockerService({
+        paths,
+        platform: process.platform,
+        scanRoles,
+        isPortFree: (port) => createPortProbe().isFree(port),
+        configTemplate: readZigbeeTemplate([
+          // Packaged: shipped alongside the app by electron-builder.
+          join(process.resourcesPath ?? '', TEMPLATE_NAME),
+          // Development: the repo copy the installer also reads. Resolved from
+          // this module rather than app.getAppPath(), which varies with how the
+          // process was launched.
+          join(dirname(fileURLToPath(import.meta.url)), '../../..', 'config', TEMPLATE_NAME),
+        ]),
+      });
 
   const zigbee2mqtt = createZigbee2MqttClient();
 

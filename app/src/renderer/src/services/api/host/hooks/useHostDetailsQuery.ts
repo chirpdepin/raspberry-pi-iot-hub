@@ -15,6 +15,7 @@ export const hostQueryKeys = {
   details: () => [...hostQueryKeys.all, 'details'] as const,
   appInfo: () => [...hostQueryKeys.all, 'appInfo'] as const,
   docker: () => [...hostQueryKeys.all, 'docker'] as const,
+  systemLoad: () => [...hostQueryKeys.all, 'systemLoad'] as const,
 };
 
 export const useHostDetailsQuery = () =>
@@ -39,6 +40,14 @@ export const useDockerStatusQuery = () =>
     queryKey: hostQueryKeys.docker(),
     queryFn: hostApi.getDockerStatus,
     refetchInterval: POLL.dockerMs,
+  });
+
+export const useSystemLoadQuery = () =>
+  useQuery({
+    queryKey: hostQueryKeys.systemLoad(),
+    queryFn: hostApi.getSystemLoad,
+    // The one query that must not be cached: it exists to show change.
+    refetchInterval: POLL.systemLoadMs,
   });
 
 export const useInstallDockerMutation = () => {

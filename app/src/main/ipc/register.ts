@@ -10,6 +10,7 @@ import {
   type CapacityPayload,
   type LnsCredentialsPayload,
   type SubsystemStatusPayload,
+  type SystemLoadPayload,
   type ZigbeeLinkInput,
 } from '../../shared/ipc';
 import type { LorawanRegion } from '../domain/gateway';
@@ -22,6 +23,8 @@ import { handleGatewayProvision } from '../usecase/gateway-provision/usecase';
 import type { GatewayRegisterPorts } from '../usecase/gateway-register/contract';
 import { handleGatewayRegister } from '../usecase/gateway-register/usecase';
 import type { HostCapabilitiesPorts } from '../usecase/host-capabilities/contract';
+import type { SystemLoadPorts } from '../usecase/system-load/contract';
+import { handleSystemLoad } from '../usecase/system-load/usecase';
 import type { ZigbeeDeviceListPorts } from '../usecase/zigbee-device-list/contract';
 import { handleZigbeeDeviceList } from '../usecase/zigbee-device-list/usecase';
 import type { ZigbeeLinkChirpPorts } from '../usecase/zigbee-device-link-chirp/contract';
@@ -71,6 +74,7 @@ export interface IpcDependencies {
   cameraRemove: CameraRemovePorts;
   cameraOpen: CameraOpenPorts;
   capacity: CapacityAdvisePorts;
+  systemLoad: SystemLoadPorts;
 }
 
 export const registerIpcHandlers = (deps: IpcDependencies): void => {
@@ -154,6 +158,8 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   );
 
   ipcMain.handle(IPC.cameraCapacity, async (): Promise<CapacityPayload> => handleCapacityAdvise(deps.capacity));
+
+  ipcMain.handle(IPC.systemLoad, async (): Promise<SystemLoadPayload> => handleSystemLoad(deps.systemLoad));
 
   ipcMain.handle(IPC.cameraOpen, async (_event, id: string) => handleCameraOpen(deps.cameraOpen, id));
 

@@ -21,6 +21,8 @@ export const IPC = {
   dockerInstall: 'docker:install',
   /** Host facts plus per-capability availability and reasons. */
   hostDetails: 'host:details',
+  /** Live load and memory use. Polled far more often than hostDetails. */
+  systemLoad: 'system:load',
 
   /** The fitted LoRaWAN concentrator, or null. */
   gatewayDetect: 'gateway:detect',
@@ -140,10 +142,21 @@ export interface CameraScanPayload {
 export interface CapacityPayload {
   current: number;
   recommended: number;
-  maximum: number;
-  /** False when the figures are an estimate rather than a benchmark. */
-  measured: boolean;
-  warning?: string;
+  /** False when this machine's capacity has not been measured; the UI shows nothing. */
+  applies: boolean;
+}
+
+export interface SystemLoadPayload {
+  /** 1-minute load average, unclamped, so the raw figure can be shown. */
+  load1: number;
+  cpuCount: number;
+  /** Percentage of the machine's capacity, clamped to 100 for display. */
+  loadPercent: number;
+  usedMemoryBytes: number;
+  totalMemoryBytes: number;
+  memoryPercent: number;
+  /** Decided in main from the unclamped load; the view only colors by it. */
+  strain: 'normal' | 'high';
 }
 
 export interface HostCapabilities {
@@ -241,6 +254,7 @@ export interface ChirpHubApi {
   getAppInfo(): Promise<AppInfo>;
   getHostCapabilities(): Promise<HostCapabilities>;
   getHostDetails(): Promise<HostDetails>;
+  getSystemLoad(): Promise<SystemLoadPayload>;
   getDockerStatus(): Promise<DockerStatus>;
   installDocker(): Promise<IpcResult<void>>;
 

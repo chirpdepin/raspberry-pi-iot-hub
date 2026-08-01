@@ -17,6 +17,7 @@ const api: ChirpHubApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
   getHostCapabilities: () => ipcRenderer.invoke(IPC.hostCapabilities),
   getHostDetails: () => ipcRenderer.invoke(IPC.hostDetails),
+  getSystemLoad: () => ipcRenderer.invoke(IPC.systemLoad),
   getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
   installDocker: () => ipcRenderer.invoke(IPC.dockerInstall),
 

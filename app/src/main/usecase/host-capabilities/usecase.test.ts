@@ -16,6 +16,7 @@ const host: Host = {
   platform: 'linux',
   arch: 'arm64',
   isRaspberryPi: true,
+      model: 'Raspberry Pi 4 Model B Rev 1.5',
   totalMemoryBytes: 8 * 1024 ** 3,
   cpuCount: 4,
 };

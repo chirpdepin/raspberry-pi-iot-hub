@@ -28,6 +28,7 @@ files inside `raspberry-pi-iot-hub/`.
 |---|---|
 | [docs/ubuntu-2604.md](docs/ubuntu-2604.md) | The Ubuntu Server build: GPIO chardev reset, the temperature-sensor patch, region-from-LNS, provisioning, GNSS opt-in |
 | [docs/zigbee-thread.md](docs/zigbee-thread.md) | Zigbee/Thread dongles: supported hardware table, stable device names, network coordinators, MQTT topology, troubleshooting |
+| [docs/camera-capacity.md](docs/camera-capacity.md) | **How many cameras a Pi can run, and the measurements behind it.** The provenance for `app/src/main/config/capacity.ts` — the curve, the five findings (keyframe-only decoding, scene content beating camera count, why CPU% lies, the Tapo's 2-session cap), and what is deliberately not covered |
 | [config/README.md](config/README.md) | What each config template is and the constraints that cannot live inside the files themselves (JSON has no comments) |
 | [app/electron.md](app/electron.md) | **Chirp Hub desktop app** — architecture, the three contracts (SOLID, non-technical user, Ubuntu Core portability), every screen and flow with real API fields, Twin distribution, ui-kit gotchas |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | The non-negotiable rules (region-agnostic, ship unprovisioned, stable device names, pinned images), testing bar, style |

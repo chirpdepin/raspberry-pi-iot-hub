@@ -8,7 +8,7 @@ the answer to "where did we get to?" at the start of a new session.
 > Build guides: **[docs/ubuntu-2604.md](docs/ubuntu-2604.md)** (LoRaWAN),
 > **[docs/zigbee-thread.md](docs/zigbee-thread.md)** (Zigbee/Thread).
 
-**Last updated:** 2026-08-01
+**Last updated:** 2026-08-02
 **Target device:** `hub@iot-hub.local` (192.168.2.199) — Raspberry Pi 4B 8GB, Ubuntu 26.04 LTS Server arm64
 **Concentrator:** RAK5146 SPI (SX1303 / CORECELL) on a RAK2287/5146 Pi HAT
 **Concentrator EUI:** `0016C001FF1E96BB` (read from the chip; `0016C0` is the RAK Wireless OUI)
@@ -857,3 +857,69 @@ Every remaining export in `src/` is now referenced somewhere.
   Lens repo, so it was not changed here — the image used for testing was built
   from a patched copy outside that repo. **Owner:** whoever owns
   `Lens/twin/Dockerfile`.
+
+
+## Camera capacity is measured, and the Dashboard shows live load (2026-08-02)
+
+Full dataset and method: **[docs/camera-capacity.md](docs/camera-capacity.md)**.
+
+- ✅ **The camera limit is measured on the real Pi, not invented.** `~6 cameras on
+  a Pi 4, 8 is the hard ceiling` — measured with every camera watching constant
+  motion, which is the worst case. The old `config/capacity.ts` claimed Pi 4 =
+  4/6, Pi 5 = 8/12, Pi 3 = 1/2 with `measured: false` on all three; none of it
+  came from a measurement.
+- ✅ **The bug that made it moot:** `capacity-advise` matched on
+  `platform + arch + hostname` → `linux arm64 iot-hub`, which contains no model,
+  so no profile could ever fire on a real Pi and it fell through to a desktop
+  heuristic that would have advertised **1 camera**. `Host` now carries `model`
+  from `/proc/device-tree/model`, which the adapter previously read and threw away.
+- ✅ **Shown only where it was measured.** Pi 4 shows the figure and the sentence
+  "This is a hardware limit. To add more cameras, upgrade the hardware or install
+  Chirp Hub on a computer." Pi 5 shows a figure derived from its specs and marked
+  as derived in the config. **Pi 3 and desktops show nothing** — a guess for an
+  unmeasured board is worse than silence. Pi 4 is the minimum supported board.
+- ✅ **Live load on the Dashboard, on every machine.** `Processor load` and
+  `Memory used` with a percentage, a bar, and the raw load average, refreshed
+  every 3 s so adding a camera visibly moves it. Verified on the desktop: 19% /
+  `load 2.30 of 12`, changing between polls.
+
+### The measurement curve (Pi 4, 4 cores, 7796 MiB, no swap)
+
+Baseline with `basicstation` + `mosquitto`: **866 MiB used, load 0.80.**
+Stream: h264 2304×1296 @ 15 fps, 2 s GOP, motion + recording on, unpaired.
+
+| Cameras | load1 (of 4) | RSS/Twin | CPU/Twin | Temp | Verdict |
+|---|---|---|---|---|---|
+| 6 | 1.57 (39%) | 137.4 MiB | 8.63% | 58.9 °C | comfortable |
+| 8 | 3.96 (99%) | 145.6 MiB | 10.33% | 60.3 °C | at the ceiling |
+| 10 | 5.09 (127%) | 159.4 MiB | 15.34% | 61.8 °C | over |
+| 18 | ~24 | — | — | — | collapsed |
+
+No throttling at any point (`get_throttled` = `0x0`, 51–62 °C). Heat is not the limit.
+
+### What the measurement overturned
+
+- **Motion detection decodes keyframes only** (Twin `computervision/main.go`), so
+  cost tracks the camera's **keyframe interval, not its frame rate**.
+- **Scene content beat camera count by ~14×.** The same 18 Twins: load 1.75 on a
+  static night scene, ~24 on footage with real movement. An early measurement
+  taken against a still room suggested ~20 cameras and was wrong by 3×.
+- **`docker stats` CPU% would have overstated capacity 4×** (0.52 cores reported
+  busy at 6 cameras against a real load of 1.57 — the difference is blocked I/O).
+- **RAM does not bind on 4 GB or 8 GB Pi 4s**, so those two boards have the same
+  limit; RAM only binds at 1 GB. The term is kept because there is no swap.
+- **The Tapo refuses a 3rd concurrent RTSP session**, so the ramp had to run on
+  restreamed real footage (`-c copy`, identical profile), one session per Twin.
+
+### Open
+
+- 🚧 **Cloud upload and live viewing are not in these numbers.** Every Twin
+  measured was unpaired (`HandleHeartBeat(): disabled`). Uploading adds TLS —
+  and the Pi 4's A72 has no ARM crypto extensions, so TLS is software.
+  **Next action:** pair one Twin to Lens and measure the delta against an
+  unpaired one under identical load.
+- 🚧 **Pi 5 is derived, not measured.** **Next action:** re-measure and replace
+  the row when a Pi 5 is available.
+- 🚧 **One camera model, one GOP.** A 1 s GOP (a common default) roughly doubles
+  the decode rate. A 1s-GOP stream was prepared for this comparison but the
+  number is not yet taken.

@@ -52,6 +52,7 @@ raspberry-pi-iot-hub/
 |-- docs/
 |   |-- ubuntu-2604.md                 # Ubuntu Server build: GPIO chardev, temp sensor, provisioning
 |   |-- zigbee-thread.md               # Dongle support, stable device names, MQTT topology
+|   |-- camera-capacity.md             # Measured camera limits per board, and the method behind them
 |   |-- hardware-setup.md              # Hardware assembly
 |   |-- software-setup.md              # Raspberry Pi OS manual install
 |   |-- configuration.md               # Region configuration reference (EU868/US915)

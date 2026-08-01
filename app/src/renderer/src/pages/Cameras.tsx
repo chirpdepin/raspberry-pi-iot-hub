@@ -156,7 +156,7 @@ export const Cameras = memo(() => {
             </Notice>
           ) : null}
 
-          {capacity ? <CapacityBar capacity={capacity} /> : null}
+          {capacity?.applies ? <CapacityBar capacity={capacity} /> : null}
 
           {/* Results come first. The user pressed Scan a moment ago and this is
               the answer; leaving it under a full-height empty state put it

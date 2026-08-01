@@ -18,6 +18,7 @@ import { createDockerRuntime } from './adapters/container/docker-runtime';
 import { createConcentratorDiscovery } from './adapters/discovery/concentrator';
 import { createHostInfo } from './adapters/discovery/host-info';
 import { createRadioDiscovery } from './adapters/discovery/radio-discovery';
+import { createSystemLoad } from './adapters/discovery/system-load';
 import { createSerialRadioScanner } from './adapters/discovery/serial';
 import { createRadioRoleStore } from './adapters/store/radio-roles';
 import { handleRadioRoles } from './usecase/radio-roles/usecase';
@@ -239,6 +240,7 @@ export const buildDependencies = (): IpcDependencies => {
         cameraCount: async () => (await cameraStore.all()).length,
       },
     },
+    systemLoad: { load: createSystemLoad() },
     subsystemStatus: {
       /**
        * Built from each subsystem's own adapters and nothing else. The probes

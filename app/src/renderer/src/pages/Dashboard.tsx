@@ -16,7 +16,7 @@ import { PageLayout } from '../features/common/PageLayout';
  * needing attention.
  */
 export const Dashboard = memo(() => {
-  const { host, appInfo, docker, cards, attention } = useDashboard();
+  const { host, appInfo, docker, load, cards, attention } = useDashboard();
 
   return (
     <PageLayout title='Dashboard'>
@@ -31,7 +31,7 @@ export const Dashboard = memo(() => {
             gridTemplateColumns: `repeat(auto-fill, minmax(${LAYOUT.cardMinWidth}, 1fr))`,
           }}
         >
-        <DeviceCard host={host} appInfo={appInfo} docker={docker} />
+        <DeviceCard host={host} appInfo={appInfo} docker={docker} load={load} />
 
         {cards.map((card) => (
           <CapabilityCard key={card.key} card={card} />

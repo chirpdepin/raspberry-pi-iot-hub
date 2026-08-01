@@ -7,6 +7,7 @@ import {
   useDockerStatusQuery,
   useHostDetailsQuery,
   useInstallDockerMutation,
+  useSystemLoadQuery,
 } from '../../../services/api/host/hooks/useHostDetailsQuery';
 import { useSubsystemStatusQuery } from '../../../services/api/status/hooks/useStatusQuery';
 
@@ -41,6 +42,7 @@ export const useDashboard = () => {
   const hostQuery = useHostDetailsQuery();
   const appInfoQuery = useAppInfoQuery();
   const dockerQuery = useDockerStatusQuery();
+  const systemLoadQuery = useSystemLoadQuery();
   const subsystemQuery = useSubsystemStatusQuery();
   const installDocker = useInstallDockerMutation();
   const navigate = useNavigate();
@@ -115,6 +117,7 @@ export const useDashboard = () => {
     host: hostQuery.data?.host,
     appInfo: appInfoQuery.data,
     docker: dockerQuery.data,
+    load: systemLoadQuery.data,
     cards,
     subsystems: subsystemQuery.data ?? [],
     attention,

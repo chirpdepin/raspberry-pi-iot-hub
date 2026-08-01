@@ -1,4 +1,4 @@
-import type { AppInfo, DockerStatus, HostDetails, IpcResult } from '@shared/ipc';
+import type { AppInfo, DockerStatus, HostDetails, IpcResult, SystemLoadPayload } from '@shared/ipc';
 
 /**
  * Transport layer — plain functions, no React.
@@ -12,6 +12,7 @@ import type { AppInfo, DockerStatus, HostDetails, IpcResult } from '@shared/ipc'
 export const hostApi = {
   getAppInfo: (): Promise<AppInfo> => window.chirpHub.getAppInfo(),
   getHostDetails: (): Promise<HostDetails> => window.chirpHub.getHostDetails(),
+  getSystemLoad: (): Promise<SystemLoadPayload> => window.chirpHub.getSystemLoad(),
   getDockerStatus: (): Promise<DockerStatus> => window.chirpHub.getDockerStatus(),
   installDocker: (): Promise<IpcResult<void>> => window.chirpHub.installDocker(),
 };

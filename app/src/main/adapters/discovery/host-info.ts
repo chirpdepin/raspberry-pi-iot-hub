@@ -14,24 +14,38 @@ import type { HostInfoPort } from '../../usecase/host-capabilities/contract';
 
 const RPI_MODEL_PATH = '/proc/device-tree/model';
 
-const detectRaspberryPi = async (): Promise<boolean> => {
-  if (platform() !== 'linux') return false;
+/**
+ * The board's own name, or null off a device tree.
+ *
+ * Read once and **returned**, not just tested. It used to be read here, checked
+ * against /raspberry pi/ and thrown away, which left nothing downstream able to
+ * tell a Pi 3 from a Pi 5.
+ *
+ * The file is NUL-terminated, hence the trim of `\0`.
+ */
+const readBoardModel = async (): Promise<string | null> => {
+  if (platform() !== 'linux') return null;
 
   try {
     const model = await readFile(RPI_MODEL_PATH, 'utf8');
-    return /raspberry pi/i.test(model);
+    return model.replace(/\0/g, '').trim() || null;
   } catch {
-    return false;
+    return null;
   }
 };
 
 export const createHostInfo = (): HostInfoPort => ({
   async read(): Promise<Host> {
+    const model = await readBoardModel();
+
     return {
       hostname: hostname(),
       platform: platform(),
       arch: arch(),
-      isRaspberryPi: await detectRaspberryPi(),
+      // Classification stays here because it is one fact about the machine; the
+      // adapter reports facts and decides no policy beyond that.
+      isRaspberryPi: model !== null && /raspberry pi/i.test(model),
+      model,
       totalMemoryBytes: totalmem(),
       cpuCount: cpus().length,
     };

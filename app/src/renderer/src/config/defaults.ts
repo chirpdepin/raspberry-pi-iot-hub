@@ -24,6 +24,14 @@ export const POLL = {
    * appear live during a join window and the user is watching for them.
    */
   zigbeeDevicesMs: 3_000,
+
+  /**
+   * Live machine load. The fastest poll in the app on purpose: the whole point
+   * of the readout is that adding a camera visibly moves it, and a 10s refresh
+   * makes cause and effect look unrelated. Cheap to serve — it reads
+   * `os.loadavg()` and `os.freemem()`, no filesystem and no subprocess.
+   */
+  systemLoadMs: 3_000,
 } as const;
 
 /** How long the Zigbee network stays open for new devices, in seconds. */

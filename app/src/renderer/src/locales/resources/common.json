@@ -106,8 +106,7 @@
     "Cameras run in Docker on this device. Install it from Settings and this page will be ready.": "Cameras run in Docker on this device. Install it from Settings and this page will be ready.",
     "of about": "of about",
     "cameras on this device": "cameras on this device",
-    "estimated": "estimated",
-    "Adding another camera may cause dropped recordings on this device.": "Adding another camera may cause dropped recordings on this device.",
+    "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.": "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.",
     "Open Cameras": "Open Cameras",
     "Open Zigbee": "Open Zigbee",
     "Open LoRaWAN": "Open LoRaWAN",
@@ -158,7 +157,11 @@
     "The camera stops running and disappears from this list. You can set it up again at any time.": "The camera stops running and disappears from this list. You can set it up again at any time.",
     "Remove, keep recordings": "Remove, keep recordings",
     "Remove and delete recordings": "Remove and delete recordings",
-    "Cancel": "Cancel"
+    "Cancel": "Cancel",
+    "Processor load": "Processor load",
+    "Memory used": "Memory used",
+    "load": "load",
+    "of": "of"
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -267,8 +270,7 @@
     "Cameras run in Docker on this device. Install it from Settings and this page will be ready.": "Kameras laufen auf diesem Gerät in Docker. Installieren Sie es in den Einstellungen, dann ist diese Seite bereit.",
     "of about": "von etwa",
     "cameras on this device": "Kameras auf diesem Gerät",
-    "estimated": "geschätzt",
-    "Adding another camera may cause dropped recordings on this device.": "Eine weitere Kamera kann auf diesem Gerät zu Aufnahmeausfällen führen.",
+    "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.": "Das ist eine Hardware-Grenze. Für mehr Kameras rüsten Sie die Hardware auf oder installieren Sie Chirp Hub auf einem Computer.",
     "Open Cameras": "Kameras öffnen",
     "Open Zigbee": "Zigbee öffnen",
     "Open LoRaWAN": "LoRaWAN öffnen",
@@ -319,7 +321,11 @@
     "The camera stops running and disappears from this list. You can set it up again at any time.": "Die Kamera wird gestoppt und verschwindet aus dieser Liste. Sie können sie jederzeit erneut einrichten.",
     "Remove, keep recordings": "Entfernen, Aufnahmen behalten",
     "Remove and delete recordings": "Entfernen und Aufnahmen löschen",
-    "Cancel": "Abbrechen"
+    "Cancel": "Abbrechen",
+    "Processor load": "Prozessorauslastung",
+    "Memory used": "Genutzter Speicher",
+    "load": "Last",
+    "of": "von"
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -428,8 +434,7 @@
     "Cameras run in Docker on this device. Install it from Settings and this page will be ready.": "Las cámaras se ejecutan en Docker en este dispositivo. Instálalo desde Ajustes y esta página estará lista.",
     "of about": "de unos",
     "cameras on this device": "cámaras en este dispositivo",
-    "estimated": "estimado",
-    "Adding another camera may cause dropped recordings on this device.": "Añadir otra cámara puede provocar grabaciones perdidas en este dispositivo.",
+    "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.": "Es un límite de hardware. Para añadir más cámaras, mejore el hardware o instale Chirp Hub en un ordenador.",
     "Open Cameras": "Abrir cámaras",
     "Open Zigbee": "Abrir Zigbee",
     "Open LoRaWAN": "Abrir LoRaWAN",
@@ -480,7 +485,11 @@
     "The camera stops running and disappears from this list. You can set it up again at any time.": "La cámara deja de funcionar y desaparece de esta lista. Puedes configurarla de nuevo cuando quieras.",
     "Remove, keep recordings": "Quitar y conservar las grabaciones",
     "Remove and delete recordings": "Quitar y eliminar las grabaciones",
-    "Cancel": "Cancelar"
+    "Cancel": "Cancelar",
+    "Processor load": "Carga del procesador",
+    "Memory used": "Memoria usada",
+    "load": "carga",
+    "of": "de"
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -589,8 +598,7 @@
     "Cameras run in Docker on this device. Install it from Settings and this page will be ready.": "Les caméras fonctionnent dans Docker sur cet appareil. Installez-le depuis les paramètres et cette page sera prête.",
     "of about": "sur environ",
     "cameras on this device": "caméras sur cet appareil",
-    "estimated": "estimé",
-    "Adding another camera may cause dropped recordings on this device.": "Ajouter une caméra supplémentaire peut entraîner des pertes d’enregistrement sur cet appareil.",
+    "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.": "Il s’agit d’une limite matérielle. Pour ajouter d’autres caméras, améliorez le matériel ou installez Chirp Hub sur un ordinateur.",
     "Open Cameras": "Ouvrir les caméras",
     "Open Zigbee": "Ouvrir Zigbee",
     "Open LoRaWAN": "Ouvrir LoRaWAN",
@@ -641,7 +649,11 @@
     "The camera stops running and disappears from this list. You can set it up again at any time.": "La caméra s'arrête et disparaît de cette liste. Vous pouvez la reconfigurer à tout moment.",
     "Remove, keep recordings": "Supprimer en gardant les enregistrements",
     "Remove and delete recordings": "Supprimer avec les enregistrements",
-    "Cancel": "Annuler"
+    "Cancel": "Annuler",
+    "Processor load": "Charge du processeur",
+    "Memory used": "Mémoire utilisée",
+    "load": "charge",
+    "of": "sur"
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -750,8 +762,7 @@
     "Cameras run in Docker on this device. Install it from Settings and this page will be ready.": "As câmaras correm em Docker neste dispositivo. Instale-o nas definições e esta página ficará pronta.",
     "of about": "de cerca de",
     "cameras on this device": "câmaras neste dispositivo",
-    "estimated": "estimado",
-    "Adding another camera may cause dropped recordings on this device.": "Adicionar outra câmara pode causar falhas de gravação neste dispositivo.",
+    "This is a hardware limit. To add more cameras, upgrade the hardware or install Chirp Hub on a computer.": "Este é um limite de hardware. Para adicionar mais câmaras, melhore o hardware ou instale o Chirp Hub num computador.",
     "Open Cameras": "Abrir câmaras",
     "Open Zigbee": "Abrir Zigbee",
     "Open LoRaWAN": "Abrir LoRaWAN",
@@ -802,6 +813,10 @@
     "The camera stops running and disappears from this list. You can set it up again at any time.": "A câmera para de funcionar e desaparece desta lista. Você pode configurá-la novamente quando quiser.",
     "Remove, keep recordings": "Remover e manter as gravações",
     "Remove and delete recordings": "Remover e excluir as gravações",
-    "Cancel": "Cancelar"
+    "Cancel": "Cancelar",
+    "Processor load": "Carga do processador",
+    "Memory used": "Memória utilizada",
+    "load": "carga",
+    "of": "de"
   }
 }

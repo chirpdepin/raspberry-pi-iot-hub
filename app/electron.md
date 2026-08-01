@@ -348,8 +348,8 @@ button: "Camera *Front door* is offline `[Check camera]`", "Docker isn't running
 
 | Card | Shows | Action |
 |---|---|---|
-| This device | Hostname, OS, arch, CPU + RAM gauges, disk free, Docker version | `[Settings]` |
-| Cameras | N running / N offline, capacity bar with headroom | `[Scan for cameras]` |
+| This device | Hostname, OS, arch, total RAM, processors, Docker version, **live processor load and memory used** (percentage + bar + raw load average, refreshed every 3s, on every platform) | `[Settings]` |
+| Cameras | N running / N offline, capacity bar with headroom — **only on boards whose limit was measured** (see [docs/camera-capacity.md](../docs/camera-capacity.md)); a desktop and a Pi 3 show no bar at all | `[Scan for cameras]` |
 | LoRaWAN | EUI, ● LNS state, uplinks today, last packet | `[Set up]` / `[View]` |
 | Zigbee | Coordinator model, N devices, N offline, join state | `[Add device]` |
 | Thread | ● state, N nodes | `[Set up]` / `[View]` |

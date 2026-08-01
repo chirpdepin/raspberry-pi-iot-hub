@@ -514,3 +514,53 @@ mappings from the observed payload, but Chirp **silently discards a mapping that
 has no normalized key**, and the normalized-key picker is empty until a metric
 exists. So the use case must **create the metric first, then map** — otherwise it
 will report success and store nothing, which is precisely what happened by hand.
+
+## Chirp UI parity and camera discovery (2026-08-01)
+
+Running the app showed it did not look like Chirp, and that camera discovery
+could not work at all. Six defects, all reproduced before being fixed.
+
+| Defect | Fix |
+|---|---|
+| No logo, no nav icons | Chirp wordmark and bird mark copied as inline SVG using `currentColor`; icons carried in the `NAV_ITEMS` registry |
+| Collapse hid the sidebar and never came back, showing clipped labels (`Dashb`, `Camer`) | Open/closed and collapsed are now separate states — the control was wired to `closeSidebar`, and `isCollapsed` was hardcoded `false` |
+| No language selector, and `lng` hardcoded to `en` | Registry of Chirp's five languages, plus persistence through the same `localStorage` helper the theme uses. **Verified by restarting the app**, since a selector alone would have reset silently |
+| Every screen inset **72px** vs Chirp's 24px | `<main>` carried `theme.spacing(6)` (48px, kit base 8) on top of `PageWrapper`'s 24px. A smoke check now asserts `main` adds no padding |
+| Page actions left-aligned in the body | One `PageLayout` with the action **top-right**, following Chirp's rule that it appears only once the page has content |
+| Empty states used an `h6` with no icon | Now through `EmptyBlock`'s own `title`/`icon` props — 12px uppercase above the 56×56 mark, as Chirp renders it |
+
+### Camera discovery — the silent failure
+
+`camera-discover` returned a bare array, so a scan that **could not run** was
+indistinguishable from one that **found nothing**. The Twin image is unpublished,
+`docker run` failed, the adapter swallowed it, and the user was told "no cameras
+found" — pointing them at cameras that were fine.
+
+It now returns a `Result`, and a smoke check drives the real IPC channel to
+assert a scan that cannot run says so. It also calls Twin's HTTP API
+(`POST /api/camera/onvif/discovery`) rather than the CLI: only the adapter
+changed, no use case or test did, which is what `CameraDiscoveryPort` was for.
+
+**Manual entry is now a first-class route**, because probing the network proved
+discovery cannot find everything:
+
+| Host | Result |
+|---|---|
+| `192.168.2.205` | ONVIF (`TC71`), but answered **unicast only**, on non-standard port **2020** |
+| `192.168.2.202` | HiLook — **ONVIF disabled entirely**. Can never be discovered; address entry is the only route |
+
+`[Open camera]` is also wired now — it was specified from the start but never
+implemented, so `hostPort` was stored and never used. Opens the Twin's own UI on
+loopback in the system browser.
+
+### Known gaps
+
+- 🚧 **Empty states that offer only `secondaryLabel` render no action at all.**
+  `EmptyState` requires both `secondaryLabel` and `onSecondary`, and the LoRaWAN
+  and Zigbee "no hardware" states pass only the label — so "Supported hardware"
+  never appears, and those screens state the problem without a next step, against
+  Contract 2 rule 4. Not fixed here because it needs a destination to point at,
+  and inventing a docs URL would be worse than the gap. **Next action:** decide
+  the target (`docs/zigbee-thread.md` has the supported-dongle table) and wire it.
+- 🚧 Discovery against a real camera stays blocked until the Twin image is
+  published — the endpoint shape is taken from `electron.md` and unverified.

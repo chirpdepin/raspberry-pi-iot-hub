@@ -8,6 +8,7 @@ import {
   useCamerasQuery,
   useCapacityQuery,
   useDiscoverCamerasMutation,
+  useOpenCameraMutation,
   useProbeCameraMutation,
   useRemoveCameraMutation,
 } from '../../../services/api/cameras/hooks/useCamerasQuery';
@@ -30,6 +31,7 @@ export const useCameras = () => {
   const probeMutation = useProbeCameraMutation();
   const addMutation = useAddCameraMutation();
   const removeMutation = useRemoveCameraMutation();
+  const openMutation = useOpenCameraMutation();
 
   const [step, setStep] = useState<WizardStep>('discover');
   const [selected, setSelected] = useState<DiscoveredCameraPayload | null>(null);
@@ -136,6 +138,16 @@ export const useCameras = () => {
     setStep('done');
   }, [config, addMutation]);
 
+  const handleOpen = useCallback(
+    async (id: string) => {
+      setErrorMessage(null);
+      const result = await openMutation.mutateAsync(id);
+
+      if (!result.ok) setErrorMessage(result.error.message);
+    },
+    [openMutation]
+  );
+
   const handleRemove = useCallback(
     async (id: string, keepRecordings: boolean) => {
       setErrorMessage(null);
@@ -168,6 +180,7 @@ export const useCameras = () => {
     updateConfig,
     handleTestConnection,
     handleAdd,
+    handleOpen,
     handleRemove,
   };
 };

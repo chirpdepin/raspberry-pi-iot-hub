@@ -60,6 +60,8 @@ export const IPC = {
   cameraRemove: 'camera:remove',
   /** How many cameras this hardware should run. */
   cameraCapacity: 'camera:capacity',
+  /** Open a camera's own web interface in the user's browser. */
+  cameraOpen: 'camera:open',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -264,4 +266,5 @@ export interface ChirpHubApi {
   listCameras(): Promise<CameraPayload[]>;
   removeCamera(input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>>;
   getCameraCapacity(): Promise<CapacityPayload>;
+  openCamera(id: string): Promise<IpcResult<void>>;
 }

@@ -41,6 +41,9 @@ export const useAddCameraMutation = () => {
   });
 };
 
+/** Opening a camera changes nothing, so there is no cache to invalidate. */
+export const useOpenCameraMutation = () => useMutation({ mutationFn: camerasApi.open });
+
 export const useRemoveCameraMutation = () => {
   const queryClient = useQueryClient();
 

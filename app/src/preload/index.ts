@@ -39,6 +39,7 @@ const api: ChirpHubApi = {
   listCameras: () => ipcRenderer.invoke(IPC.cameraList),
   removeCamera: (input) => ipcRenderer.invoke(IPC.cameraRemove, input),
   getCameraCapacity: () => ipcRenderer.invoke(IPC.cameraCapacity),
+  openCamera: (id) => ipcRenderer.invoke(IPC.cameraOpen, id),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

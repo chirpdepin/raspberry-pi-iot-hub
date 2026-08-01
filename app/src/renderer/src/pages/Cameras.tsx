@@ -45,6 +45,7 @@ export const Cameras = memo(() => {
     updateConfig,
     handleTestConnection,
     handleAdd,
+    handleOpen,
     handleRemove,
   } = useCameras();
 
@@ -118,7 +119,12 @@ export const Cameras = memo(() => {
           {cameras.map((camera) => (
             // Recordings are kept: removing a camera is usually reorganising,
             // and deleting a container is reversible where recordings are not.
-            <CameraRow key={camera.id} camera={camera} onRemove={(id) => handleRemove(id, true)} />
+            <CameraRow
+              key={camera.id}
+              camera={camera}
+              onOpen={handleOpen}
+              onRemove={(id) => handleRemove(id, true)}
+            />
           ))}
         </Stack>
       ) : null}

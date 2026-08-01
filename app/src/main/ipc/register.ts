@@ -39,6 +39,8 @@ import type { CameraListPorts } from '../usecase/camera-list/contract';
 import { handleCameraList } from '../usecase/camera-list/usecase';
 import type { CameraRemovePorts } from '../usecase/camera-remove/contract';
 import { handleCameraRemove } from '../usecase/camera-remove/usecase';
+import type { CameraOpenPorts } from '../usecase/camera-open/contract';
+import { handleCameraOpen } from '../usecase/camera-open/usecase';
 import type { CapacityAdvisePorts } from '../usecase/capacity-advise/contract';
 import { handleCapacityAdvise } from '../usecase/capacity-advise/usecase';
 import type { SubsystemStatusPorts } from '../usecase/subsystem-status/contract';
@@ -67,6 +69,7 @@ export interface IpcDependencies {
   cameraAdd: CameraAddPorts;
   cameraList: CameraListPorts;
   cameraRemove: CameraRemovePorts;
+  cameraOpen: CameraOpenPorts;
   capacity: CapacityAdvisePorts;
 }
 
@@ -154,6 +157,8 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   );
 
   ipcMain.handle(IPC.cameraCapacity, async (): Promise<CapacityPayload> => handleCapacityAdvise(deps.capacity));
+
+  ipcMain.handle(IPC.cameraOpen, async (_event, id: string) => handleCameraOpen(deps.cameraOpen, id));
 
   ipcMain.handle(IPC.hostDetails, async () => {
     const { host, capabilities } = await handleHostCapabilities(deps.hostCapabilities);

@@ -7,6 +7,7 @@ import type { CameraPayload } from '@shared/ipc';
 
 interface CameraRowProps {
   camera: CameraPayload;
+  onOpen: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -16,9 +17,10 @@ interface CameraRowProps {
  * A stopped camera stays in the list, marked — hiding it would make a failure
  * look like the user had deleted it (Contract 2 rule 2).
  */
-export const CameraRow = memo<CameraRowProps>(({ camera, onRemove }) => {
+export const CameraRow = memo<CameraRowProps>(({ camera, onOpen, onRemove }) => {
   const { t } = useTranslation();
 
+  const handleOpen = () => onOpen(camera.id);
   const handleRemove = () => onRemove(camera.id);
 
   return (
@@ -32,9 +34,20 @@ export const CameraRow = memo<CameraRowProps>(({ camera, onRemove }) => {
             </Typography>
           </Stack>
 
-          <Button variant='secondary' size='small' onClick={handleRemove}>
-            {t('Remove')}
-          </Button>
+          <Stack direction='row' sx={{ gap: '8px' }}>
+            {/* The camera's own interface has live view, recordings and every
+                setting this app deliberately does not expose. Only offered while
+                it is running — there is nothing to open otherwise. */}
+            {camera.online ? (
+              <Button variant='secondary' size='small' onClick={handleOpen}>
+                {t('Open camera')}
+              </Button>
+            ) : null}
+
+            <Button variant='secondary' size='small' onClick={handleRemove}>
+              {t('Remove')}
+            </Button>
+          </Stack>
         </Stack>
 
         <Stack direction='row' sx={{ gap: '16px', flexWrap: 'wrap' }}>

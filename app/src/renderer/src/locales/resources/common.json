@@ -143,7 +143,10 @@
     "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "No cameras answered. Some cameras cannot be found automatically — add one by address below.",
     "Know the camera’s address? Add it directly.": "Know the camera’s address? Add it directly.",
     "Camera address": "Camera address",
-    "The camera software is not installed yet.": "The camera software is not installed yet."
+    "The camera software is not installed yet.": "The camera software is not installed yet.",
+    "Open camera": "Open camera",
+    "This camera isn't running, so there's nothing to open yet.": "This camera isn't running, so there's nothing to open yet.",
+    "Couldn't open your browser.": "Couldn't open your browser."
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -289,7 +292,10 @@
     "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Keine Kamera hat geantwortet. Manche Kameras lassen sich nicht automatisch finden — fügen Sie unten eine per Adresse hinzu.",
     "Know the camera’s address? Add it directly.": "Sie kennen die Adresse der Kamera? Fügen Sie sie direkt hinzu.",
     "Camera address": "Kameraadresse",
-    "The camera software is not installed yet.": "Die Kamerasoftware ist noch nicht installiert."
+    "The camera software is not installed yet.": "Die Kamerasoftware ist noch nicht installiert.",
+    "Open camera": "Kamera öffnen",
+    "This camera isn't running, so there's nothing to open yet.": "Diese Kamera läuft nicht, es gibt also noch nichts zu öffnen.",
+    "Couldn't open your browser.": "Ihr Browser konnte nicht geöffnet werden."
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -435,7 +441,10 @@
     "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Ninguna cámara respondió. Algunas cámaras no se pueden encontrar automáticamente: añade una por dirección abajo.",
     "Know the camera’s address? Add it directly.": "¿Conoces la dirección de la cámara? Añádela directamente.",
     "Camera address": "Dirección de la cámara",
-    "The camera software is not installed yet.": "El software de cámara aún no está instalado."
+    "The camera software is not installed yet.": "El software de cámara aún no está instalado.",
+    "Open camera": "Abrir cámara",
+    "This camera isn't running, so there's nothing to open yet.": "Esta cámara no está en marcha, así que todavía no hay nada que abrir.",
+    "Couldn't open your browser.": "No se pudo abrir tu navegador."
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -581,7 +590,10 @@
     "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Aucune caméra n’a répondu. Certaines caméras ne peuvent pas être trouvées automatiquement — ajoutez-en une par adresse ci-dessous.",
     "Know the camera’s address? Add it directly.": "Vous connaissez l’adresse de la caméra ? Ajoutez-la directement.",
     "Camera address": "Adresse de la caméra",
-    "The camera software is not installed yet.": "Le logiciel de caméra n’est pas encore installé."
+    "The camera software is not installed yet.": "Le logiciel de caméra n’est pas encore installé.",
+    "Open camera": "Ouvrir la caméra",
+    "This camera isn't running, so there's nothing to open yet.": "Cette caméra ne fonctionne pas, il n’y a donc rien à ouvrir pour l’instant.",
+    "Couldn't open your browser.": "Impossible d’ouvrir votre navigateur."
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -727,6 +739,9 @@
     "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Nenhuma câmara respondeu. Algumas câmaras não podem ser encontradas automaticamente — adicione uma por endereço abaixo.",
     "Know the camera’s address? Add it directly.": "Sabe o endereço da câmara? Adicione-a diretamente.",
     "Camera address": "Endereço da câmara",
-    "The camera software is not installed yet.": "O software de câmara ainda não está instalado."
+    "The camera software is not installed yet.": "O software de câmara ainda não está instalado.",
+    "Open camera": "Abrir câmara",
+    "This camera isn't running, so there's nothing to open yet.": "Esta câmara não está a funcionar, por isso ainda não há nada para abrir.",
+    "Couldn't open your browser.": "Não foi possível abrir o seu navegador."
   }
 }

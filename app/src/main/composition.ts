@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { shell } from 'electron';
 
-import { domainError, err } from './domain/errors';
+import { domainError, err, ok } from './domain/errors';
 
 import { createChirpGatewayClient } from './adapters/chirp/gateway-client';
 import { readZipEntries } from './adapters/chirp/zip';
@@ -181,6 +181,29 @@ export const buildDependencies = (): IpcDependencies => {
       },
     },
     cameraRemove: { containers: twinRuntime.removal, records: cameraStore },
+    cameraOpen: {
+      external: {
+        async open(url: string) {
+          try {
+            await shell.openExternal(url);
+            return ok(undefined);
+          } catch (error) {
+            return err(
+              domainError(
+                'unknown',
+                "Couldn't open your browser.",
+                error instanceof Error ? error.message : String(error)
+              )
+            );
+          }
+        },
+      },
+      // Read from the stored record rather than asked of Docker: the port is
+      // ours, allocated when the camera was added.
+      location: {
+        hostPort: async (id) => (await cameraStore.all()).find((camera) => camera.id === id)?.hostPort ?? null,
+      },
+    },
     capacity: {
       capacity: {
         host: () => createHostInfo().read(),

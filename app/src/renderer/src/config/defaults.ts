@@ -69,4 +69,8 @@ export const LAYOUT = {
   emptyIconSize: 56,
   /** Empty-state block height, so a mostly-empty page still has weight. */
   emptyMinHeight: '400px',
+  /** Chirp drops the empty block down on a narrow screen; on lg it centres. */
+  emptyTopMarginMobile: '40px',
+  /** Gap between the description and the action, wider on a desktop. */
+  emptyActionGap: '32px',
 } as const;

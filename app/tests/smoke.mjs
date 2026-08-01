@@ -245,7 +245,29 @@ async function run() {
   const mainPadding = await window.webContents.executeJavaScript(
     `getComputedStyle(document.querySelector('main')).padding`
   );
-  check('main adds no padding of its own', /^0px/.test(mainPadding), mainPadding);
+  check('main adds no padding of its own', mainPadding.startsWith('0px'), mainPadding);
+
+  // Empty states: chirp renders the title through EmptyBlock's own `title` prop,
+  // which is 12px UPPERCASE above a 56x56 mark. Ours hand-rolled an h6 with no
+  // icon, which is why these screens did not match.
+  await window.webContents.executeJavaScript(`window.location.hash = '#/lorawan'`);
+  await new Promise((resolve) => setTimeout(resolve, 900));
+
+  const empty = await window.webContents.executeJavaScript(`(() => {
+        const main = document.querySelector('main');
+        const svg = main?.querySelector('svg');
+        const title = Array.from(main?.querySelectorAll('p, span, div') ?? [])
+            .map((el) => getComputedStyle(el))
+            .find((style) => style.textTransform === 'uppercase');
+        return {
+            hasIcon: Boolean(svg),
+            iconSize: svg ? Math.round(svg.getBoundingClientRect().width) : 0,
+            titleSize: title ? title.fontSize : null,
+        };
+    })()`);
+
+  check('empty state shows the Chirp mark', empty.hasIcon && empty.iconSize === 56, `${empty.iconSize}px`);
+  check('empty state title is 12px uppercase', empty.titleSize === '12px', String(empty.titleSize));
 
   // ---------------------------------------------------------------------
   // Phase 11: every section the user can reach must actually render.
@@ -265,7 +287,9 @@ async function run() {
     );
     check(
       `${route} renders its own content`,
-      expected.some((phrase) => text.includes(phrase)),
+      // Case-insensitive: EmptyBlock uppercases its title, so the rendered text
+      // is not the copy as written.
+      expected.some((phrase) => text.toLowerCase().includes(phrase.toLowerCase())),
       text.slice(0, 60).replaceAll('\n', ' ')
     );
 

@@ -6,6 +6,7 @@ import { NAV_ITEMS, type CapabilityKey } from './config/navigation';
 import { CapabilityPage } from './pages/CapabilityPage';
 import { Dashboard } from './pages/Dashboard';
 import { Lorawan } from './pages/Lorawan';
+import { Zigbee } from './pages/Zigbee';
 import { PagePlaceholder } from './pages/PagePlaceholder';
 import { ThemeModeProvider } from './theme/ThemeModeContext';
 import './i18n';
@@ -44,9 +45,10 @@ export const App = () => (
             <Route path='/' element={<Dashboard />} />
 
             <Route path='/lorawan' element={<Lorawan />} />
+            <Route path='/zigbee' element={<Zigbee />} />
 
             {NAV_ITEMS.filter(hasCapability)
-              .filter((item) => item.capability !== 'lorawan')
+              .filter((item) => item.capability !== 'lorawan' && item.capability !== 'zigbee')
               .map((item) => (
                 <Route key={item.id} path={item.path} element={<CapabilityPage item={item} />} />
               ))}

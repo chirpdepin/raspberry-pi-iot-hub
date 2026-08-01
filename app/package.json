@@ -32,6 +32,7 @@
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
     "i18next": "^24.2.2",
+    "mqtt": "^5.15.2",
     "mui-tel-input": "^11.0.0",
     "react": "^19.2.8",
     "react-colorful": "^5.8.0",
@@ -64,8 +65,8 @@
     "vitest": "^4.1.10"
   },
   "comments": {
-    "react-router-dom": "PINNED to 6.30.4, NOT 7.x. The ui-kit peer range is ^6.26.1 and RouterLink/Link/GeneralInfoCard import from it directly. A deliberate exception to 'use the latest version' \u2014 see app/electron.md.",
-    "typescript": "7.0.2, the current stable release. The fallback to 5.x described in electron.md was NOT needed: TS 7 typechecks MUI v9, React 19, generics, sx callbacks and the ui-kit subpath imports with zero errors \u2014 including the 37 ui-kit dist .d.ts files that reference node_modules paths, which skipLibCheck covers. Verified 2026-08-01 before pinning.",
+    "react-router-dom": "PINNED to 6.30.4, NOT 7.x. The ui-kit peer range is ^6.26.1 and RouterLink/Link/GeneralInfoCard import from it directly. A deliberate exception to 'use the latest version' — see app/electron.md.",
+    "typescript": "7.0.2, the current stable release. The fallback to 5.x described in electron.md was NOT needed: TS 7 typechecks MUI v9, React 19, generics, sx callbacks and the ui-kit subpath imports with zero errors — including the 37 ui-kit dist .d.ts files that reference node_modules paths, which skipLibCheck covers. Verified 2026-08-01 before pinning.",
     "@chirpwireless/ui-kit": "Pinned to a commit SHA rather than a branch so builds are reproducible. 542ddde is v1.0.0 with MUI v9 peers and a committed dist/, the same tree chirp-frontend consumes.",
     "oxlint": "oxlint instead of ESLint: typescript-eslint peers >=4.8.4 <6.1.0, so it supports neither TypeScript 7 (current stable, used here) nor TypeScript 6 (still beta), and cannot parse these files at all. oxlint is Rust-based with its own parser, never invokes tsc, and reads ESLint v8-style config. eslint.config.js.pending is kept for when typescript-eslint catches up."
   },

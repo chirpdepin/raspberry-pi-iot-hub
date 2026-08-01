@@ -23,6 +23,13 @@ const api: ChirpHubApi = {
   detectGateway: () => ipcRenderer.invoke(IPC.gatewayDetect),
   registerGateway: (input) => ipcRenderer.invoke(IPC.gatewayRegister, input),
   provisionGateway: (credentials) => ipcRenderer.invoke(IPC.gatewayProvision, credentials),
+
+  getZigbeeCoordinator: () => ipcRenderer.invoke(IPC.zigbeeCoordinator),
+  startZigbee: (channel) => ipcRenderer.invoke(IPC.zigbeeStart, channel),
+  permitZigbeeJoin: (seconds) => ipcRenderer.invoke(IPC.zigbeePermitJoin, seconds),
+  stopZigbeeJoin: () => ipcRenderer.invoke(IPC.zigbeeStopJoin),
+  getZigbeeDevices: () => ipcRenderer.invoke(IPC.zigbeeDevices),
+  linkZigbeeDevice: (input) => ipcRenderer.invoke(IPC.zigbeeLinkChirp, input),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

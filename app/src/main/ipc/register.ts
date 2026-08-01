@@ -7,6 +7,7 @@ import {
   type GatewayRegisterInput,
   type HostCapabilities,
   type LnsCredentialsPayload,
+  type ZigbeeLinkInput,
 } from '../../shared/ipc';
 import type { LorawanRegion } from '../domain/gateway';
 import { handleDockerEnsure, handleDockerInstall } from '../usecase/docker-ensure/usecase';
@@ -18,6 +19,14 @@ import { handleGatewayProvision } from '../usecase/gateway-provision/usecase';
 import type { GatewayRegisterPorts } from '../usecase/gateway-register/contract';
 import { handleGatewayRegister } from '../usecase/gateway-register/usecase';
 import type { HostCapabilitiesPorts } from '../usecase/host-capabilities/contract';
+import type { ZigbeeDeviceListPorts } from '../usecase/zigbee-device-list/contract';
+import { handleZigbeeDeviceList } from '../usecase/zigbee-device-list/usecase';
+import type { ZigbeeLinkChirpPorts } from '../usecase/zigbee-device-link-chirp/contract';
+import { handleZigbeeLinkChirp } from '../usecase/zigbee-device-link-chirp/usecase';
+import type { ZigbeePermitJoinPorts } from '../usecase/zigbee-permit-join/contract';
+import { handleZigbeePermitJoin, handleZigbeeStopJoin } from '../usecase/zigbee-permit-join/usecase';
+import type { ZigbeeStartPorts } from '../usecase/zigbee-start/contract';
+import { handleZigbeeStart } from '../usecase/zigbee-start/usecase';
 import { handleHostCapabilities } from '../usecase/host-capabilities/usecase';
 
 /**
@@ -34,6 +43,10 @@ export interface IpcDependencies {
   gatewayDetect: GatewayDetectPorts;
   gatewayRegister: GatewayRegisterPorts;
   gatewayProvision: GatewayProvisionPorts;
+  zigbeeStart: ZigbeeStartPorts;
+  zigbeePermitJoin: ZigbeePermitJoinPorts;
+  zigbeeDeviceList: ZigbeeDeviceListPorts;
+  zigbeeLinkChirp: ZigbeeLinkChirpPorts;
 }
 
 export const registerIpcHandlers = (deps: IpcDependencies): void => {
@@ -79,6 +92,22 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
 
   ipcMain.handle(IPC.gatewayProvision, async (_event, credentials: LnsCredentialsPayload) =>
     handleGatewayProvision(deps.gatewayProvision, credentials)
+  );
+
+  ipcMain.handle(IPC.zigbeeCoordinator, async () => deps.zigbeeStart.service.coordinator());
+
+  ipcMain.handle(IPC.zigbeeStart, async (_event, channel?: number) => handleZigbeeStart(deps.zigbeeStart, channel));
+
+  ipcMain.handle(IPC.zigbeePermitJoin, async (_event, seconds?: number) =>
+    handleZigbeePermitJoin(deps.zigbeePermitJoin, seconds)
+  );
+
+  ipcMain.handle(IPC.zigbeeStopJoin, async () => handleZigbeeStopJoin(deps.zigbeePermitJoin));
+
+  ipcMain.handle(IPC.zigbeeDevices, async () => handleZigbeeDeviceList(deps.zigbeeDeviceList));
+
+  ipcMain.handle(IPC.zigbeeLinkChirp, async (_event, input: ZigbeeLinkInput) =>
+    handleZigbeeLinkChirp(deps.zigbeeLinkChirp, input)
   );
 
   ipcMain.handle(IPC.hostDetails, async () => {

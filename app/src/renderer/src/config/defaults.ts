@@ -18,7 +18,16 @@ export const POLL = {
    * Desktop takes tens of seconds anyway.
    */
   dockerMs: 15_000,
+
+  /**
+   * Paired Zigbee devices. Faster than the hardware inventory because devices
+   * appear live during a join window and the user is watching for them.
+   */
+  zigbeeDevicesMs: 3_000,
 } as const;
+
+/** How long the Zigbee network stays open for new devices, in seconds. */
+export const JOIN_WINDOW_SECONDS = 60;
 
 /** Layout values used by more than one screen. */
 export const LAYOUT = {

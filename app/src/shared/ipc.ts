@@ -28,6 +28,19 @@ export const IPC = {
   gatewayRegister: 'gateway:register',
   /** Write credentials and start the gateway service. */
   gatewayProvision: 'gateway:provision',
+
+  /** The attached Zigbee coordinator, or null. */
+  zigbeeCoordinator: 'zigbee:coordinator',
+  /** Render config and start Mosquitto plus Zigbee2MQTT. */
+  zigbeeStart: 'zigbee:start',
+  /** Open a bounded join window. */
+  zigbeePermitJoin: 'zigbee:permitJoin',
+  /** Close the join window early. */
+  zigbeeStopJoin: 'zigbee:stopJoin',
+  /** Paired devices with independent hub and Chirp status. */
+  zigbeeDevices: 'zigbee:devices',
+  /** Provision one device into Chirp. */
+  zigbeeLinkChirp: 'zigbee:linkChirp',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -114,6 +127,35 @@ export interface LnsCredentialsPayload {
   key: string;
 }
 
+export interface ZigbeeCoordinatorInfo {
+  model: string;
+  port: string;
+  adapter: string | null;
+  serial: string;
+}
+
+export interface ZigbeeDeviceInfo {
+  ieeeAddress: string;
+  displayName: string;
+  type: string;
+  manufacturer: string | null;
+  model: string | null;
+  linkQuality: number | null;
+  batteryPercent: number | null;
+  lastSeen: string | null;
+  /** Messages are reaching the local broker. */
+  connectedToHub: boolean;
+  /** The device has been provisioned into Chirp. */
+  connectedToChirp: boolean;
+}
+
+export interface ZigbeeLinkInput {
+  ieeeAddress: string;
+  displayName: string;
+  gatewayEui: string;
+  hubName: string;
+}
+
 /** The surface `preload` exposes on `window.chirpHub`. */
 export interface ChirpHubApi {
   getAppInfo(): Promise<AppInfo>;
@@ -125,4 +167,11 @@ export interface ChirpHubApi {
   detectGateway(): Promise<ConcentratorInfo | null>;
   registerGateway(input: GatewayRegisterInput): Promise<IpcResult<LnsCredentialsPayload>>;
   provisionGateway(credentials: LnsCredentialsPayload): Promise<IpcResult<void>>;
+
+  getZigbeeCoordinator(): Promise<ZigbeeCoordinatorInfo | null>;
+  startZigbee(channel?: number): Promise<IpcResult<void>>;
+  permitZigbeeJoin(seconds?: number): Promise<IpcResult<void>>;
+  stopZigbeeJoin(): Promise<IpcResult<void>>;
+  getZigbeeDevices(): Promise<ZigbeeDeviceInfo[]>;
+  linkZigbeeDevice(input: ZigbeeLinkInput): Promise<IpcResult<void>>;
 }

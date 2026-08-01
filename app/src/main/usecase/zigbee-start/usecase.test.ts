@@ -10,6 +10,7 @@ const coordinator: ZigbeeCoordinator = {
   model: 'SONOFF_Dongle_Plus_MG24',
   port: '/dev/zigbee',
   adapter: 'ember',
+  transport: 'serial',
   serial: 'f620d69ac39aef11aa72ad9061ce3355',
 };
 

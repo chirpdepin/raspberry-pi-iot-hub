@@ -1,3 +1,5 @@
+import type { RadioTransport } from './radio';
+
 /**
  * Zigbee domain.
  *
@@ -8,6 +10,11 @@
 export type ZigbeeAdapter = 'ember' | 'zstack' | 'deconz' | 'zboss';
 
 export interface ZigbeeCoordinator {
+  /**
+   * How the hub reaches it. A serial coordinator needs a Linux host; a network
+   * one works on any platform — see `domain/radio.ts`.
+   */
+  transport: RadioTransport;
   model: string;
   /** The stable udev role symlink, never /dev/ttyUSB*. */
   port: string;

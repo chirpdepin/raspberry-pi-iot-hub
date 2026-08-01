@@ -1,20 +1,22 @@
 import { readFile, access } from 'node:fs/promises';
 
 import type { RadioDiscoveryPort } from '../../usecase/host-capabilities/contract';
+import type { RadioRole } from '../../domain/radio';
 import type { PathsPort } from '../paths/paths';
+import type { RadioRolesResult } from '../../usecase/radio-roles/contract';
 
 /**
- * Radio discovery, reading what the installer scripts already detected.
+ * Radio discovery.
  *
- * The Pi image ships `detect-radios.sh` and `detect-concentrator.sh`, which
- * write `/etc/iot-hub/radios.env` and `concentrator.env`. Re-implementing that
- * detection in TypeScript would create a second source of truth for which
- * dongle is which — and the shell version is the one the udev rules and systemd
- * units already agree with (Contract 4).
+ * **`radios.env` first, live scan second.** On the Pi the installer's
+ * `detect-radios.sh` writes that file, and it is what the udev rules and
+ * systemd units agree with — so it stays authoritative there (Contract 4).
  *
- * On Windows and macOS these files simply do not exist, so every check returns
- * false and the UI shows the "no radio on this computer" empty state. That is
- * the correct answer there, not an error.
+ * Everywhere else it does not exist, and the previous version stopped at that
+ * point and reported "no radio". That was the bug: a dongle plugged into a
+ * laptop could never be found, on any platform, no matter how long the UI
+ * polled. The live scan is the fallback, so the same dongle is recognised
+ * whether it is in the hub or in the machine running this app.
  */
 
 const exists = async (path: string): Promise<boolean> => {
@@ -50,7 +52,20 @@ const readEnvFile = async (path: string): Promise<Record<string, string>> => {
   }
 };
 
-export const createRadioDiscovery = (paths: PathsPort): RadioDiscoveryPort => ({
+export interface RadioDiscoveryDeps {
+  paths: PathsPort;
+  /** Live enumeration with roles applied, used when radios.env is absent. */
+  scanRoles: () => Promise<RadioRolesResult>;
+}
+
+export const createRadioDiscovery = ({ paths, scanRoles }: RadioDiscoveryDeps): RadioDiscoveryPort => {
+  /** True when a radio holding this role is attached right now. */
+  const hasRole = async (role: RadioRole): Promise<boolean> => {
+    const { assigned } = await scanRoles();
+    return assigned.some((entry) => entry.role === role);
+  };
+
+  return {
   async hasConcentrator(): Promise<boolean> {
     const env = await readEnvFile(paths.concentratorEnv());
     // The EUI is only written once the chip has actually answered, so its
@@ -60,17 +75,22 @@ export const createRadioDiscovery = (paths: PathsPort): RadioDiscoveryPort => ({
 
   async hasZigbeeCoordinator(): Promise<boolean> {
     const env = await readEnvFile(paths.radiosEnv());
-    if (!env['ZIGBEE_PORT']) return false;
 
-    // The env file records what was detected at install time; the device node
-    // proves it is still plugged in right now.
-    return exists(paths.radioDevice('zigbee'));
+    if (env['ZIGBEE_PORT']) {
+      // The env file records what was detected at install time; the device node
+      // proves it is still plugged in right now.
+      return exists(paths.radioDevice('zigbee'));
+    }
+
+    return hasRole('zigbee');
   },
 
   async hasThreadRadio(): Promise<boolean> {
     const env = await readEnvFile(paths.radiosEnv());
-    if (!env['THREAD_PORT']) return false;
 
-    return exists(paths.radioDevice('thread'));
+    if (env['THREAD_PORT']) return exists(paths.radioDevice('thread'));
+
+    return hasRole('thread');
   },
-});
+  };
+};

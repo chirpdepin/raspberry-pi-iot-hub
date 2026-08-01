@@ -10,6 +10,9 @@ import { createDockerRuntime } from './adapters/container/docker-runtime';
 import { createConcentratorDiscovery } from './adapters/discovery/concentrator';
 import { createHostInfo } from './adapters/discovery/host-info';
 import { createRadioDiscovery } from './adapters/discovery/radio-discovery';
+import { createSerialRadioScanner } from './adapters/discovery/serial';
+import { createRadioRoleStore } from './adapters/store/radio-roles';
+import { handleRadioRoles } from './usecase/radio-roles/usecase';
 import { createPaths } from './adapters/paths/paths';
 import { createZigbee2MqttClient } from './adapters/mqtt/zigbee2mqtt-client';
 import { createZigbeeService } from './adapters/mqtt/zigbee-service';
@@ -49,9 +52,21 @@ export const buildDependencies = (): IpcDependencies => {
   const privileged = createPrivilegedRunner();
   const services = createServiceState(process.platform);
 
+  /**
+   * Live radio inventory with roles applied. Shared by every reader so the
+   * dashboard, the Zigbee page and the Thread page can never disagree about
+   * what is plugged in.
+   */
+  const scanRoles = () =>
+    handleRadioRoles({
+      scan: { scan: createSerialRadioScanner(process.platform) },
+      roles: createRadioRoleStore(),
+    });
+
   const zigbeeService = createZigbeeService({
     paths,
     startService: (name) => privileged.startService(name),
+    scanRoles,
     // Reading unit state is unprivileged, so it does not go through the
     // privileged runner — a dashboard refresh must never raise a password
     // prompt.
@@ -91,7 +106,7 @@ export const buildDependencies = (): IpcDependencies => {
   return {
     hostCapabilities: {
       hostInfo: createHostInfo(),
-      radios: createRadioDiscovery(paths),
+      radios: createRadioDiscovery({ paths, scanRoles }),
       // host-capabilities wants a boolean pair; docker-ensure wants the
       // three-state view. Adapted at the seam rather than widening either port
       // to satisfy both (Contract 1 I).

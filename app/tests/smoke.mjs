@@ -327,6 +327,7 @@ async function run() {
             listCameras: () => window.chirpHub.listCameras(),
             getCameraCapacity: () => window.chirpHub.getCameraCapacity(),
             discoverCameras: () => window.chirpHub.discoverCameras(),
+            getZigbeeCoordinator: () => window.chirpHub.getZigbeeCoordinator(),
         };
         const out = {};
         for (const [name, call] of Object.entries(calls)) {
@@ -368,6 +369,24 @@ async function run() {
     'a scan that cannot run says so instead of reporting an empty network',
     discovery !== undefined && discovery.ok === false && typeof discovery.error?.message === 'string',
     discovery?.ok === false ? discovery.error.message : `ok=${String(discovery?.ok)}`
+  );
+
+  /**
+   * Radio detection reaches the renderer.
+   *
+   * Conditional on hardware, because this must pass on a machine with no
+   * dongle. What is asserted unconditionally is that detection *ran* and that
+   * anything it found is fully identified — the old failure was a coordinator
+   * that could never be seen, not one described badly.
+   */
+  const coordinator = ipcResults.getZigbeeCoordinator?.value;
+  check(
+    coordinator ? 'detected coordinator is fully identified' : 'no coordinator attached, reported cleanly',
+    coordinator === null ||
+      (typeof coordinator?.model === 'string' &&
+        typeof coordinator?.port === 'string' &&
+        coordinator?.transport === 'serial'),
+    coordinator ? `${coordinator.model} on ${coordinator.port} (${coordinator.adapter})` : 'none attached'
   );
 
   // The capacity figures must say when they are an estimate rather than a

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { describeDevice } from '../../../domain/radio';
+
 import { identify } from './index';
 import { parseByIdName } from './linux';
 import { parseSystemProfiler, serialFromCalloutName } from './macos';
@@ -26,7 +28,10 @@ describe('linux by-id parsing', () => {
   /** The whole point: the shared registry must recognise it. */
   it('identifies that dongle as an ember coordinator from a known brand', () => {
     const parsed = parseByIdName(LINUX_BY_ID);
-    const identified = identify({ node: '/dev/ttyUSB0', ...parsed! });
+    expect(parsed).not.toBeNull();
+    if (!parsed) return;
+
+    const identified = identify({ node: '/dev/ttyUSB0', ...parsed });
 
     expect(identified.adapter).toBe('ember');
     expect(identified.known).toBe(true);
@@ -118,12 +123,15 @@ describe('windows parsing', () => {
    */
   it('identifies from the bus description, not the driver name', () => {
     const [device] = parsePowerShellPorts(SAMPLE);
-    const identified = identify(device!);
+    expect(device).toBeDefined();
+    if (!device) return;
+
+    const identified = identify(device);
 
     expect(identified.adapter).toBe('ember');
     expect(identified.known).toBe(true);
 
-    const fromDriverName = identify({ ...device!, model: 'Silicon Labs CP210x USB to UART Bridge' });
+    const fromDriverName = identify({ ...device, model: 'Silicon Labs CP210x USB to UART Bridge' });
     expect(fromDriverName.adapter).toBeNull();
     expect(fromDriverName.known).toBe(false);
   });
@@ -140,5 +148,22 @@ describe('windows parsing', () => {
   it('reads the COM port off the end of the friendly name', () => {
     expect(comPortFrom('Silicon Labs CP210x USB to UART Bridge (COM12)')).toBe('COM12');
     expect(comPortFrom('No port here')).toBeNull();
+  });
+});
+
+describe('device naming', () => {
+  it('does not repeat a vendor that the model already carries', () => {
+    // The dongle reports vendor SONOFF and product "SONOFF Dongle Plus MG24",
+    // so a naive join reads "SONOFF SONOFF Dongle Plus MG24".
+    expect(describeDevice('SONOFF', 'SONOFF Dongle Plus MG24')).toBe('SONOFF Dongle Plus MG24');
+  });
+
+  it('prepends a vendor the model does not carry', () => {
+    expect(describeDevice('dresden elektronik', 'ConBee II')).toBe('dresden elektronik ConBee II');
+  });
+
+  it('copes with either half missing', () => {
+    expect(describeDevice('SONOFF', '')).toBe('SONOFF');
+    expect(describeDevice('', 'ConBee II')).toBe('ConBee II');
   });
 });

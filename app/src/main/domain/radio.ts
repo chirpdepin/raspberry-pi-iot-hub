@@ -33,6 +33,25 @@ export interface SerialDevice {
 }
 
 /**
+ * A human-readable name for a device.
+ *
+ * Vendors routinely repeat their own name in the product string — the SONOFF
+ * dongle reports vendor `SONOFF` and product `SONOFF Dongle Plus MG24`, so
+ * joining them naively yields "SONOFF SONOFF Dongle Plus MG24". The vendor is
+ * only prepended when the model does not already carry it.
+ */
+export const describeDevice = (vendor: string, model: string): string => {
+  const trimmedVendor = vendor.trim();
+  const trimmedModel = model.trim();
+
+  if (!trimmedModel) return trimmedVendor;
+  if (!trimmedVendor) return trimmedModel;
+  if (trimmedModel.toLowerCase().startsWith(trimmedVendor.toLowerCase())) return trimmedModel;
+
+  return `${trimmedVendor} ${trimmedModel}`;
+};
+
+/**
  * Whether the hub can drive this radio itself.
  *
  * The **only** place the platform rule lives. Everything else asks this rather

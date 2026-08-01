@@ -6,12 +6,16 @@ import { adapterFor } from '../../config/zigbee-adapters';
 import { SERVICES } from '../../config/services';
 import type { ZigbeeServicePort } from '../../usecase/zigbee-start/contract';
 import type { PathsPort } from '../paths/paths';
+import type { RadioRolesResult } from '../../usecase/radio-roles/contract';
+import { describeDevice } from '../../domain/radio';
 
 /**
  * Zigbee coordinator inventory and service control.
  *
- * Reads `/etc/iot-hub/radios.env`, which `detect-radios.sh` already wrote — the
- * same file the udev rules and systemd units agree with (Contract 4).
+ * Reads `/etc/iot-hub/radios.env` on the Pi — the same file the udev rules and
+ * systemd units agree with (Contract 4) — and falls back to a live scan
+ * everywhere else, so a dongle plugged into the machine running this app is
+ * recognised rather than reported missing.
  *
  * Starting the stack is left to the systemd unit rather than driven from here,
  * because the unit already encodes the dependency order and the restart policy.
@@ -43,6 +47,8 @@ export interface ZigbeeServiceDeps {
   paths: PathsPort;
   startService(name: string): Promise<Result<void>>;
   isServiceActive(name: string): Promise<boolean>;
+  /** Live enumeration with roles applied, used when radios.env is absent. */
+  scanRoles(): Promise<RadioRolesResult>;
 }
 
 
@@ -50,21 +56,38 @@ export const createZigbeeService = ({
   paths,
   startService,
   isServiceActive,
+  scanRoles,
 }: ZigbeeServiceDeps): ZigbeeServicePort => ({
   async coordinator(): Promise<ZigbeeCoordinator | null> {
     const env = await readEnvFile(paths.radiosEnv());
     const port = env['ZIGBEE_PORT'];
-    if (!port) return null;
 
-    const model = env['ZIGBEE_MODEL'] ?? 'Unknown';
+    if (port) {
+      const model = env['ZIGBEE_MODEL'] ?? 'Unknown';
+
+      return {
+        model,
+        port,
+        // detect-radios.sh already derived this; fall back to our own registry
+        // so the two never disagree silently.
+        adapter: (env['ZIGBEE_ADAPTER'] as ZigbeeCoordinator['adapter']) || adapterFor(model),
+        serial: env['ZIGBEE_SERIAL'] ?? '',
+        transport: 'serial',
+      };
+    }
+
+    // No installer inventory: this is not the Pi image, so look at what is
+    // actually plugged in.
+    const { assigned } = await scanRoles();
+    const zigbee = assigned.find((entry) => entry.role === 'zigbee');
+    if (!zigbee) return null;
 
     return {
-      model,
-      port,
-      // detect-radios.sh already derived this; fall back to our own registry so
-      // the two never disagree silently.
-      adapter: (env['ZIGBEE_ADAPTER'] as ZigbeeCoordinator['adapter']) || adapterFor(model),
-      serial: env['ZIGBEE_SERIAL'] ?? '',
+      model: describeDevice(zigbee.device.vendor, zigbee.device.model) || 'Unknown',
+      port: zigbee.device.node,
+      adapter: zigbee.device.adapter,
+      serial: zigbee.device.serial,
+      transport: 'serial',
     };
   },
 

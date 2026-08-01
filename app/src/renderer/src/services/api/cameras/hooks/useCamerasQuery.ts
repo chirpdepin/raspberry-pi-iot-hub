@@ -9,7 +9,6 @@ export const cameraQueryKeys = {
   all: ['cameras'] as const,
   list: () => [...cameraQueryKeys.all, 'list'] as const,
   capacity: () => [...cameraQueryKeys.all, 'capacity'] as const,
-  discovered: () => [...cameraQueryKeys.all, 'discovered'] as const,
   availability: () => [...cameraQueryKeys.all, 'availability'] as const,
 };
 

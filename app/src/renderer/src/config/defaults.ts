@@ -94,8 +94,6 @@ export const LAYOUT = {
 
   /** Readable line length for a form column, so fields do not stretch. */
   formMaxWidth: '640px',
-  /** A narrow form column — the wizard's credential and name steps. */
-  narrowFormMaxWidth: '420px',
   /** The gateway setup form and its progress list. */
   setupFormMaxWidth: '480px',
   /** Corner radius on inline media and progress bars. */
@@ -107,6 +105,4 @@ export const LAYOUT = {
   emptyMinHeight: '400px',
   /** Chirp drops the empty block down on a narrow screen; on lg it centres. */
   emptyTopMarginMobile: '40px',
-  /** Gap between the description and the action, wider on a desktop. */
-  emptyActionGap: '32px',
 } as const;

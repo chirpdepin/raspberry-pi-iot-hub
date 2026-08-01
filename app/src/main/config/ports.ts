@@ -49,14 +49,12 @@ export const RESERVED_PORTS: readonly ReservedPort[] = [
 export const TWIN_PORT_RANGE = { start: 18_080, end: 18_180 } as const;
 
 /**
- * Basic Station is NOT in this table because it binds nothing.
+ * Basic Station is deliberately absent from the table above: it binds nothing.
  *
  * It runs with `network_mode: host` and dials **outbound** to the LNS over
- * wss://, so it contributes no listener to collide with. Adding it here with a
+ * wss://, so it contributes no listener to collide with. Adding it with a
  * made-up port would be worse than omitting it — it would reserve a port
  * nothing uses and imply an inbound connection that never happens.
  */
-export const HOST_NETWORK_SERVICES = ['Basic Station (LoRaWAN)'] as const;
-
 export const reservedPortFor = (port: number): ReservedPort | undefined =>
   RESERVED_PORTS.find((r) => r.port === port);

@@ -546,6 +546,112 @@ function checkTranslations(srcRoot: string): Violation[] {
 // Runner
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Tree-level rule: config is data meant to be consumed
+// ---------------------------------------------------------------------------
+
+/**
+ * Every export under `main/config/**` must be referenced outside its own file.
+ *
+ * This exists because it has now taken two manual sweeps to find the same class
+ * of rot. Removing the last consumer of a config block leaves the block behind,
+ * looking authoritative and describing behaviour the app no longer has — the
+ * `TWIN_API` block outlived the Twin-API discovery path and the frame probe by a
+ * whole release, still documenting an endpoint nothing called.
+ *
+ * Config is pure data whose entire purpose is to be read somewhere else, so
+ * "unreferenced" is unambiguous here in a way it would not be for, say, a type.
+ */
+function checkUnusedConfig(srcRoot: string): Violation[] {
+  const out: Violation[] = [];
+  const configRoot = join(srcRoot, 'main', 'config');
+
+  let files: string[];
+  try {
+    files = readdirSync(configRoot).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+  } catch {
+    return out;
+  }
+
+  // Every other source file, concatenated once — the question is only whether a
+  // name appears anywhere else, not where.
+  const others = new Map<string, string>();
+  for (const abs of walk(srcRoot)) {
+    others.set(norm(relative(srcRoot, abs)), readFileSync(abs, 'utf8'));
+  }
+
+  for (const file of files) {
+    const rel = `main/config/${file}`;
+    const lines = readFileSync(join(configRoot, file), 'utf8').split('\n');
+
+    lines.forEach((line, index) => {
+      const name = /^export (?:const|function|class) (\w+)/.exec(line)?.[1];
+      if (!name) return;
+
+      const used = [...others].some(([path, body]) => path !== rel && new RegExp(`\\b${name}\\b`).test(body));
+      if (used) return;
+
+      out.push({
+        rule: 'no-unused-config',
+        file: rel,
+        line: index + 1,
+        detail: `"${name}" is exported but referenced nowhere else — delete it, or drop "export" if only this file uses it`,
+      });
+    });
+  }
+
+  return out;
+}
+
+/**
+ * A locale key whose English text appears nowhere in the source.
+ *
+ * Honest about its limit: it matches the literal anywhere in `src/`, so it
+ * **cannot** catch a key whose only reader is itself dead code. That is exactly
+ * how `"Add manually"` survived a manual sweep — the string sat in a capability
+ * registry field that nothing read. `no-unused-config` and ordinary export
+ * hygiene are what prevent that class; this rule catches the plain orphans.
+ */
+function checkUnusedTranslations(srcRoot: string): Violation[] {
+  const out: Violation[] = [];
+  const dir = join(srcRoot, 'renderer', 'src', 'locales', 'resources');
+
+  let files: string[];
+  try {
+    files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+  } catch {
+    return out;
+  }
+
+  let source = '';
+  for (const abs of walk(srcRoot)) {
+    const rel = norm(relative(srcRoot, abs));
+    if (rel.includes('locales/resources')) continue;
+    source += readFileSync(abs, 'utf8');
+  }
+
+  for (const file of files) {
+    const rel = `renderer/src/locales/resources/${file}`;
+
+    let parsed: Record<string, Record<string, string>>;
+    try {
+      parsed = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+    } catch {
+      continue; // i18n-complete already reports invalid JSON
+    }
+
+    for (const key of Object.keys(parsed['en'] ?? {})) {
+      // Interpolated keys carry {{count}} in the JSON but reach the source as
+      // the same literal, so a plain substring test still holds.
+      if (!source.includes(key)) {
+        out.push({ rule: 'i18n-unused', file: rel, line: 0, detail: `unused key: ${key}` });
+      }
+    }
+  }
+
+  return out;
+}
+
 function run(srcRoot: string): Violation[] {
   const violations: Violation[] = [];
   for (const abs of walk(srcRoot)) {
@@ -557,6 +663,8 @@ function run(srcRoot: string): Violation[] {
   }
   violations.push(...checkUseCaseTests(srcRoot));
   violations.push(...checkTranslations(srcRoot));
+  violations.push(...checkUnusedConfig(srcRoot));
+  violations.push(...checkUnusedTranslations(srcRoot));
   return violations;
 }
 
@@ -607,10 +715,12 @@ function selfTest(): number {
   write('renderer/src/pages/Btn.tsx', "import { Button, Stack } from '@mui/material';\nvoid [Button, Stack];\n");
   write('main/adapters/chirp/client.ts', 'export const parse = (v: any) => v;\n');
   write('main/adapters/store/order.ts', "import { join } from 'node:path';\nimport { x } from './local';\nimport { Box } from '@mui/material';\nvoid [join, x, Box];\n");
+  // 'Hello' is used by Root.tsx below; 'Orphan' is referenced nowhere.
   write(
     'renderer/src/locales/resources/common.json',
-    JSON.stringify({ en: { Hello: 'Hello', 'nav.bad': 'Bad' }, de: {} }),
+    JSON.stringify({ en: { Hello: 'Hello', Orphan: 'Orphan', 'nav.bad': 'Bad' }, de: {} }),
   );
+  write('main/config/dead.ts', "export const UNUSED_BLOCK = { a: 1 } as const;\n");
 
   const found = run(tmp);
   const expected = [
@@ -628,6 +738,8 @@ function selfTest(): number {
     'no-any',
     'i18n-complete',
     'import-order',
+    'no-unused-config',
+    'i18n-unused',
   ];
 
   let failures = 0;
@@ -647,6 +759,15 @@ function selfTest(): number {
   );
   write('main/usecase/camera-add/usecase.test.ts', 'export {};\n');
   write('renderer/pages/Cameras.tsx', 'export const C = () => null;\n');
+  // A config export with a real consumer, and a locale key that is actually
+  // used — both new rules must stay silent on these.
+  write('main/config/live.ts', "export const LIVE = { a: 1 } as const;\n");
+  write('main/adapters/uses.ts', "import { LIVE } from '../config/live';\nvoid LIVE;\n");
+  write(
+    'renderer/src/locales/resources/common.json',
+    JSON.stringify({ en: { Hello: 'Hello' }, de: { Hello: 'Hallo' }, es: { Hello: 'Hola' }, fr: { Hello: 'Bonjour' }, pt: { Hello: 'Ola' } }),
+  );
+  write('renderer/src/pages/Uses.tsx', "export const U = () => 'Hello';\n");
 
   const clean = run(tmp);
   const cleanOk = clean.length === 0;

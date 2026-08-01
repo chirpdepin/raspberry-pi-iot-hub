@@ -22,8 +22,6 @@ export interface CapabilityCopy {
   unconfiguredTitle: string;
   /** Primary action for the unconfigured state. */
   unconfiguredAction: string;
-  /** Secondary link, usually to hardware guidance. */
-  learnMore?: string;
 }
 
 export const CAPABILITY_COPY: Record<CapabilityKey, CapabilityCopy> = {
@@ -31,26 +29,22 @@ export const CAPABILITY_COPY: Record<CapabilityKey, CapabilityCopy> = {
     emptyTitle: 'Camera recording needs Docker.',
     unconfiguredTitle: 'No cameras yet. Chirp Hub can find cameras on your network automatically.',
     unconfiguredAction: 'Scan for cameras',
-    learnMore: 'Add manually',
   },
   lorawan: {
     emptyTitle:
       'No LoRaWAN radio on this computer. LoRaWAN needs a concentrator such as a RAK5146 on a Raspberry Pi HAT.',
     unconfiguredTitle: 'Concentrator ready. Connect it to Chirp to start receiving data.',
     unconfiguredAction: 'Register with Chirp',
-    learnMore: 'Supported hardware',
   },
   zigbee: {
     emptyTitle: 'No Zigbee coordinator found. Plug in a supported USB dongle and it will appear here.',
     unconfiguredTitle: 'Coordinator ready. No devices paired yet.',
     unconfiguredAction: 'Add device',
-    learnMore: 'Supported hardware',
   },
   thread: {
     emptyTitle:
       'Thread needs its own radio. One dongle cannot run Zigbee and Thread at the same time — they use different firmware.',
     unconfiguredTitle: 'Thread radio ready. No border router running yet.',
     unconfiguredAction: 'Start Thread',
-    learnMore: 'Supported hardware',
   },
 };

@@ -7,13 +7,6 @@
  */
 
 /**
- * The Twin's own HTTP API, which the hub calls rather than reimplementing.
- *
- * Discovery logic lives in the Twin (`twin/machinery/src/onvif/discovery.go`).
- * Calling its API keeps exactly one ONVIF implementation in the product, and
- * keeps the hub's wizard as the only interface the user sees.
- */
-/**
  * ONVIF WS-Discovery, run by this app.
  *
  * Discovery is the one camera concern the app keeps, and only to answer "what
@@ -57,24 +50,8 @@ export const ONVIF = {
   maxSweepHosts: 1024,
 } as const;
 
-export const TWIN_API = {
-  /** ONVIF WS-Discovery, as exposed by the Twin. */
-  discoverPath: '/api/camera/onvif/discovery',
-  /** The Twin listens on 80 inside its container; the host port is allocated. */
-  containerPort: 80,
-  /**
-   * A discovery run is multicast with a fixed listen window, so it takes
-   * seconds even when it succeeds. Generous enough not to cut a slow network
-   * short, short enough that a wedged Twin does not hang the wizard.
-   */
-  discoverTimeoutMs: 30_000,
-} as const;
-
 export const WINDOW = {
-  /**
-   * Opening size on a desktop. Comfortable for the camera wizard, which is the
-   * widest screen in the app.
-   */
+  /** Opening size on a desktop, comfortable for the tables and scan results. */
   defaultWidth: 1280,
   defaultHeight: 800,
 
@@ -85,13 +62,6 @@ export const WINDOW = {
    */
   minWidth: 1024,
   minHeight: 600,
-} as const;
-
-export const TIMEOUTS = {
-  /** Docker daemon probe. Long enough for a cold Docker Desktop start. */
-  dockerProbeMs: 5_000,
-  /** How often the dashboard refreshes host state while visible. */
-  hostPollMs: 10_000,
 } as const;
 
 /**

@@ -15,7 +15,7 @@
  *
  * Contract 1 (O): a new brand is one row.
  */
-export const KNOWN_BRANDS: readonly string[] = [
+const KNOWN_BRANDS: readonly string[] = [
   'sonoff',
   'itead',
   'zbdongle',

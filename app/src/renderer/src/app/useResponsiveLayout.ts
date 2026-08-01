@@ -24,6 +24,16 @@ export interface ResponsiveLayout {
   isSidebarOpen: boolean;
   openSidebar: () => void;
   closeSidebar: () => void;
+  /**
+   * Narrow icons-only rail. **Distinct from `isSidebarOpen`**, and conflating
+   * the two was a real bug: the collapse control was wired to `closeSidebar`,
+   * so it hid the sidebar instead of narrowing it, never came back, and left
+   * the kit rendering full labels inside a narrow rail — the "Dashb"/"Camer"
+   * clipping. Open/closed is *whether* the sidebar shows; collapsed is *how
+   * wide* it is when it does.
+   */
+  isSidebarCollapsed: boolean;
+  toggleSidebarCollapsed: () => void;
 }
 
 export const useResponsiveLayout = (): ResponsiveLayout => {
@@ -33,6 +43,7 @@ export const useResponsiveLayout = (): ResponsiveLayout => {
   const isMobile = isBelowMd || isMdToLg;
 
   const [isSidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Follow the viewport: permanent on a desktop, closed by default on a small
   // screen so the user sees content rather than a full-screen menu.
@@ -45,5 +56,9 @@ export const useResponsiveLayout = (): ResponsiveLayout => {
     isSidebarOpen,
     openSidebar: () => setSidebarOpen(true),
     closeSidebar: () => setSidebarOpen(false),
+    // On a small screen the sidebar is already an overlay that is dismissed
+    // entirely, so a narrow rail has nothing to offer there.
+    isSidebarCollapsed: isMobile ? false : isSidebarCollapsed,
+    toggleSidebarCollapsed: () => setSidebarCollapsed((collapsed) => !collapsed),
   };
 };

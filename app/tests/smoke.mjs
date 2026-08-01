@@ -208,6 +208,38 @@ async function run() {
   check('no jargon in the UI', leaked.length === 0, leaked.join(', '));
 
   // ---------------------------------------------------------------------
+  // Sidebar parity with chirp-frontend.
+  //
+  // Each of these is a defect that shipped: no logo, no icons, and a collapse
+  // control wired to "close" so the rail rendered clipped labels ("Dashb",
+  // "Camer"). Only a rendered-DOM assertion catches that last one.
+  // ---------------------------------------------------------------------
+  console.log('\n— sidebar —');
+
+  const sidebar = await window.webContents.executeJavaScript(`(() => {
+        const rail = document.querySelector('.MuiDrawer-paper') ?? document.body;
+        const links = Array.from(rail.querySelectorAll('a'));
+        return {
+            logoPaths: rail.querySelectorAll('svg path').length,
+            linkCount: links.length,
+            linksWithIcon: links.filter((a) => a.querySelector('svg')).length,
+            // .includes, not a regex: this string is a template literal, so a
+            // \\b word boundary would be read as a backspace character.
+            hasLanguage: rail.innerText.includes('EN'),
+            hasThemeLabel: /(Dark|Light)/.test(rail.innerText),
+        };
+    })()`);
+
+  check('sidebar renders the Chirp logo', sidebar.logoPaths > 0, `${sidebar.logoPaths} svg paths`);
+  check(
+    'every nav item has an icon',
+    sidebar.linkCount > 0 && sidebar.linksWithIcon === sidebar.linkCount,
+    `${sidebar.linksWithIcon}/${sidebar.linkCount}`
+  );
+  check('language selector present', sidebar.hasLanguage);
+  check('theme label present', sidebar.hasThemeLabel);
+
+  // ---------------------------------------------------------------------
   // Phase 11: every section the user can reach must actually render.
   //
   // A route that resolves to a blank page passes every other check here —

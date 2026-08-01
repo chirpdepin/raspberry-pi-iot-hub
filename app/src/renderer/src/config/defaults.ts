@@ -29,12 +29,42 @@ export const POLL = {
 /** How long the Zigbee network stays open for new devices, in seconds. */
 export const JOIN_WINDOW_SECONDS = 60;
 
-/** Layout values used by more than one screen. */
+/**
+ * Layout values — Contract 4's single source of truth for spacing.
+ *
+ * These are chirp-frontend's own numbers, taken from its page skeleton
+ * (`modules/Connectors/Connectors.tsx`) and sidebar (`app/Sidebar/Sidebar.tsx`).
+ * chirp inlines them at each call site; kept here instead, they cannot drift
+ * page by page — which is exactly how this app ended up 72px inset where chirp
+ * uses 24px.
+ */
 export const LAYOUT = {
-  /** Body gap on every page, matching the chirp page-layout convention. */
+  /** Gap between a page's header block and its body. */
   pageGap: '24px',
+  /** Gap between sections inside a page body. chirp uses the theme scale (3 = 24px). */
+  bodyGap: 3,
+  /** Gap inside the page header block. chirp uses 2 (= 16px). */
+  headerGap: 2,
+  /** Gap between the page title and its action. chirp passes gap={4} to StackRowJB. */
+  headerRowGap: 4,
   /** Dashboard card grid gap. */
   cardGap: '16px',
   /** Minimum card width before the grid wraps — keeps 1024px to two columns. */
   cardMinWidth: '320px',
+
+  /** Sidebar text size, matching chirp's language/theme row. */
+  sidebarFontSize: '14px',
+  /** Gap between the theme label and its switch. */
+  themeToggleGap: '8px',
+  /** Horizontal padding on the sidebar's bottom row. */
+  sidebarRowPaddingX: '6px',
+  /** Room for the select caret so the code is not clipped. */
+  selectCaretGap: '20px',
+  /** Menu row height in the language dropdown, matching chirp. */
+  menuItemHeight: '40px',
+
+  /** Empty-state icon, matching chirp's 56x56 Chirp mark. */
+  emptyIconSize: 56,
+  /** Empty-state block height, so a mostly-empty page still has weight. */
+  emptyMinHeight: '400px',
 } as const;

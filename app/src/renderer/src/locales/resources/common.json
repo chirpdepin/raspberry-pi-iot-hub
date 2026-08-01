@@ -137,7 +137,9 @@
     "The LoRaWAN gateway is set up but not running.": "The LoRaWAN gateway is set up but not running.",
     "A camera has stopped recording.": "A camera has stopped recording.",
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.",
-    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet."
+    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.",
+    "Dark": "Dark",
+    "Light": "Light"
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -277,7 +279,9 @@
     "The LoRaWAN gateway is set up but not running.": "Das LoRaWAN-Gateway ist eingerichtet, läuft aber nicht.",
     "A camera has stopped recording.": "Eine Kamera nimmt nicht mehr auf.",
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Auf diesem Gerät sind keine freien Verbindungen für neue Kameras mehr vorhanden. Entfernen Sie eine nicht mehr genutzte Kamera und versuchen Sie es erneut.",
-    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Für das Verbinden von Kameras mit Chirp wird die Lens-Registrierungs-API benötigt, die noch nicht angebunden ist."
+    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Für das Verbinden von Kameras mit Chirp wird die Lens-Registrierungs-API benötigt, die noch nicht angebunden ist.",
+    "Dark": "Dunkel",
+    "Light": "Hell"
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -417,7 +421,9 @@
     "The LoRaWAN gateway is set up but not running.": "La pasarela LoRaWAN está configurada pero no se está ejecutando.",
     "A camera has stopped recording.": "Una cámara ha dejado de grabar.",
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Este dispositivo se ha quedado sin conexiones libres para cámaras nuevas. Elimina una cámara que ya no uses e inténtalo de nuevo.",
-    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Conectar cámaras a Chirp requiere la API de registro de Lens, que aún no está integrada."
+    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Conectar cámaras a Chirp requiere la API de registro de Lens, que aún no está integrada.",
+    "Dark": "Oscuro",
+    "Light": "Claro"
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -557,7 +563,9 @@
     "The LoRaWAN gateway is set up but not running.": "La passerelle LoRaWAN est configurée mais ne fonctionne pas.",
     "A camera has stopped recording.": "Une caméra a cessé d’enregistrer.",
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Cet appareil n’a plus de connexions libres pour de nouvelles caméras. Supprimez une caméra que vous n’utilisez plus, puis réessayez.",
-    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecter des caméras à Chirp nécessite l’API d’enregistrement Lens, qui n’est pas encore branchée."
+    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecter des caméras à Chirp nécessite l’API d’enregistrement Lens, qui n’est pas encore branchée.",
+    "Dark": "Sombre",
+    "Light": "Clair"
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -697,6 +705,8 @@
     "The LoRaWAN gateway is set up but not running.": "A gateway LoRaWAN está configurada mas não está em execução.",
     "A camera has stopped recording.": "Uma câmara deixou de gravar.",
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Este dispositivo já não tem ligações livres para novas câmaras. Remova uma câmara que já não use e tente novamente.",
-    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Ligar câmaras ao Chirp requer a API de registo do Lens, que ainda não está integrada."
+    "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Ligar câmaras ao Chirp requer a API de registo do Lens, que ainda não está integrada.",
+    "Dark": "Escuro",
+    "Light": "Claro"
   }
 }

@@ -236,6 +236,23 @@ async function run() {
     sidebar.linkCount > 0 && sidebar.linksWithIcon === sidebar.linkCount,
     `${sidebar.linksWithIcon}/${sidebar.linkCount}`
   );
+  // Row metrics, matching chirp's styled link. The row and its selected
+  // highlight are the same box, so with no padding or min-height both collapsed
+  // to the text's 20px — one cause, two visible defects.
+  const row = await window.webContents.executeJavaScript(`(() => {
+        const link = document.querySelector('.MuiDrawer-paper a');
+        const style = getComputedStyle(link);
+        return {
+            height: Math.round(link.getBoundingClientRect().height),
+            padding: style.padding,
+            radius: style.borderRadius,
+        };
+    })()`);
+
+  check('sidebar row is a full row, not text height', row.height >= 32, `${row.height}px`);
+  check('sidebar row has chirp padding and radius', row.padding === '6px' && row.radius === '4px',
+    `${row.padding} / ${row.radius}`);
+
   check('language selector present', sidebar.hasLanguage);
   check('theme label present', sidebar.hasThemeLabel);
 

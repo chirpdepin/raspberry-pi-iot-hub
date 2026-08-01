@@ -52,6 +52,19 @@ export const LAYOUT = {
   /** Minimum card width before the grid wraps — keeps 1024px to two columns. */
   cardMinWidth: '320px',
 
+  /**
+   * Sidebar row metrics, copied from chirp's styled link
+   * (`chirp-frontend/src/app/Sidebar/style.ts` — the `Link` export).
+   *
+   * These are what make a row a row. Without them the link box collapses to the
+   * text's line height: rows measured 20px against chirp's ~44px, and because
+   * the selected highlight is drawn on this same box, it collapsed with them
+   * into a thin band. Both complaints, one cause.
+   */
+  sidebarRowMinHeight: '32px',
+  sidebarRowPadding: '6px',
+  sidebarRowRadius: '4px',
+
   /** Sidebar text size, matching chirp's language/theme row. */
   sidebarFontSize: '14px',
   /** Gap between the theme label and its switch. */

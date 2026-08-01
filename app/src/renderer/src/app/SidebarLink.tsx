@@ -2,6 +2,8 @@ import type { MouseEvent, ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Box } from '@mui/material';
 
+import { LAYOUT } from '../config/defaults';
+
 /**
  * The link component injected into the ui-kit `Sidebar`.
  *
@@ -12,9 +14,14 @@ import { Box } from '@mui/material';
  * The kit styles its own link through an internal `LinkBox` that is not
  * exported, so a bare `NavLink` arrives unstyled and browser-default underlined.
  * Rendering through MUI's `Box` with `component={NavLink}` keeps router
- * behaviour while restoring the expected appearance. Only structural properties
- * are set here — colour and spacing still come from the theme and from the kit's
- * surrounding ListItem, which owns the active state (Contract 4).
+ * behaviour while restoring the expected appearance.
+ *
+ * **This box carries the row metrics**, matching chirp's styled link. That is
+ * not cosmetic: the row height and the selected highlight are both this
+ * element, so with no padding or min-height the row collapsed to text height
+ * (20px against chirp's ~44px) and the highlight collapsed into a thin band
+ * with it. Colour still comes from the theme and the active state from the
+ * kit's surrounding ListItem (Contract 4).
  *
  * External links are not navigated here at all: main's window-open handler sends
  * them to the user's own browser, so they never trap the user inside a
@@ -33,7 +40,15 @@ export interface SidebarLinkProps {
 const linkSx = {
   display: 'flex',
   alignItems: 'center',
+  // Collapsed, the kit renders the icon alone and it should sit centred in the
+  // rail; expanded, the label follows the icon.
+  justifyContent: 'flex-start',
   width: '100%',
+  flexGrow: 1,
+  minHeight: LAYOUT.sidebarRowMinHeight,
+  padding: LAYOUT.sidebarRowPadding,
+  borderRadius: LAYOUT.sidebarRowRadius,
+  boxSizing: 'border-box',
   textDecoration: 'none',
   color: 'inherit',
 } as const;

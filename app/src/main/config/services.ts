@@ -23,3 +23,19 @@ export const SERVICES = {
 } as const;
 
 export type ServiceName = (typeof SERVICES)[keyof typeof SERVICES];
+
+/**
+ * The container each unit actually manages.
+ *
+ * Needed because the units are `Type=oneshot` with `RemainAfterExit=yes` around
+ * `docker compose up -d`: systemd reports the unit active once that command has
+ * returned, and keeps reporting it active even after the container has died.
+ * Asking systemd alone would show a dead stack as running, which is the failure
+ * a health probe exists to catch.
+ */
+export const SERVICE_CONTAINERS: Record<ServiceName, string> = {
+  'iot-hub-lorawan': 'basicstation',
+  'iot-hub-mqtt': 'mosquitto',
+  'iot-hub-zigbee': 'zigbee2mqtt',
+  'iot-hub-thread': 'otbr',
+};

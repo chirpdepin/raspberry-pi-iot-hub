@@ -18,7 +18,7 @@ import { createSessionStore } from './adapters/store/session';
 import { createPortClaims, createPortProbe } from './adapters/network/port-allocator';
 import { createServiceState } from './adapters/system/service-state';
 import { createCameraProbe, createLorawanProbe, createZigbeeProbe } from './adapters/status/subsystem-probes';
-import { createCredentialsCheck, createTwinInventory } from './adapters/status/inventory';
+import { createContainerState, createCredentialsCheck, createTwinInventory } from './adapters/status/inventory';
 import { createCameraStore } from './adapters/store/cameras';
 import { createTwinRuntime } from './adapters/camera/twin-runtime';
 import { createImageStore } from './adapters/images/image-store';
@@ -86,6 +86,7 @@ export const buildDependencies = (): IpcDependencies => {
 
   const cameraStore = createCameraStore();
   const twinInventory = createTwinInventory();
+  const containerState = createContainerState();
 
   return {
     hostCapabilities: {
@@ -192,10 +193,12 @@ export const buildDependencies = (): IpcDependencies => {
           concentratorPresent: async () => (await concentrator.read()) !== null,
           credentialsPresent: createCredentialsCheck(paths.lorawanCredentialsDir()),
           serviceState: (unit) => services.state(unit),
+          containerState,
         }),
         createZigbeeProbe({
           coordinatorPresent: async () => (await zigbeeService.coordinator()) !== null,
           serviceState: (unit) => services.state(unit),
+          containerState,
           pairedCount: async () => (await zigbee2mqtt.zigbee.devices()).length,
         }),
         createCameraProbe({

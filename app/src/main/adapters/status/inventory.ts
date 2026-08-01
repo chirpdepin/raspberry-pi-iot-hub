@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { TWIN_CONTAINER_PREFIX } from '../../config/images';
+import { SERVICE_CONTAINERS, type ServiceName } from '../../config/services';
+import type { ContainerState } from './subsystem-probes';
 
 const run = promisify(execFile);
 
@@ -28,6 +30,28 @@ export const createCredentialsCheck = (credentialsDir: string) => async (): Prom
     return true;
   } catch {
     return false;
+  }
+};
+
+/**
+ * Whether the container behind a unit is actually running.
+ *
+ * The unit cannot answer this: `Type=oneshot` with `RemainAfterExit=yes` around
+ * `docker compose up -d` stays active once the command has returned, whatever
+ * the container does afterwards.
+ */
+export const createContainerState = () => async (unit: string): Promise<ContainerState> => {
+  const container = SERVICE_CONTAINERS[unit as ServiceName];
+  if (!container) return 'missing';
+
+  try {
+    const { stdout } = await run('docker', ['inspect', '-f', '{{.State.Status}}', container]);
+    return stdout.trim() === 'running' ? 'running' : 'stopped';
+  } catch {
+    // `docker inspect` fails when the container has never been created — which
+    // is "missing", not "stopped": never set up and set up then died get
+    // different messages.
+    return 'missing';
   }
 };
 

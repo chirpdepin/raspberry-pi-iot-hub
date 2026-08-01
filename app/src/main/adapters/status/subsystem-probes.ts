@@ -3,6 +3,24 @@ import type { SubsystemProbePort } from '../../usecase/subsystem-status/contract
 import { SERVICES } from '../../config/services';
 
 /**
+ * How a subsystem is really doing: the unit says whether it was asked to run,
+ * the container says whether it is running.
+ *
+ * Both are needed. The units are oneshot wrappers around `docker compose up
+ * -d`, so systemd keeps reporting them active after the container has died —
+ * and the container alone cannot tell "never set up" from "set up and failed".
+ */
+export type UnitState = 'active' | 'failed' | 'inactive' | 'unknown';
+export type ContainerState = 'running' | 'stopped' | 'missing';
+
+const combine = (unit: UnitState, container: ContainerState): 'running' | 'failed' | 'stopped' => {
+  if (unit === 'active' && container === 'running') return 'running';
+  // Asked to run, and not running. This is the case systemd hides.
+  if (unit === 'active' || unit === 'failed') return 'failed';
+  return 'stopped';
+};
+
+/**
  * The three real subsystem probes.
  *
  * Each is built from the adapters that subsystem already owns and reaches into
@@ -15,7 +33,8 @@ import { SERVICES } from '../../config/services';
 export interface LorawanProbeDeps {
   concentratorPresent(): Promise<boolean>;
   credentialsPresent(): Promise<boolean>;
-  serviceState(unit: string): Promise<'active' | 'failed' | 'inactive' | 'unknown'>;
+  serviceState(unit: string): Promise<UnitState>;
+  containerState(unit: string): Promise<ContainerState>;
 }
 
 export const createLorawanProbe = (deps: LorawanProbeDeps): SubsystemProbePort => ({
@@ -38,9 +57,14 @@ export const createLorawanProbe = (deps: LorawanProbeDeps): SubsystemProbePort =
       };
     }
 
-    const state = await deps.serviceState(SERVICES.lorawan);
+    const [unit, container] = await Promise.all([
+      deps.serviceState(SERVICES.lorawan),
+      deps.containerState(SERVICES.lorawan),
+    ]);
 
-    if (state === 'active') {
+    const health = combine(unit, container);
+
+    if (health === 'running') {
       return { id: 'lorawan', state: 'running', summary: 'Gateway is connected.' };
     }
 
@@ -50,26 +74,32 @@ export const createLorawanProbe = (deps: LorawanProbeDeps): SubsystemProbePort =
       id: 'lorawan',
       state: 'failed',
       summary:
-        state === 'failed'
+        health === 'failed'
           ? 'The LoRaWAN gateway stopped unexpectedly.'
           : 'The LoRaWAN gateway is set up but not running.',
       nextAction: { label: 'Open LoRaWAN', route: '/lorawan' },
-      technicalDetail: `${SERVICES.lorawan}: ${state}`,
+      technicalDetail: `${SERVICES.lorawan}: unit ${unit}, container ${container}`,
     };
   },
 });
 
 export interface ZigbeeProbeDeps {
   coordinatorPresent(): Promise<boolean>;
-  serviceState(unit: string): Promise<'active' | 'failed' | 'inactive' | 'unknown'>;
+  serviceState(unit: string): Promise<UnitState>;
+  containerState(unit: string): Promise<ContainerState>;
   pairedCount(): Promise<number>;
 }
 
 export const createZigbeeProbe = (deps: ZigbeeProbeDeps): SubsystemProbePort => ({
   id: 'zigbee',
   async probe(): Promise<SubsystemStatus> {
-    const present = await deps.coordinatorPresent();
-    const state = await deps.serviceState(SERVICES.zigbee);
+    const [present, unit, container] = await Promise.all([
+      deps.coordinatorPresent(),
+      deps.serviceState(SERVICES.zigbee),
+      deps.containerState(SERVICES.zigbee),
+    ]);
+
+    const health = combine(unit, container);
 
     /**
      * The dongle-pulled case, and the reason this ordering matters: Zigbee2MQTT
@@ -80,22 +110,22 @@ export const createZigbeeProbe = (deps: ZigbeeProbeDeps): SubsystemProbePort => 
     if (!present) {
       return {
         id: 'zigbee',
-        state: state === 'inactive' ? 'unavailable' : 'failed',
+        state: health === 'stopped' ? 'unavailable' : 'failed',
         summary:
-          state === 'inactive'
+          health === 'stopped'
             ? 'No Zigbee dongle plugged in.'
             : 'The Zigbee dongle was unplugged. Plug it back into the same socket.',
-        nextAction: state === 'inactive' ? undefined : { label: 'Open Zigbee', route: '/zigbee' },
+        nextAction: health === 'stopped' ? undefined : { label: 'Open Zigbee', route: '/zigbee' },
       };
     }
 
-    if (state !== 'active') {
+    if (health !== 'running') {
       return {
         id: 'zigbee',
-        state: state === 'failed' ? 'failed' : 'not-configured',
-        summary: state === 'failed' ? 'Zigbee stopped unexpectedly.' : 'Zigbee dongle found. It is not started yet.',
+        state: health === 'failed' ? 'failed' : 'not-configured',
+        summary: health === 'failed' ? 'Zigbee stopped unexpectedly.' : 'Zigbee dongle found. It is not started yet.',
         nextAction: { label: 'Open Zigbee', route: '/zigbee' },
-        technicalDetail: `${SERVICES.zigbee}: ${state}`,
+        technicalDetail: `${SERVICES.zigbee}: unit ${unit}, container ${container}`,
       };
     }
 

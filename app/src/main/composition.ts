@@ -145,7 +145,12 @@ export const buildDependencies = (): IpcDependencies => {
       },
       payloads: zigbee2mqtt.payloads,
     },
-    cameraDiscover: { discovery: twinRuntime.discovery },
+    cameraDiscover: {
+      discovery: twinRuntime.discovery,
+      // Same ensure the wizard uses, so the image downloads once rather than
+      // once per entry point.
+      runtime: { ensure: () => ensureTwinImage() },
+    },
     cameraAdd: {
       discovery: twinRuntime.discovery,
       images: { ensure: ensureTwinImage },

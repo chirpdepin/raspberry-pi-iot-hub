@@ -6,6 +6,26 @@
  * knows what it was protecting.
  */
 
+/**
+ * The Twin's own HTTP API, which the hub calls rather than reimplementing.
+ *
+ * Discovery logic lives in the Twin (`twin/machinery/src/onvif/discovery.go`).
+ * Calling its API keeps exactly one ONVIF implementation in the product, and
+ * keeps the hub's wizard as the only interface the user sees.
+ */
+export const TWIN_API = {
+  /** ONVIF WS-Discovery, as exposed by the Twin. */
+  discoverPath: '/api/camera/onvif/discovery',
+  /** The Twin listens on 80 inside its container; the host port is allocated. */
+  containerPort: 80,
+  /**
+   * A discovery run is multicast with a fixed listen window, so it takes
+   * seconds even when it succeeds. Generous enough not to cut a slow network
+   * short, short enough that a wedged Twin does not hang the wizard.
+   */
+  discoverTimeoutMs: 30_000,
+} as const;
+
 export const WINDOW = {
   /**
    * Opening size on a desktop. Comfortable for the camera wizard, which is the

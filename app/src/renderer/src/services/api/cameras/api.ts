@@ -9,7 +9,7 @@ import type {
 
 /** Transport layer — plain functions, no React (Contract 5). */
 export const camerasApi = {
-  discover: (): Promise<DiscoveredCameraPayload[]> => window.chirpHub.discoverCameras(),
+  discover: (): Promise<IpcResult<DiscoveredCameraPayload[]>> => window.chirpHub.discoverCameras(),
   probe: (config: CameraConfigPayload): Promise<IpcResult<CameraProbePayload>> => window.chirpHub.probeCamera(config),
   add: (config: CameraConfigPayload): Promise<IpcResult<{ camera: CameraPayload }>> =>
     window.chirpHub.addCamera(config),

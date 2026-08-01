@@ -1,6 +1,6 @@
 import { Button, Card, TextField } from '@chirpwireless/ui-kit/primitives';
 import { Stack, Typography } from '@mui/material';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { CameraConfigPayload, CameraProbePayload, DiscoveredCameraPayload } from '@shared/ipc';
@@ -12,6 +12,8 @@ interface AddCameraWizardProps {
   step: WizardStep;
   discovered: DiscoveredCameraPayload[];
   isScanning: boolean;
+  /** True when a scan completed and the network genuinely had no cameras. */
+  hasScannedEmpty: boolean;
   isTesting: boolean;
   isAdding: boolean;
   config: CameraConfigPayload | null;
@@ -19,6 +21,7 @@ interface AddCameraWizardProps {
   errorMessage: string | null;
   onScan: () => void;
   onSelect: (camera: DiscoveredCameraPayload) => void;
+  onManual: (address: string) => void;
   onChange: (patch: Partial<CameraConfigPayload>) => void;
   onTest: () => void;
   onAdd: () => void;
@@ -38,6 +41,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
     step,
     discovered,
     isScanning,
+    hasScannedEmpty,
     isTesting,
     isAdding,
     config,
@@ -45,6 +49,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
     errorMessage,
     onScan,
     onSelect,
+    onManual,
     onChange,
     onTest,
     onAdd,
@@ -52,6 +57,7 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
     onFinish,
   }) => {
     const { t } = useTranslation();
+    const [manualAddress, setManualAddress] = useState('');
 
     return (
       <Stack sx={{ gap: LAYOUT.pageGap, width: '100%' }} data-testid='add-camera-wizard'>
@@ -69,6 +75,39 @@ export const AddCameraWizard = memo<AddCameraWizardProps>(
               <Button variant='primary' size='medium' onClick={onScan} disabled={isScanning}>
                 {t(isScanning ? 'Scanning…' : 'Scan for cameras')}
               </Button>
+            </Stack>
+
+            {/* A scan that found nothing is not the same as one that failed, and
+                it is not a dead end either: some cameras have ONVIF switched off
+                and can only ever be added by address. */}
+            {hasScannedEmpty ? (
+              <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
+                {t('No cameras answered. Some cameras cannot be found automatically — add one by address below.')}
+              </Typography>
+            ) : null}
+
+            <Stack sx={{ gap: '12px', maxWidth: '420px' }}>
+              <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
+                {t('Know the camera’s address? Add it directly.')}
+              </Typography>
+
+              <TextField
+                label={t('Camera address')}
+                placeholder='192.168.1.64'
+                value={manualAddress}
+                onChange={(event) => setManualAddress(event.target.value)}
+              />
+
+              <Stack direction='row' sx={{ gap: '12px' }}>
+                <Button
+                  variant='secondary'
+                  size='medium'
+                  disabled={manualAddress.trim().length === 0}
+                  onClick={() => onManual(manualAddress.trim())}
+                >
+                  {t('Add manually')}
+                </Button>
+              </Stack>
             </Stack>
 
             {discovered.map((camera) => (

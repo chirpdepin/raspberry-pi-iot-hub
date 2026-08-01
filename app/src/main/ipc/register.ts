@@ -138,6 +138,7 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
 
   ipcMain.handle(IPC.cameraDiscover, async () => handleCameraDiscover(deps.cameraDiscover));
 
+
   ipcMain.handle(IPC.cameraProbe, async (_event, config: CameraConfigPayload) =>
     deps.cameraAdd.discovery.probe(config)
   );

@@ -139,7 +139,11 @@
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.",
     "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.",
     "Dark": "Dark",
-    "Light": "Light"
+    "Light": "Light",
+    "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "No cameras answered. Some cameras cannot be found automatically — add one by address below.",
+    "Know the camera’s address? Add it directly.": "Know the camera’s address? Add it directly.",
+    "Camera address": "Camera address",
+    "The camera software is not installed yet.": "The camera software is not installed yet."
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -281,7 +285,11 @@
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Auf diesem Gerät sind keine freien Verbindungen für neue Kameras mehr vorhanden. Entfernen Sie eine nicht mehr genutzte Kamera und versuchen Sie es erneut.",
     "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Für das Verbinden von Kameras mit Chirp wird die Lens-Registrierungs-API benötigt, die noch nicht angebunden ist.",
     "Dark": "Dunkel",
-    "Light": "Hell"
+    "Light": "Hell",
+    "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Keine Kamera hat geantwortet. Manche Kameras lassen sich nicht automatisch finden — fügen Sie unten eine per Adresse hinzu.",
+    "Know the camera’s address? Add it directly.": "Sie kennen die Adresse der Kamera? Fügen Sie sie direkt hinzu.",
+    "Camera address": "Kameraadresse",
+    "The camera software is not installed yet.": "Die Kamerasoftware ist noch nicht installiert."
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -423,7 +431,11 @@
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Este dispositivo se ha quedado sin conexiones libres para cámaras nuevas. Elimina una cámara que ya no uses e inténtalo de nuevo.",
     "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Conectar cámaras a Chirp requiere la API de registro de Lens, que aún no está integrada.",
     "Dark": "Oscuro",
-    "Light": "Claro"
+    "Light": "Claro",
+    "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Ninguna cámara respondió. Algunas cámaras no se pueden encontrar automáticamente: añade una por dirección abajo.",
+    "Know the camera’s address? Add it directly.": "¿Conoces la dirección de la cámara? Añádela directamente.",
+    "Camera address": "Dirección de la cámara",
+    "The camera software is not installed yet.": "El software de cámara aún no está instalado."
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -565,7 +577,11 @@
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Cet appareil n’a plus de connexions libres pour de nouvelles caméras. Supprimez une caméra que vous n’utilisez plus, puis réessayez.",
     "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Connecter des caméras à Chirp nécessite l’API d’enregistrement Lens, qui n’est pas encore branchée.",
     "Dark": "Sombre",
-    "Light": "Clair"
+    "Light": "Clair",
+    "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Aucune caméra n’a répondu. Certaines caméras ne peuvent pas être trouvées automatiquement — ajoutez-en une par adresse ci-dessous.",
+    "Know the camera’s address? Add it directly.": "Vous connaissez l’adresse de la caméra ? Ajoutez-la directement.",
+    "Camera address": "Adresse de la caméra",
+    "The camera software is not installed yet.": "Le logiciel de caméra n’est pas encore installé."
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -707,6 +723,10 @@
     "This device has run out of free connections for new cameras. Remove a camera you no longer use, then try again.": "Este dispositivo já não tem ligações livres para novas câmaras. Remova uma câmara que já não use e tente novamente.",
     "Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.": "Ligar câmaras ao Chirp requer a API de registo do Lens, que ainda não está integrada.",
     "Dark": "Escuro",
-    "Light": "Claro"
+    "Light": "Claro",
+    "No cameras answered. Some cameras cannot be found automatically — add one by address below.": "Nenhuma câmara respondeu. Algumas câmaras não podem ser encontradas automaticamente — adicione uma por endereço abaixo.",
+    "Know the camera’s address? Add it directly.": "Sabe o endereço da câmara? Adicione-a diretamente.",
+    "Camera address": "Endereço da câmara",
+    "The camera software is not installed yet.": "O software de câmara ainda não está instalado."
   }
 }

@@ -30,6 +30,7 @@ export const Cameras = memo(() => {
     capacity,
     discovered,
     isScanning,
+    hasScannedEmpty,
     isTesting,
     isAdding: isSubmitting,
     step,
@@ -40,6 +41,7 @@ export const Cameras = memo(() => {
     setStep,
     handleScan,
     handleSelect,
+    handleManual,
     updateConfig,
     handleTestConnection,
     handleAdd,
@@ -84,6 +86,7 @@ export const Cameras = memo(() => {
           step={step}
           discovered={discovered}
           isScanning={isScanning}
+          hasScannedEmpty={hasScannedEmpty}
           isTesting={isTesting}
           isAdding={isSubmitting}
           config={config}
@@ -91,6 +94,7 @@ export const Cameras = memo(() => {
           errorMessage={errorMessage}
           onScan={handleScan}
           onSelect={handleSelect}
+          onManual={handleManual}
           onChange={updateConfig}
           onTest={handleTestConnection}
           onAdd={handleAdd}

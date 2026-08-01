@@ -1,3 +1,4 @@
+import { err, ok, type Result } from '../../domain/errors';
 import { profileFor, type DiscoveredCamera } from '../../domain/camera';
 
 import type { CameraDiscoverPorts } from './contract';
@@ -16,14 +17,25 @@ export interface DiscoveredCameraWithDefaults extends DiscoveredCamera {
  *
  * Contract 2 rule 3: the RTSP path and ONVIF port come from the vendor profile
  * registry, so they sit under Advanced rather than being asked for.
+ *
+ * **Returns a Result, and that is the point.** This used to return a bare array,
+ * so a scan that could not run at all was indistinguishable from a scan that
+ * found nothing — the adapter swallowed the failure and the user was told "no
+ * cameras found" when the truth was that the camera software was never
+ * installed. An empty list must mean an empty network and nothing else.
  */
 export const handleCameraDiscover = async (
   ports: CameraDiscoverPorts,
   timeoutMs: number = DISCOVERY_TIMEOUT_MS
-): Promise<DiscoveredCameraWithDefaults[]> => {
+): Promise<Result<DiscoveredCameraWithDefaults[]>> => {
+  // Nothing can be scanned until the Twin image exists, and saying so is far
+  // more useful than an empty list.
+  const ready = await ports.runtime.ensure();
+  if (!ready.ok) return err(ready.error);
+
   const found = await ports.discovery.discover(timeoutMs);
 
-  return found.map((camera) => {
+  const cameras = found.map((camera) => {
     const profile = profileFor(camera.manufacturer, camera.model);
 
     return {
@@ -35,4 +47,6 @@ export const handleCameraDiscover = async (
       suggestedOnvifPort: profile.onvifPort,
     };
   });
+
+  return ok(cameras);
 };

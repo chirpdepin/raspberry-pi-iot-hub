@@ -309,6 +309,7 @@ async function run() {
             getSubsystemStatus: () => window.chirpHub.getSubsystemStatus(),
             listCameras: () => window.chirpHub.listCameras(),
             getCameraCapacity: () => window.chirpHub.getCameraCapacity(),
+            discoverCameras: () => window.chirpHub.discoverCameras(),
         };
         const out = {};
         for (const [name, call] of Object.entries(calls)) {
@@ -337,6 +338,19 @@ async function run() {
     'every failing subsystem offers a next action',
     subsystems.filter((s) => s.state === 'failed').every((s) => Boolean(s.nextAction)),
     subsystems.filter((s) => s.state === 'failed').map((s) => s.id).join(', ') || 'none failing'
+  );
+
+  /**
+   * The Twin image is not installed on any machine yet, so a scan cannot run.
+   * It must say so. Reporting that as "no cameras found" sends the user to
+   * check cameras that are working perfectly well — the silent failure this
+   * Result was introduced to end.
+   */
+  const discovery = ipcResults.discoverCameras?.value;
+  check(
+    'a scan that cannot run says so instead of reporting an empty network',
+    discovery !== undefined && discovery.ok === false && typeof discovery.error?.message === 'string',
+    discovery?.ok === false ? discovery.error.message : `ok=${String(discovery?.ok)}`
   );
 
   // The capacity figures must say when they are an estimate rather than a

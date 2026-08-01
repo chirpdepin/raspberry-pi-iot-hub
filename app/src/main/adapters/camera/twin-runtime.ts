@@ -12,16 +12,21 @@ import {
 import type { CameraDiscoveryPort, ContainerRuntimePort } from '../../usecase/camera-add/contract';
 import type { TwinRemovalPort } from '../../usecase/camera-remove/contract';
 import type { PathsPort } from '../paths/paths';
+import { TWIN_API } from '../../config/defaults';
 
 const run = promisify(execFile);
 
 /**
  * Camera discovery and Twin lifecycle.
  *
- * Discovery **reuses the Twin's own ONVIF implementation** by running a
- * short-lived, host-network container with `-action discover`. Re-implementing
- * WS-Discovery here would be a second implementation to keep in step with the
- * one the Twin actually uses at runtime.
+ * Discovery **reuses the Twin's own ONVIF implementation** through its HTTP API
+ * (`POST /api/camera/onvif/discovery`) rather than a second implementation
+ * here. A short-lived host-network container runs the scan: WS-Discovery is L2
+ * multicast, so it cannot work from a bridge network.
+ *
+ * The container is host-network and short-lived; Twins themselves run on bridge
+ * networking with a mapped port, because every Twin listens on port 80 and
+ * twenty of them on host networking would all collide.
  *
  * Discovery needs host networking because WS-Discovery is L2 multicast. Twins
  * themselves run on bridge networking with a mapped port, because every Twin
@@ -29,7 +34,44 @@ const run = promisify(execFile);
  * collide.
  */
 
-const DISCOVERY_CONTAINER_TIMEOUT_MS = 20_000;
+/**
+ * The Twin answers discovery as a JSON array; older builds print one object per
+ * line. Both are accepted so the hub is not broken by a Twin release, and an
+ * unparseable line is skipped rather than failing the whole scan.
+ */
+const parseDiscovered = (raw: string): DiscoveredCamera[] => {
+  const toCamera = (value: unknown): DiscoveredCamera[] => {
+    const parsed = value as { xaddr?: string; name?: string; model?: string };
+    if (!parsed?.xaddr) return [];
+
+    return [
+      {
+        xaddr: parsed.xaddr,
+        address: new URL(parsed.xaddr).hostname,
+        manufacturer: parsed.name ?? null,
+        model: parsed.model ?? null,
+      },
+    ];
+  };
+
+  try {
+    const parsed: unknown = JSON.parse(raw.trim());
+    if (Array.isArray(parsed)) return parsed.flatMap(toCamera);
+    return toCamera(parsed);
+  } catch {
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('{'))
+      .flatMap((line) => {
+        try {
+          return toCamera(JSON.parse(line));
+        } catch {
+          return [];
+        }
+      });
+  }
+};
 
 /**
  * Port allocation used to live here. It now belongs to `usecase/port-allocate`,
@@ -52,44 +94,32 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
 
   const discovery: CameraDiscoveryPort = {
     async discover(timeoutMs: number): Promise<DiscoveredCamera[]> {
+      // Host networking, because WS-Discovery is L2 multicast and cannot reach
+      // the LAN from a bridge network. `-P` maps the Twin's port to a random
+      // free host port, so a scan never collides with a running Twin.
+      const name = `twin-discovery-${Date.now()}`;
+
       try {
+        await run('docker', [
+          'run', '-d', '--rm', '--name', name, '--network', 'host', imageTag(),
+        ]);
+
         const { stdout } = await run(
           'docker',
-          ['run', '--rm', '--network', 'host', imageTag(), '-action', 'discover'],
-          { timeout: Math.max(timeoutMs, DISCOVERY_CONTAINER_TIMEOUT_MS) }
+          [
+            'exec', name,
+            'curl', '-sS', '-X', 'POST', '--max-time', String(Math.floor(timeoutMs / 1000)),
+            `http://127.0.0.1:${TWIN_API.containerPort}${TWIN_API.discoverPath}`,
+          ],
+          { timeout: timeoutMs }
         );
 
-        // The Twin prints one JSON object per discovered camera.
-        return stdout
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line.startsWith('{'))
-          .flatMap((line) => {
-            try {
-              const parsed = JSON.parse(line) as {
-                xaddr?: string;
-                name?: string;
-                model?: string;
-              };
-
-              if (!parsed.xaddr) return [];
-
-              return [
-                {
-                  xaddr: parsed.xaddr,
-                  address: new URL(parsed.xaddr).hostname,
-                  manufacturer: parsed.name ?? null,
-                  model: parsed.model ?? null,
-                },
-              ];
-            } catch {
-              return [];
-            }
-          });
-      } catch {
-        // Discovery failing is not an error the user needs to see — it usually
-        // just means nothing answered. The UI offers manual entry regardless.
-        return [];
+        return parseDiscovered(stdout);
+      } finally {
+        // Always, even when the scan threw: a leaked host-network container
+        // would hold the port and make the next scan fail for a different
+        // reason than the first.
+        await run('docker', ['rm', '-f', name]).catch(() => undefined);
       }
     },
 
@@ -98,7 +128,7 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
         const { stdout } = await run(
           'docker',
           ['run', '--rm', imageTag(), '-action', 'probe', '-source', rtspUrl(config)],
-          { timeout: DISCOVERY_CONTAINER_TIMEOUT_MS }
+          { timeout: TWIN_API.discoverTimeoutMs }
         );
 
         const parsed = JSON.parse(stdout.trim()) as {

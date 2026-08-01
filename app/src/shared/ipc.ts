@@ -254,7 +254,11 @@ export interface ChirpHubApi {
   /** Per-subsystem health for the dashboard's Needs-attention strip. */
   getSubsystemStatus(): Promise<SubsystemStatusPayload[]>;
 
-  discoverCameras(): Promise<DiscoveredCameraPayload[]>;
+  /**
+   * A Result, not a bare list: "the camera software is not installed" and "your
+   * network has no cameras" are different answers and need different advice.
+   */
+  discoverCameras(): Promise<IpcResult<DiscoveredCameraPayload[]>>;
   probeCamera(config: CameraConfigPayload): Promise<IpcResult<CameraProbePayload>>;
   addCamera(config: CameraConfigPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
   listCameras(): Promise<CameraPayload[]>;

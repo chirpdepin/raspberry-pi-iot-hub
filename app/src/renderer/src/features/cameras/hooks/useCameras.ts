@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import type { CameraConfigPayload, CameraProbePayload, DiscoveredCameraPayload } from '@shared/ipc';
 
-import { CAMERA_DEFAULTS } from '../../../config/cameras';
+import { CAMERA_DEFAULTS, MANUAL_DEFAULTS } from '../../../config/cameras';
 import {
   useAddCameraMutation,
   useCamerasQuery,
@@ -47,7 +47,11 @@ export const useCameras = () => {
 
   const handleScan = useCallback(async () => {
     setErrorMessage(null);
-    await discoverMutation.mutateAsync();
+    const result = await discoverMutation.mutateAsync();
+
+    // A failed scan must say so. Falling through to an empty list here is what
+    // made a missing Twin image look like a network with no cameras.
+    if (!result.ok) setErrorMessage(result.error.message);
   }, [discoverMutation]);
 
   /**
@@ -63,6 +67,31 @@ export const useCameras = () => {
       credentials: { username: CAMERA_DEFAULTS.username, password: '' },
       rtspPath: camera.suggestedRtspPath,
       onvifPort: camera.suggestedOnvifPort,
+      recording: CAMERA_DEFAULTS.recording,
+      retentionDays: CAMERA_DEFAULTS.retentionDays,
+    });
+    setStep('connect');
+    setErrorMessage(null);
+  }, []);
+
+  /**
+   * Manual entry, and it is a first-class route rather than a fallback.
+   *
+   * Discovery cannot find every camera: ONVIF is switched off entirely on some
+   * models, and others answer only on a non-standard port. Typing an address is
+   * the only way in for those, so it is offered beside the scan, not hidden
+   * behind its failure.
+   */
+  const handleManual = useCallback((address: string) => {
+    const profile = MANUAL_DEFAULTS;
+
+    setSelected(null);
+    setConfig({
+      displayName: address,
+      address,
+      credentials: { username: CAMERA_DEFAULTS.username, password: '' },
+      rtspPath: profile.rtspPath,
+      onvifPort: profile.onvifPort,
       recording: CAMERA_DEFAULTS.recording,
       retentionDays: CAMERA_DEFAULTS.retentionDays,
     });
@@ -120,7 +149,9 @@ export const useCameras = () => {
   return {
     cameras: camerasQuery.data ?? [],
     capacity: capacityQuery.data ?? null,
-    discovered: discoverMutation.data ?? [],
+    discovered: discoverMutation.data?.ok ? discoverMutation.data.value : [],
+    /** True once a scan has completed successfully and genuinely found nothing. */
+    hasScannedEmpty: discoverMutation.data?.ok === true && discoverMutation.data.value.length === 0,
     isScanning: discoverMutation.isPending,
     isTesting: probeMutation.isPending,
     isAdding: addMutation.isPending,
@@ -133,6 +164,7 @@ export const useCameras = () => {
     setStep,
     handleScan,
     handleSelect,
+    handleManual,
     updateConfig,
     handleTestConnection,
     handleAdd,

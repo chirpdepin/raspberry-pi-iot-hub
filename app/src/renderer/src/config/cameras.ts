@@ -22,5 +22,17 @@ export const CAMERA_DEFAULTS = {
   retentionDays: 14,
 } as const;
 
+/**
+ * Starting point for a camera typed in by hand.
+ *
+ * Nothing is known about it — no vendor, no model — so these are the ONVIF
+ * defaults, and both are editable under Advanced. Guessing a vendor path here
+ * would be worse than a generic one that the user can correct.
+ */
+export const MANUAL_DEFAULTS = {
+  rtspPath: '/onvif1',
+  onvifPort: 80,
+} as const;
+
 /** Retention choices offered in the wizard, in days. */
 export const RETENTION_OPTIONS = [7, 14, 30, 90] as const;

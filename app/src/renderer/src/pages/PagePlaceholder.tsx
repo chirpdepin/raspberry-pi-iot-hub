@@ -19,12 +19,8 @@ export const PagePlaceholder = memo<PagePlaceholderProps>(({ item }) => {
   const { t } = useTranslation();
 
   return (
-    <PageLayout title={item.label}>
-      <Typography variant='body1' sx={(theme) => ({ color: theme.palette.text.secondary })}>
-        {t(item.subtitle)}
-      </Typography>
-
-      <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.disabled })}>
+    <PageLayout title={item.label} subtitle={item.subtitle}>
+      <Typography variant='body2' sx={{ color: 'text.disabled' }}>
         {t('This section is being built.')}
       </Typography>
     </PageLayout>

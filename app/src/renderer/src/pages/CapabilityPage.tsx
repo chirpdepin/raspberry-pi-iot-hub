@@ -1,6 +1,4 @@
-import { Typography } from '@mui/material';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { CAPABILITY_COPY } from '../config/capabilities';
 import type { CapabilityKey, NavItem } from '../config/navigation';
@@ -24,7 +22,6 @@ interface CapabilityPageProps {
  * main process, which knows whether Docker is missing or merely stopped.
  */
 export const CapabilityPage = memo<CapabilityPageProps>(({ item }) => {
-  const { t } = useTranslation();
   const { data } = useHostDetailsQuery();
 
   const capability = data?.capabilities?.[item.capability];
@@ -32,21 +29,15 @@ export const CapabilityPage = memo<CapabilityPageProps>(({ item }) => {
   const isAvailable = capability?.available ?? false;
 
   return (
-    <PageLayout title={item.label}>
-      <Typography variant='body1' sx={(theme) => ({ color: theme.palette.text.secondary })}>
-        {t(item.subtitle)}
-      </Typography>
-
+    <PageLayout title={item.label} subtitle={item.subtitle}>
       {isAvailable ? (
-        <EmptyState title={copy.unconfiguredTitle} actionLabel={copy.unconfiguredAction} onAction={() => undefined} />
+        <EmptyState title={copy.unconfiguredTitle} />
       ) : (
         <EmptyState
           // Prefer the reason the main process computed — it distinguishes
           // "Docker missing" from "Docker stopped", which the static registry
           // copy cannot.
           title={capability?.reason ?? copy.emptyTitle}
-          secondaryLabel={copy.learnMore}
-          onSecondary={() => undefined}
         />
       )}
     </PageLayout>

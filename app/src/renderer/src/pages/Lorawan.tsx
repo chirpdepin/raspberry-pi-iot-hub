@@ -37,9 +37,9 @@ export const Lorawan = memo(() => {
   } = useGatewaySetup();
 
   return (
-    <PageLayout title='LoRaWAN Gateway'>
+    <PageLayout title='LoRaWAN Gateway' subtitle='Connect this device to Chirp as a LoRaWAN gateway.'>
       {!concentrator && !isDetecting ? (
-        <EmptyState title={CAPABILITY_COPY.lorawan.emptyTitle} secondaryLabel={CAPABILITY_COPY.lorawan.learnMore} />
+        <EmptyState title={CAPABILITY_COPY.lorawan.emptyTitle} />
       ) : null}
 
       {concentrator ? (

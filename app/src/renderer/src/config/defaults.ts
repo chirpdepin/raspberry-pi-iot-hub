@@ -45,8 +45,10 @@ export const LAYOUT = {
   bodyGap: 3,
   /** Gap inside the page header block. chirp uses 2 (= 16px). */
   headerGap: 2,
-  /** Gap between the page title and its action. chirp passes gap={4} to StackRowJB. */
-  headerRowGap: 4,
+  /** Gap between the page title row and its subtitle, matching Alarm's mb. */
+  headerTitleGap: '4px',
+  /** Gap between page actions when a screen has more than one. Alarm uses 12px. */
+  headerActionGap: '12px',
   /** Dashboard card grid gap. */
   cardGap: '16px',
   /** Minimum card width before the grid wraps — keeps 1024px to two columns. */

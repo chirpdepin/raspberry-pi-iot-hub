@@ -146,7 +146,18 @@
     "The camera software is not installed yet.": "The camera software is not installed yet.",
     "Open camera": "Open camera",
     "This camera isn't running, so there's nothing to open yet.": "This camera isn't running, so there's nothing to open yet.",
-    "Couldn't open your browser.": "Couldn't open your browser."
+    "Couldn't open your browser.": "Couldn't open your browser.",
+    "Coordinator": "Coordinator",
+    "Devices": "Devices",
+    "Name": "Name",
+    "Type": "Type",
+    "Status": "Status",
+    "Address": "Address",
+    "No devices yet": "No devices yet",
+    "Use Add device to pair your first one.": "Use Add device to pair your first one.",
+    "Use Add camera to set up your first one.": "Use Add camera to set up your first one.",
+    "Plug in a Zigbee dongle first.": "Plug in a Zigbee dongle first.",
+    "Cameras need Docker, which is not running.": "Cameras need Docker, which is not running."
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -295,7 +306,18 @@
     "The camera software is not installed yet.": "Die Kamerasoftware ist noch nicht installiert.",
     "Open camera": "Kamera öffnen",
     "This camera isn't running, so there's nothing to open yet.": "Diese Kamera läuft nicht, es gibt also noch nichts zu öffnen.",
-    "Couldn't open your browser.": "Ihr Browser konnte nicht geöffnet werden."
+    "Couldn't open your browser.": "Ihr Browser konnte nicht geöffnet werden.",
+    "Coordinator": "Koordinator",
+    "Devices": "Geräte",
+    "Name": "Name",
+    "Type": "Typ",
+    "Status": "Status",
+    "Address": "Adresse",
+    "No devices yet": "Noch keine Geräte",
+    "Use Add device to pair your first one.": "Verwenden Sie „Gerät hinzufügen“, um Ihr erstes Gerät zu koppeln.",
+    "Use Add camera to set up your first one.": "Verwenden Sie „Kamera hinzufügen“, um Ihre erste Kamera einzurichten.",
+    "Plug in a Zigbee dongle first.": "Schließen Sie zuerst einen Zigbee-Stick an.",
+    "Cameras need Docker, which is not running.": "Kameras benötigen Docker, das nicht läuft."
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -444,7 +466,18 @@
     "The camera software is not installed yet.": "El software de cámara aún no está instalado.",
     "Open camera": "Abrir cámara",
     "This camera isn't running, so there's nothing to open yet.": "Esta cámara no está en marcha, así que todavía no hay nada que abrir.",
-    "Couldn't open your browser.": "No se pudo abrir tu navegador."
+    "Couldn't open your browser.": "No se pudo abrir tu navegador.",
+    "Coordinator": "Coordinador",
+    "Devices": "Dispositivos",
+    "Name": "Nombre",
+    "Type": "Tipo",
+    "Status": "Estado",
+    "Address": "Dirección",
+    "No devices yet": "Aún no hay dispositivos",
+    "Use Add device to pair your first one.": "Usa «Añadir dispositivo» para vincular el primero.",
+    "Use Add camera to set up your first one.": "Usa «Añadir cámara» para configurar la primera.",
+    "Plug in a Zigbee dongle first.": "Primero conecta un adaptador Zigbee.",
+    "Cameras need Docker, which is not running.": "Las cámaras necesitan Docker, que no está en ejecución."
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -593,7 +626,18 @@
     "The camera software is not installed yet.": "Le logiciel de caméra n’est pas encore installé.",
     "Open camera": "Ouvrir la caméra",
     "This camera isn't running, so there's nothing to open yet.": "Cette caméra ne fonctionne pas, il n’y a donc rien à ouvrir pour l’instant.",
-    "Couldn't open your browser.": "Impossible d’ouvrir votre navigateur."
+    "Couldn't open your browser.": "Impossible d’ouvrir votre navigateur.",
+    "Coordinator": "Coordinateur",
+    "Devices": "Appareils",
+    "Name": "Nom",
+    "Type": "Type",
+    "Status": "État",
+    "Address": "Adresse",
+    "No devices yet": "Aucun appareil pour l’instant",
+    "Use Add device to pair your first one.": "Utilisez « Ajouter un appareil » pour coupler le premier.",
+    "Use Add camera to set up your first one.": "Utilisez « Ajouter une caméra » pour configurer la première.",
+    "Plug in a Zigbee dongle first.": "Branchez d’abord une clé Zigbee.",
+    "Cameras need Docker, which is not running.": "Les caméras nécessitent Docker, qui n’est pas en cours d’exécution."
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -742,6 +786,17 @@
     "The camera software is not installed yet.": "O software de câmara ainda não está instalado.",
     "Open camera": "Abrir câmara",
     "This camera isn't running, so there's nothing to open yet.": "Esta câmara não está a funcionar, por isso ainda não há nada para abrir.",
-    "Couldn't open your browser.": "Não foi possível abrir o seu navegador."
+    "Couldn't open your browser.": "Não foi possível abrir o seu navegador.",
+    "Coordinator": "Coordenador",
+    "Devices": "Dispositivos",
+    "Name": "Nome",
+    "Type": "Tipo",
+    "Status": "Estado",
+    "Address": "Endereço",
+    "No devices yet": "Ainda não há dispositivos",
+    "Use Add device to pair your first one.": "Use «Adicionar dispositivo» para emparelhar o primeiro.",
+    "Use Add camera to set up your first one.": "Use «Adicionar câmara» para configurar a primeira.",
+    "Plug in a Zigbee dongle first.": "Ligue primeiro um adaptador Zigbee.",
+    "Cameras need Docker, which is not running.": "As câmaras precisam do Docker, que não está em execução."
   }
 }

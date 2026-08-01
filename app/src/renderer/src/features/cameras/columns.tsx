@@ -17,7 +17,12 @@ import { LAYOUT } from '../../config/defaults';
 
 export interface CameraColumnActions {
   onOpen: (id: string) => void;
-  onRemove: (id: string) => void;
+  /**
+   * Takes the whole camera, not an id: removing asks a question that names the
+   * camera, and a confirmation that says "this one" instead of its name is how
+   * people delete the wrong thing.
+   */
+  onRemove: (camera: CameraPayload) => void;
 }
 
 export const cameraColumns = (t: TFunction, actions: CameraColumnActions): TableColumnDef<CameraPayload>[] => [
@@ -57,7 +62,7 @@ export const cameraColumns = (t: TFunction, actions: CameraColumnActions): Table
           </Button>
         ) : null}
 
-        <Button variant='secondary' size='small' onClick={() => actions.onRemove(row.original.id)}>
+        <Button variant='secondary' size='small' onClick={() => actions.onRemove(row.original)}>
           {t('Remove')}
         </Button>
       </Stack>

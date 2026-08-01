@@ -44,6 +44,7 @@ export const useCameras = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busyAddress, setBusyAddress] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<CameraPayload | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<CameraPayload | null>(null);
 
   const handleScan = useCallback(async () => {
     setErrorMessage(null);
@@ -98,12 +99,33 @@ export const useCameras = () => {
     [addMutation, camerasQuery.data, handleOpen]
   );
 
-  const handleRemove = useCallback(
-    async (id: string, keepRecordings: boolean) => {
-      const result = await removeMutation.mutateAsync({ id, keepRecordings });
+  /**
+   * Removing is a two-step: ask, then do.
+   *
+   * The camera's recordings outlive the camera unless the user says otherwise,
+   * and until this existed the screen never asked — it always kept them, so the
+   * data was orphaned where nothing could reach it and the disk filled with
+   * volumes belonging to cameras that no longer appeared anywhere. Deleting a
+   * container is reversible in a minute; deleting recordings is not, so the two
+   * are separate answers to a question the user is actually asked.
+   */
+  const requestRemove = useCallback((camera: CameraPayload) => {
+    setErrorMessage(null);
+    setPendingRemoval(camera);
+  }, []);
+
+  const cancelRemove = useCallback(() => setPendingRemoval(null), []);
+
+  const confirmRemove = useCallback(
+    async (keepRecordings: boolean) => {
+      const camera = pendingRemoval;
+      if (!camera) return;
+
+      setPendingRemoval(null);
+      const result = await removeMutation.mutateAsync({ id: camera.id, keepRecordings });
       if (!result.ok) setErrorMessage(result.error.message);
     },
-    [removeMutation]
+    [pendingRemoval, removeMutation]
   );
 
   const dismissJustAdded = useCallback(() => setJustAdded(null), []);
@@ -139,13 +161,16 @@ export const useCameras = () => {
     isScanning: discoverMutation.isPending,
     busyAddress,
     justAdded,
+    pendingRemoval,
     errorMessage,
     handleScan,
     clearScan,
     handleSetUp,
     handleAddBlank,
     handleOpen,
-    handleRemove,
+    requestRemove,
+    confirmRemove,
+    cancelRemove,
     dismissJustAdded,
   };
 };

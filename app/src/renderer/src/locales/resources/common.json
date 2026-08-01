@@ -153,7 +153,12 @@
     "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.": "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.",
     "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.": "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.",
     "Searched {{count}} addresses on {{network}}.": "Searched {{count}} addresses on {{network}}.",
-    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed."
+    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.",
+    "Remove this camera?": "Remove this camera?",
+    "The camera stops running and disappears from this list. You can set it up again at any time.": "The camera stops running and disappears from this list. You can set it up again at any time.",
+    "Remove, keep recordings": "Remove, keep recordings",
+    "Remove and delete recordings": "Remove and delete recordings",
+    "Cancel": "Cancel"
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -309,7 +314,12 @@
     "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.": "So lassen sich nur Kameras finden, die sich selbst ankündigen – viele tun das nicht. Nutzen Sie „Kamera hinzufügen“, um eine direkt einzurichten.",
     "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.": "So lassen sich nur Kameras finden, die sich selbst ankündigen – viele tun das nicht, meist ist es in den Einstellungen der Kamera abgeschaltet. Kameras in einem anderen Netzwerk erscheinen ebenfalls nicht. Nutzen Sie „Kamera hinzufügen“ für jede Kamera, die nicht aufgeführt ist.",
     "Searched {{count}} addresses on {{network}}.": "{{count}} Adressen in {{network}} durchsucht.",
-    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Ihr Netzwerk {{network}} ist zu groß zum Durchsuchen ({{count}} Adressen), daher sind nur Kameras aufgeführt, die auf einen allgemeinen Aufruf geantwortet haben."
+    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Ihr Netzwerk {{network}} ist zu groß zum Durchsuchen ({{count}} Adressen), daher sind nur Kameras aufgeführt, die auf einen allgemeinen Aufruf geantwortet haben.",
+    "Remove this camera?": "Diese Kamera entfernen?",
+    "The camera stops running and disappears from this list. You can set it up again at any time.": "Die Kamera wird gestoppt und verschwindet aus dieser Liste. Sie können sie jederzeit erneut einrichten.",
+    "Remove, keep recordings": "Entfernen, Aufnahmen behalten",
+    "Remove and delete recordings": "Entfernen und Aufnahmen löschen",
+    "Cancel": "Abbrechen"
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -465,7 +475,12 @@
     "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.": "Así solo se encuentran las cámaras que se anuncian a sí mismas, y muchas no lo hacen. Usa Añadir cámara para configurar una directamente.",
     "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.": "Así solo se encuentran las cámaras que se anuncian a sí mismas, y muchas no lo hacen: suele estar desactivado en los ajustes de la propia cámara. Las cámaras de otra red tampoco aparecerán. Usa Añadir cámara para cualquier cámara que no esté en la lista.",
     "Searched {{count}} addresses on {{network}}.": "Se buscaron {{count}} direcciones en {{network}}.",
-    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Tu red {{network}} es demasiado grande para explorarla ({{count}} direcciones), así que solo se listan las cámaras que respondieron a una llamada general."
+    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Tu red {{network}} es demasiado grande para explorarla ({{count}} direcciones), así que solo se listan las cámaras que respondieron a una llamada general.",
+    "Remove this camera?": "¿Quitar esta cámara?",
+    "The camera stops running and disappears from this list. You can set it up again at any time.": "La cámara deja de funcionar y desaparece de esta lista. Puedes configurarla de nuevo cuando quieras.",
+    "Remove, keep recordings": "Quitar y conservar las grabaciones",
+    "Remove and delete recordings": "Quitar y eliminar las grabaciones",
+    "Cancel": "Cancelar"
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -621,7 +636,12 @@
     "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.": "Seules les caméras qui s'annoncent peuvent être trouvées ainsi, et beaucoup ne le font pas. Utilisez Ajouter une caméra pour en configurer une directement.",
     "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.": "Seules les caméras qui s'annoncent peuvent être trouvées ainsi, et beaucoup ne le font pas — c'est généralement désactivé dans les réglages de la caméra. Les caméras d'un autre réseau n'apparaîtront pas non plus. Utilisez Ajouter une caméra pour toute caméra absente de la liste.",
     "Searched {{count}} addresses on {{network}}.": "{{count}} adresses analysées sur {{network}}.",
-    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Votre réseau {{network}} est trop vaste pour être analysé ({{count}} adresses) ; seules les caméras ayant répondu à un appel général sont listées."
+    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Votre réseau {{network}} est trop vaste pour être analysé ({{count}} adresses) ; seules les caméras ayant répondu à un appel général sont listées.",
+    "Remove this camera?": "Supprimer cette caméra ?",
+    "The camera stops running and disappears from this list. You can set it up again at any time.": "La caméra s'arrête et disparaît de cette liste. Vous pouvez la reconfigurer à tout moment.",
+    "Remove, keep recordings": "Supprimer en gardant les enregistrements",
+    "Remove and delete recordings": "Supprimer avec les enregistrements",
+    "Cancel": "Annuler"
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -777,6 +797,11 @@
     "Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly.": "Assim só é possível encontrar câmeras que se anunciam, e muitas não fazem isso. Use Adicionar câmera para configurar uma diretamente.",
     "Only cameras that advertise themselves can be found this way, and many don't — it's usually switched off in the camera's own settings. Cameras on a different network won't appear either. Use Add camera for any camera that isn't listed.": "Assim só é possível encontrar câmeras que se anunciam, e muitas não fazem isso — normalmente está desativado nas configurações da própria câmera. Câmeras em outra rede também não aparecerão. Use Adicionar câmera para qualquer câmera que não esteja na lista.",
     "Searched {{count}} addresses on {{network}}.": "Foram pesquisados {{count}} endereços em {{network}}.",
-    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Sua rede {{network}} é grande demais para pesquisar ({{count}} endereços), então só aparecem as câmeras que responderam a uma chamada geral."
+    "Your network {{network}} is too large to search ({{count}} addresses), so only cameras that answered a general call are listed.": "Sua rede {{network}} é grande demais para pesquisar ({{count}} endereços), então só aparecem as câmeras que responderam a uma chamada geral.",
+    "Remove this camera?": "Remover esta câmera?",
+    "The camera stops running and disappears from this list. You can set it up again at any time.": "A câmera para de funcionar e desaparece desta lista. Você pode configurá-la novamente quando quiser.",
+    "Remove, keep recordings": "Remover e manter as gravações",
+    "Remove and delete recordings": "Remover e excluir as gravações",
+    "Cancel": "Cancelar"
   }
 }

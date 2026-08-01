@@ -38,21 +38,24 @@ export const Cameras = memo(() => {
     isScanning,
     busyAddress,
     justAdded,
+    pendingRemoval,
     errorMessage,
     handleScan,
     clearScan,
     handleSetUp,
     handleAddBlank,
     handleOpen,
-    handleRemove,
+    requestRemove,
+    confirmRemove,
+    cancelRemove,
     dismissJustAdded,
   } = useCameras();
 
   const dockerReady = hostQuery.data?.capabilities.cameras.available ?? false;
 
   const columns = useMemo(
-    () => cameraColumns(t, { onOpen: handleOpen, onRemove: (id) => handleRemove(id, true) }),
-    [t, handleOpen, handleRemove]
+    () => cameraColumns(t, { onOpen: handleOpen, onRemove: requestRemove }),
+    [t, handleOpen, requestRemove]
   );
 
   const scanColumns = useMemo(
@@ -108,6 +111,29 @@ export const Cameras = memo(() => {
       {dockerReady ? (
         <>
           {errorMessage ? <Notice title={errorMessage} tone='error' /> : null}
+
+          {/* Asked, never assumed. Recordings outlive the camera unless the user
+              says otherwise, and the screen used to decide that silently. */}
+          {pendingRemoval ? (
+            <Notice
+              title='Remove this camera?'
+              description="The camera stops running and disappears from this list. You can set it up again at any time."
+              tone='warning'
+            >
+              <Typography variant='body2'>{pendingRemoval.displayName}</Typography>
+
+              <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+                <PageAction label='Remove, keep recordings' showPlus={false} onClick={() => confirmRemove(true)} />
+                <PageAction
+                  label='Remove and delete recordings'
+                  variant='secondary'
+                  showPlus={false}
+                  onClick={() => confirmRemove(false)}
+                />
+                <PageAction label='Cancel' variant='secondary' showPlus={false} onClick={cancelRemove} />
+              </Stack>
+            </Notice>
+          ) : null}
 
           {justAdded ? (
             <Notice

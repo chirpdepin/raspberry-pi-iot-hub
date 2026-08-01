@@ -2,14 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { domainError, err, ok } from '../../domain/errors';
 
-import type { CameraRemovePorts } from './contract';
+import type { CameraRemovePorts, TwinRemovalPort } from './contract';
 import { handleCameraRemove } from './usecase';
 
-const ports = (removeFails = false) => {
-  const remove = vi.fn(async () => (removeFails ? err(domainError('unknown', 'busy')) : ok(undefined)));
-  const purgeData = vi.fn(async () => ok(undefined));
+type RemoveMock = ReturnType<typeof vi.fn<TwinRemovalPort['remove']>>;
+type PurgeMock = ReturnType<typeof vi.fn<TwinRemovalPort['purgeData']>>;
 
-  const value: CameraRemovePorts & { remove: typeof remove; purgeData: typeof purgeData } = {
+const ports = (removeFails = false) => {
+  const remove: RemoveMock = vi.fn(async () =>
+    removeFails ? err<void>(domainError('unknown', 'busy')) : ok(undefined)
+  );
+  const purgeData: PurgeMock = vi.fn(async () => ok(undefined));
+
+  const value: CameraRemovePorts & { remove: RemoveMock; purgeData: PurgeMock } = {
     containers: { remove, purgeData },
     remove,
     purgeData,

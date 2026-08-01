@@ -564,3 +564,54 @@ loopback in the system browser.
   the target (`docs/zigbee-thread.md` has the supported-dongle table) and wire it.
 - 🚧 Discovery against a real camera stays blocked until the Twin image is
   published — the endpoint shape is taken from `electron.md` and unverified.
+
+## Radios by transport — cross-platform detection (2026-08-01)
+
+A dongle plugged into the machine running the app was never detected, on any
+platform. Both readers stopped at `/etc/iot-hub/radios.env`, which only the Pi
+installer writes. Polling was never at fault: it ran every 10s against a
+detector that could not succeed off the image.
+
+### Now working
+
+| | |
+|---|---|
+| **Detection** | `radios.env` wins on the image; a live scan is the fallback everywhere else. Verified here: SONOFF Dongle Plus MG24 → `/dev/ttyUSB0`, adapter `ember` |
+| **Linux** | `/dev/serial/by-id` + `readlink`, mirroring `detect-radios.sh`. **Verified on hardware** |
+| **macOS** | `/dev/cu.*` joined to `system_profiler SPUSBDataType` on the serial in the node name. **Parser tested, unverified on hardware** |
+| **Windows** | PowerShell `Get-PnpDevice` + `DEVPKEY_Device_BusReportedDeviceDesc`. **Parser tested, unverified on hardware** |
+| **Roles** | Mirrors the script: one recognised coordinator claims Zigbee; two or more ask. Pinned per USB serial, so they follow the dongle |
+| **Running Zigbee off the Pi** | Second `ZigbeeServicePort` implementation driving Docker directly. Verified: Zigbee2MQTT up against `/dev/ttyUSB0`, EmberZNet 7.4.5, network up, broker connected |
+| **Paths** | Chosen on the `/etc/iot-hub` marker, not the platform, so a Linux desktop no longer gets the image's root-owned paths |
+
+### The transport model
+
+A coordinator is `{ transport, address }` rather than "a USB device". One domain
+function decides runnability — `network` always, `serial` only on a Linux host,
+because Docker Desktop runs containers in a VM with **no USB passthrough**.
+Camera Twins are unaffected: they reach cameras over IP, so cameras work on all
+three platforms.
+
+### Found only by running it
+
+- The template path resolved into a temp directory via `app.getAppPath()`; it is
+  now resolved from the compiled module.
+- Zigbee2MQTT reached the radio, brought the network up, connected to MQTT — then
+  exited with `EADDRINUSE`, because something else on this desktop holds 8080.
+  That reads as a coordinator fault when it is a port clash, so off the image the
+  frontend port is probed and moved (to 18090 here). Fallbacks skip 8081, which
+  `config/ports.ts` reserves for the Thread border router.
+- The display name read "SONOFF SONOFF Dongle Plus MG24"; the vendor is now only
+  prepended when the model does not already carry it.
+
+### Open
+
+- 🚧 **macOS and Windows detection is unverified on real hardware.** Parsers ship
+  with fixture tests, including one asserting Windows identifies from the
+  bus-reported description rather than the driver's FriendlyName — which says
+  "Silicon Labs CP210x…" and would match nothing. **Owner: Tim.** Next action:
+  plug the dongle into the Windows machine and confirm it is detected and named.
+- 🚧 **A serial coordinator cannot be run on Windows or macOS at all** — a Docker
+  Desktop limitation, not ours. The app detects and explains, and a network
+  coordinator (`tcp://…`) works everywhere. Wiring the network transport into the
+  UI is not done yet.

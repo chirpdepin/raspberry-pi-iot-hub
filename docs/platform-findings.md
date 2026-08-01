@@ -144,7 +144,40 @@ so a device nobody has modelled still works.
 
 ---
 
-## 4. Corrections to our own assumptions
+## 4. Saving a sensor mapping without a normalized key silently discards it
+
+**Severity: minor, but it costs real time.**
+
+On the device's **Mapping** tab, selecting a *Device data key* and pressing
+**Save** shows `Success — Device updated successfully`. Reload the page and the
+row is empty: the mapping was never stored.
+
+The cause is that the row also needs a **Normalized key**, and its picker is
+empty until a metric exists — so on a fresh organization there is nothing to
+choose. Creating a metric first (`+ Add new metric`) makes the identical save
+persist.
+
+Nothing in the UI says so. The success toast reports a change that was thrown
+away, which is worse than an error would be: the natural conclusion is that
+mapping is broken rather than that a prerequisite is missing.
+
+**Fix:** either reject the save with "choose a normalized key first", or make
+the Normalized key field visibly required. Do not report success for a discarded
+change.
+
+### Values are last-seen, not live
+
+Worth stating because it reads as a bug: the **Value** column shows the last
+value Chirp *received*, per key. With the bridge down (finding 3) nothing
+updates it, so a lamp that is physically on can sit there showing `state = OFF`
+from an earlier message indefinitely. Publishing the true state updates it
+immediately — `state = ON` — and the mapping picker also learns new keys
+cumulatively, gaining `color_mode` and `color_temp` once a payload containing
+them arrived.
+
+---
+
+## 5. Corrections to our own assumptions
 
 Not platform bugs — things this repo had wrong, now fixed.
 
@@ -169,6 +202,11 @@ form.
 - Basic Station reaching the LNS, INFOS handshake, and MUXS URI resolution
 - Cloud MQTT connector creation, credentials, and broker authentication
 - Zigbee2MQTT on the MG24 coordinator, channel 15, join window control
+- Pairing and driving a real device: Paulmann 50064 CCT spot
+  `0x00158d00053c075f`, state, brightness and colour temperature all controlled
+  from the hub and confirmed physically
+- Chirp device provisioning, topic resolution, payload parsing and sensor
+  mapping — proven by publishing the lamp's real payload past finding 3
 - Mosquitto bridge configuration (connects as soon as finding 3 is fixed)
 
 ## What is blocked, and on whom

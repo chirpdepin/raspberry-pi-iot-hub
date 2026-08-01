@@ -64,11 +64,9 @@ export const Cameras = memo(() => {
     <PageLayout
       title='Cameras'
       subtitle='Record and stream your cameras through Chirp.'
-      // Always rendered, never moved. Scanning is never blocked: finding your
-      // cameras proves they are reachable, which is useful even when setting
-      // one up is not available yet.
-      // `[Add camera]` is primary; scanning is secondary, because most cameras
-      // will never turn up in a scan and setting one up must not depend on it.
+      // Always rendered, never moved. `[Add camera]` is primary and scanning is
+      // secondary, because most cameras will never turn up in a scan and
+      // setting one up must not depend on being found.
       actions={
         <>
           <PageAction

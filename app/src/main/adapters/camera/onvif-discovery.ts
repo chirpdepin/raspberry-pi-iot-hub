@@ -162,7 +162,7 @@ export const planScan = (interfaces: ReturnType<typeof networkInterfaces>): Scan
  * network answers at .205, whose probe was among the cancelled 61. A longer
  * fixed timer would not fix it; it would move the race.
  */
-export const discoverOnvifCameras = async (
+const discoverOnvifCameras = async (
   targets: string[],
   replyWindowMs: number = ONVIF.replyWindowMs
 ): Promise<DiscoveredCamera[]> =>

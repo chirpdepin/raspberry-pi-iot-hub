@@ -82,16 +82,3 @@ export const describeDevice = (vendor: string, model: string): string => {
  */
 export const canRunLocally = (transport: RadioTransport, platform: string): boolean =>
   transport === 'network' || platform === 'linux';
-
-/**
- * Why a detected radio cannot be run here. English text used as an i18n key.
- *
- * Returned only when the radio is genuinely present — this explains a
- * limitation, never an absence, and it names the way forward rather than
- * stopping at "unsupported".
- */
-export const unrunnableReason = (transport: RadioTransport, platform: string): string | undefined => {
-  if (canRunLocally(transport, platform)) return undefined;
-
-  return 'This dongle is plugged in, but running it needs Linux or the Chirp Hub device. A network coordinator works on any computer.';
-};

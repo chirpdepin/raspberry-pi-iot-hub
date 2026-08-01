@@ -739,12 +739,121 @@ forgets it locks the user out of their own camera (Contract 2 rule 6).
 
 ### Still open
 
-- 🚧 Setting a camera up end to end is still blocked on the **unpublished Twin
-  image** — the one remaining blocker, now stated on the page before the user
-  invests in the flow rather than partway through it. Scanning works without it.
-- 🚧 `192.168.2.202` (HiLook) has **ONVIF disabled entirely** and answers 404 on
-  every ONVIF path, so no discovery method can find it. With manual entry removed
-  as duplicated logic, such a camera is reached through the Twin's own Camera tab
-  once a Twin exists — but there is no way to create a Twin for a camera that
-  cannot be discovered. **Next action:** an "add by address" row that creates a
-  Twin from a typed address and opens it, doing no camera configuration.
+Both items here were **closed the same day** — see the next section.
+
+## Cameras work end to end, and a scan no longer looks like a bug (2026-08-01)
+
+Two changes, one commit each, plus a dead-code sweep that turned into a build
+check.
+
+### `[Add camera]` is the main route; scanning is a shortcut
+
+A scan can only ever find cameras that advertise themselves over ONVIF. That is
+switched off by default on many models, and a camera on another subnet or VLAN is
+unreachable by any sweep. Someone with twenty cameras can scan and see one — and
+until now that was both unexplained and a **dead end**, because the previous
+change had removed manual entry as duplicated logic without leaving any other way
+in.
+
+`[Add camera]` now starts a Twin with no camera attached and opens it. The user
+gives it an address in the Twin's own Camera tab, alongside the credentials,
+streams, recording mode and Chirp connection that already live there. Clicking a
+discovered camera does the same thing and additionally records the address, so a
+later scan can mark it as already set up.
+
+**Verified end to end** against a Twin built from the Lens repo: the container
+starts, reports healthy, its UI answers **HTTP 200** on `127.0.0.1:18080`, and its
+log reads `no rtsp url found in config, please provide one` — the hand-off working
+as designed.
+
+### The scan says what it searched
+
+> Searched 254 addresses on 192.168.2.0/24.
+> Only cameras that advertise themselves can be found this way, and many don't —
+> it's usually switched off in the camera's own settings.
+
+The concrete number is what stops a partial result reading as a broken app, and it
+makes a camera on another network obvious at a glance. "ONVIF" and "subnet" are
+kept out of the sentence the user reads.
+
+Three defects found on real hardware while building it:
+
+| Defect | Why it mattered |
+|---|---|
+| A network too large to sweep was **silently dropped**, and the caller then said *"this device isn't on a network we can scan"* | Reads as "you have no network" to someone who plainly has one — on exactly the large flat networks most likely to hold twenty cameras. Now a successful scan that searched nothing and says why |
+| The scan reported **seven networks, six of them /16s — all Docker bridges** | Would have warned about virtual networks nobody has heard of and buried the one real line. Container and VM bridges are now excluded by a registry of interface prefixes |
+| Twin state was a **bind-mounted host directory** | Owned by the desktop user while the Twin runs as its own account: the first camera sat in a retry loop on `mkdir ./data/config: permission denied` and served nothing. Now a named volume, seeded from the image with the image's ownership — also the only form that works on Windows and macOS, where Docker runs in a VM and host uids do not map through |
+
+### The "not published yet" notice is gone
+
+It told the user that Lens had not been deployed. That is a development fact and
+had no business being in the product — the fix is to test against the local stack,
+not to describe the gap in the UI. The whole `camera-availability` use case behind
+it is deleted.
+
+The image resolver now **prefers a Twin already present on the machine** before
+consulting the update feed, so a locally built `lens/twin:local` is used directly.
+That is better product behaviour too: a hub that already has the image should
+never need the network to run a camera. Twin stays closed source and ships as a
+compiled image — never as source pulled into this app.
+
+### Dead code is now a build failure, not a sweep
+
+The previous change left **seven** orphans (a whole `TWIN_API` config block, a doc
+comment asserting the opposite of the truth, a layout token, a query key, locale
+keys, and two exports justified by a test file that was never written). Finding
+them took a manual audit, which is the actual problem.
+
+Two rules now run in CI and are in `--self-test`, which plants a violation of all
+16 rules and asserts each is caught:
+
+- **`no-unused-config`** — every export under `main/config/**` must be referenced
+  outside its own file. On its first run it found two more: `HOST_NETWORK_SERVICES`
+  (unread) and `KNOWN_BRANDS` (only its own file used it — it should never have
+  been exported).
+- **`i18n-unused`** — a locale key whose text appears nowhere in `src/`. It caught
+  four of my own orphans *during* this change. Its comment is honest that it
+  cannot catch a key whose only reader is itself dead code, which is exactly how
+  `"Add manually"` survived — export hygiene is what prevents that class.
+
+`onvif-discovery.test.ts` now exists: the parser is tested against the **real**
+`ProbeMatch` captured from the TC71, and the scan plan against plain interface
+objects, with no sockets.
+
+### The banner's code, not just its pixels
+
+Removing the notice meant removing everything behind it, checked by sweeping for
+each identifier rather than by eye: the `camera-availability` use case, contract
+and tests · the `camera:availability` IPC channel · `CameraAvailabilityPayload` ·
+the preload bridge method · the composition wiring · `camerasApi.availability` ·
+`useCameraAvailabilityQuery` · the `availability` query key · the `canAdd` prop
+threaded through `Cameras.tsx` and the scan columns · both locale strings in five
+languages · and a comment fragment that survived the edit.
+
+The same sweep found four more exports referenced nowhere, three of them older
+than this work:
+
+| Dead | Disposition |
+|---|---|
+| `discoverOnvifCameras` exported | Only its own file calls it now that `createOnvifDiscovery` is the entry point — un-exported |
+| `NEVER_RENAME_FRIENDLY_NAME` | A constant nothing read, but its comment is *the* Zigbee invariant (renaming friendly_name changes the MQTT topic and breaks every provisioned device). Constant deleted, knowledge moved onto the topic helper |
+| `deviceTopic` | Unused helper, deleted |
+| `unrunnableReason` | Unused, and its message was never in the locale file — so it could not have rendered translated even if something had called it. Deleted; see below |
+
+Every remaining export in `src/` is now referenced somewhere.
+
+- 🚧 **A radio that is detected but cannot run here says nothing.** That was
+  `unrunnableReason`'s job and nothing ever called it. `canRunLocally` is wired
+  up (5 call sites) and correctly refuses to start; the user is just not told
+  why. **Next action:** surface it on the Zigbee/Thread page, with the string
+  added to all five locale files.
+
+### Blocked elsewhere
+
+- 🚧 **The Twin Dockerfile does not build at `898e5df9`.** Line 99 runs
+  `apk add libcap` after an earlier step did `--no-cache` and
+  `rm -rf /var/cache/apk/*`, so there is no package index left and it fails with
+  `libcap (no such package)`. **Fix:** `apk add --no-cache libcap`. It is in the
+  Lens repo, so it was not changed here — the image used for testing was built
+  from a patched copy outside that repo. **Owner:** whoever owns
+  `Lens/twin/Dockerfile`.

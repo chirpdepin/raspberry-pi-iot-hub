@@ -377,18 +377,44 @@ recorded 12s of motion", "Gateway received 43 uplinks".
 **Empty:** "No cameras yet. Chirp Hub can find cameras on your network automatically."
 **Docker missing:** its own state, naming Docker as the cause.
 
-**Header action, always present:** `[Scan for cameras]` / `[Scan again]`.
-Scanning is **never** blocked — finding your cameras proves they are powered on
-and reachable, which is useful on its own, and blocking it would make a blocked
-flow look like a broken app.
+**Header actions:** `[Add camera]` primary, `[Scan for cameras]` secondary.
 
-**The whole flow is three moves:**
+**`[Add camera]` needs no camera and is the main route.** A scan finds only
+cameras that advertise themselves over ONVIF — off by default on many models,
+and unreachable entirely on another network — so someone with twenty cameras may
+see one. Making setup depend on being found would leave the other nineteen with
+no way in at all.
 
 | Step | Shows | What happens |
 |---|---|---|
-| 1 Scan | *Found on your network*: camera label, address, one button per row | ONVIF WS-Discovery in the main process. ~10 s on a /24 |
-| 2 Click a camera | `[Set up]`, or `[Open camera]` when it already has a Twin | The Twin is created and started; a camera that has one just opens |
-| 3 Configure | The Twin's own UI, in the system browser | Everything about the camera: stream, credentials, recording, retention, Chirp connection |
+| 1 Add | `[Add camera]` | A Twin starts with nothing attached and opens |
+| 2 Configure | The Twin's own UI, in the system browser | Everything about the camera: address, credentials, stream, recording, retention, Chirp connection |
+
+**Scanning is the shortcut, not the path.** It answers "what address is my
+camera on" and pre-labels the row; clicking a found camera does exactly what
+`[Add camera]` does, plus records the address so a later scan can mark it as
+already set up. It is never blocked — knowing which cameras are reachable is
+useful on its own.
+
+**The scan states its own scope, and this is not decoration:**
+
+> Searched 254 addresses on 192.168.2.0/24.
+> Only cameras that advertise themselves can be found this way, and many
+> don't — it's usually switched off in the camera's own settings. Cameras on a
+> different network won't appear either. Use Add camera for any camera that
+> isn't listed.
+
+"Found 1" reads as a broken app to someone who owns twenty. The concrete number
+is checkable and makes a camera on another VLAN obvious immediately. Note the
+absence of "ONVIF" and "subnet" — "advertise themselves" is what those mean to
+the reader, and the terms belong behind `[Technical details]` (Contract 2 rule 1).
+
+A network too large to sweep is reported as a **successful** scan that searched
+nothing, never as an error: telling someone with a flat /16 that they have no
+network is the failure this whole section exists to prevent. Container and VM
+bridges (`docker*`, `br-*`, `veth*`, `virbr*`, …) are excluded by registry —
+running the scan here surfaced seven such networks, six of them /16s, which would
+have buried the one line that mattered.
 
 **First-login credentials.** The Twin fails closed on first boot — it wants
 `TWIN_USERNAME`/`TWIN_PASSWORD`, or `TWIN_ALLOW_DEFAULT_LOCAL_CREDENTIALS=true`,
@@ -408,12 +434,22 @@ the user picks a camera.
 
 **How the Twin is actually created** — `camera-add`, in full:
 
-1. ensures the Twin image (download → SHA-256 verify → `docker load`) — first camera only
+1. ensures the Twin image — **a Twin already on the machine wins**, before the
+   update feed is consulted at all, so a hub that has the image never needs the
+   network and a locally built `lens/twin:local` is used directly. Otherwise:
+   download → SHA-256 verify → `docker load`, first camera only. Twin is closed
+   source and ships as a compiled image, never as source pulled into this app
 2. allocates a free host port, **before** the container exists, so a Twin that cannot
    be given one fails with an explanation rather than half-existing
 3. generates the first-login password
-4. `docker run` with the data volume mounted, `TWIN_USERNAME`/`TWIN_PASSWORD`/
-   `TWIN_PUBLIC_URL` set, and **no configuration written**
+4. `docker run` with a **named volume** at `/home/twin/data`,
+   `TWIN_USERNAME`/`TWIN_PASSWORD`/`TWIN_PUBLIC_URL` set, and **no configuration
+   written**. A bind-mounted host directory was tried and fails: it carries the
+   desktop user's ownership while the Twin runs as its own account, so the
+   container sits in a retry loop on `mkdir ./data/config: permission denied` and
+   serves nothing. A named volume is seeded from the image, ownership included —
+   and it is the only form that works on Windows and macOS, where Docker runs in
+   a VM and host uids do not map through
 5. saves the record — only after the container exists
 
 Bound to **`127.0.0.1:${hostPort}:80`**, not `0.0.0.0`. Publishing on all
@@ -435,11 +471,10 @@ The reply window starts when the **last** probe has left the socket — timing i
 from the first is a race that silently truncated the sweep and missed the only
 camera on the network.
 
-**Known gap:** a camera with ONVIF switched off (verified: the HiLook at
-`192.168.2.202`, 404 on every ONVIF path) cannot be discovered, and with manual
-entry removed there is no way to create a Twin for it. Next action is an "add by
-address" row that creates a Twin from a typed address and opens it — creating
-only, no camera configuration.
+A camera with ONVIF switched off — verified: the HiLook at `192.168.2.202`, 404
+on every ONVIF path — can never be discovered by any method. That is not a gap
+any more: `[Add camera]` sets it up without a scan, and its address goes into the
+Twin along with everything else.
 
 ### 7.3 LoRaWAN Gateway
 

@@ -46,22 +46,14 @@ export interface ZigbeeDevice {
 }
 
 /**
- * Zigbee2MQTT publishes to `zigbee2mqtt/<friendly_name>`, and friendly_name
- * defaults to the IEEE address. **Renaming it changes the MQTT topic**, which
- * silently breaks every device already provisioned in Chirp against the old
- * topic.
- *
- * So friendly_name stays the IEEE address forever and the human-readable name
- * lives in this app and in Chirp. This is the single most important invariant
- * in the Zigbee flow.
- */
-export const NEVER_RENAME_FRIENDLY_NAME = true;
-
-/** The MQTT topic a device publishes on, given the local base topic. */
-export const deviceTopic = (baseTopic: string, ieeeAddress: string): string => `${baseTopic}/${ieeeAddress}`;
-
-/**
  * The topic Chirp sees, after the Mosquitto bridge rewrites the prefix.
+ *
+ * **Never rename a device's friendly_name.** Zigbee2MQTT publishes to
+ * `zigbee2mqtt/<friendly_name>`, which defaults to the IEEE address, so renaming
+ * it changes the MQTT topic and silently breaks every device already provisioned
+ * in Chirp against the old one. friendly_name stays the IEEE address forever and
+ * the human-readable name lives in this app and in Chirp. This is the single
+ * most important invariant in the Zigbee flow.
  *
  * The remote prefix MUST differ from the local one or the bridge re-publishes
  * what it just received, forever.

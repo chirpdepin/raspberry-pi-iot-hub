@@ -1,92 +1,91 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { domainError, err, ok } from '../../domain/errors';
+import type { DiscoveredCamera } from '../../domain/camera';
 
 import type { CameraDiscoverPorts } from './contract';
 import { handleCameraDiscover } from './usecase';
 
-const ports = (manufacturer: string | null, model: string | null): CameraDiscoverPorts => ({
-  discovery: {
-    discover: async () => [
-      { xaddr: 'http://192.168.2.40/onvif/device_service', address: '192.168.2.40', manufacturer, model },
-    ],
-  },
-  runtime: { ensure: async () => ok('lens-twin:1.0.0') },
+const camera = (address: string, model: string | null = null): DiscoveredCamera => ({
+  xaddr: `http://${address}/onvif/device_service`,
+  address,
+  manufacturer: null,
+  model,
 });
 
-/** Unwraps a successful scan, failing loudly if it was not one. */
-const camerasFrom = async (input: CameraDiscoverPorts) => {
-  const result = await handleCameraDiscover(input);
-  if (!result.ok) throw new Error(`expected a successful scan: ${result.error.message}`);
-  return result.value;
-};
+const ports = (found: DiscoveredCamera[], configured: string[] = []): CameraDiscoverPorts => ({
+  discovery: { discover: async () => ok(found) },
+  configured: { addresses: async () => configured },
+});
 
 describe('camera-discover', () => {
-  it('pre-fills the RTSP path from the vendor registry', async () => {
-    const [camera] = await camerasFrom(ports('HiLook', 'IPC-B180Ha'));
+  it('returns what the scan found', async () => {
+    const result = await handleCameraDiscover(ports([camera('192.168.2.205', 'TC71')]));
 
-    // The user must never have to type an RTSP path; it belongs under Advanced.
-    expect(camera?.suggestedRtspPath).toBe('/Streaming/Channels/102');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]?.address).toBe('192.168.2.205');
   });
 
-  it('falls back to a generic ONVIF path for an unknown vendor', async () => {
-    const [camera] = await camerasFrom(ports('Acme', 'Unknown-1'));
+  it('labels a camera by its model, so the list reads before anything is set up', async () => {
+    const result = await handleCameraDiscover(ports([camera('192.168.2.205', 'TC71')]));
 
-    expect(camera?.suggestedRtspPath).toBeTruthy();
+    expect(result.ok && result.value[0]?.label).toBe('TC71');
   });
 
-  it('defaults to the sub-stream', async () => {
-    const [camera] = await camerasFrom(ports('Reolink', 'RLC-810A'));
+  it('falls back to the address when the camera reports no model', async () => {
+    const result = await handleCameraDiscover(ports([camera('192.168.2.205')]));
 
-    // The sub-stream is lower resolution, far cheaper to decode for motion
-    // detection, and much more likely to be H.264 rather than H.265 which the
-    // Twin cannot record.
-    expect(camera?.suggestedRtspPath).toBe('/h264Preview_01_sub');
-  });
-
-  it('uses the vendor non-standard ONVIF port where one applies', async () => {
-    const [camera] = await camerasFrom(ports('TP-Link', 'Tapo C200'));
-
-    expect(camera?.suggestedOnvifPort).toBe(2020);
+    expect(result.ok && result.value[0]?.label).toBe('192.168.2.205');
   });
 
   /**
-   * The defect this Result exists for. The camera software is not installed, so
-   * no scan can run — reporting that as "no cameras found" sends the user to
-   * look at their cameras, which are fine.
+   * Setting the same camera up twice is two containers fighting over one
+   * stream, so the row has to know it already has a Twin.
    */
-  it('reports that the camera software is missing rather than an empty network', async () => {
+  it('marks cameras that already have a Twin', async () => {
+    const result = await handleCameraDiscover(
+      ports([camera('192.168.2.205'), camera('192.168.2.206')], ['192.168.2.205'])
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value[0]?.alreadyAdded).toBe(true);
+    expect(result.value[1]?.alreadyAdded).toBe(false);
+  });
+
+  it('passes a scan failure through, so it is never shown as an empty network', async () => {
     const result = await handleCameraDiscover({
-      ...ports('HiLook', 'IPC-B180Ha'),
-      runtime: { ensure: async () => err<string>(domainError('unknown', 'Camera software is not installed yet.')) },
+      discovery: { discover: async () => err(domainError('unknown', 'No network to scan.')) },
+      configured: { addresses: async () => [] },
     });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.message).toContain('not installed');
+    expect(!result.ok && result.error.message).toBe('No network to scan.');
   });
 
-  it('does not scan at all when the camera software is missing', async () => {
-    let scanned = false;
+  /**
+   * The old version called `images.ensure()` before scanning, on the reasoning
+   * that discovery ran inside a Twin container. With the image unpublished every
+   * scan failed before a packet was sent, and the screen blamed the network.
+   */
+  it('scans without needing the camera software installed', async () => {
+    const discover = vi.fn(async () => ok([camera('192.168.2.205')]));
 
-    await handleCameraDiscover({
-      discovery: {
-        discover: async () => {
-          scanned = true;
-          return [];
-        },
-      },
-      runtime: { ensure: async () => err<string>(domainError('unknown', 'nope')) },
-    });
-
-    expect(scanned).toBe(false);
-  });
-
-  it('an empty list means an empty network, and is a success', async () => {
     const result = await handleCameraDiscover({
-      discovery: { discover: async () => [] },
-      runtime: { ensure: async () => ok('lens-twin:1.0.0') },
+      discovery: { discover },
+      configured: { addresses: async () => [] },
     });
 
-    expect(result).toEqual({ ok: true, value: [] });
+    expect(discover).toHaveBeenCalledOnce();
+    expect(result.ok).toBe(true);
+  });
+
+  it('reports an empty network as an empty list rather than a failure', async () => {
+    const result = await handleCameraDiscover(ports([]));
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value).toEqual([]);
   });
 });

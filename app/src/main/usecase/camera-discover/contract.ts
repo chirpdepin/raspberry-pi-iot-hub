@@ -1,21 +1,35 @@
 import type { Result } from '../../domain/errors';
-import type { CameraDiscoveryPort } from '../camera-add/contract';
+import type { DiscoveredCamera } from '../../domain/camera';
 
 /**
- * Ensures the camera software is present before a scan can run.
+ * Finding cameras on the network.
  *
- * Discovery is performed by the Twin, so there is nothing to ask until its
- * image exists. Keeping this as its own port means the use case can tell "the
- * software is not installed" apart from "your network has no cameras" — two
- * situations that look identical from an empty list and need completely
- * different advice.
+ * **Discovery is the one camera concern this app keeps**, and only because it
+ * answers a question the user genuinely cannot: what address is my camera on.
+ * The Twin has its own ONVIF discovery, but it cannot run before a Twin exists,
+ * and choosing which camera to create one *for* is the step that comes first.
+ *
+ * The port returns a `Result` rather than a bare array so that "the scan could
+ * not run" stays distinguishable from "your network has no cameras" — two
+ * answers that look identical as an empty list and need completely different
+ * advice.
  */
-export interface DiscoveryRuntimePort {
-  /** Resolves the Twin image, downloading it once if needed. */
-  ensure(): Promise<Result<string>>;
+export interface CameraDiscoveryPort {
+  discover(): Promise<Result<DiscoveredCamera[]>>;
+}
+
+/**
+ * Which cameras already have a Twin.
+ *
+ * Its own narrow port (Contract 1 I): discovery scans a network and knows
+ * nothing about what we have set up. Merging the two would put the record store
+ * behind the same interface as a UDP socket.
+ */
+export interface ConfiguredAddressPort {
+  addresses(): Promise<string[]>;
 }
 
 export interface CameraDiscoverPorts {
-  discovery: Pick<CameraDiscoveryPort, 'discover'>;
-  runtime: DiscoveryRuntimePort;
+  discovery: CameraDiscoveryPort;
+  configured: ConfiguredAddressPort;
 }

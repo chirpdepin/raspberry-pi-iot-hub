@@ -1,26 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { domainError, err, ok } from '../../domain/errors';
-import type { CameraConfig } from '../../domain/camera';
+import type { DiscoveredCamera } from '../../domain/camera';
 
 import type { CameraAddPorts, ContainerRuntimePort, ImageEnsurePort } from './contract';
 import { handleCameraAdd } from './usecase';
 
-const config: CameraConfig = {
-  displayName: 'Front door',
-  address: '192.168.2.40',
-  credentials: { username: 'admin', password: 'videocamera1$' },
-  rtspPath: '/Streaming/Channels/102',
-  onvifPort: 80,
-  recording: 'motion',
-  retentionDays: 14,
+const camera: DiscoveredCamera = {
+  xaddr: 'http://192.168.2.205:2020/onvif/device_service',
+  address: '192.168.2.205',
+  manufacturer: 'TC71',
+  model: 'TC71',
 };
 
 type CreateTwinMock = ReturnType<typeof vi.fn<ContainerRuntimePort['createTwin']>>;
 type EnsureMock = ReturnType<typeof vi.fn<ImageEnsurePort['ensure']>>;
 
-const ports = (overrides: { ensureFails?: boolean; registerFails?: boolean } = {}) => {
-  const createTwin: CreateTwinMock = vi.fn(async () => ok(undefined));
+const ports = (overrides: { ensureFails?: boolean; portFails?: boolean; createFails?: boolean } = {}) => {
+  const createTwin: CreateTwinMock = vi.fn(async () =>
+    overrides.createFails ? err<void>(domainError('unknown', "Couldn't set up this camera on the device.")) : ok(undefined)
+  );
   const save = vi.fn(async () => undefined);
   const ensure: EnsureMock = vi.fn(async () =>
     overrides.ensureFails ? err<string>(domainError('unknown', 'Download failed.')) : ok('lens-twin:2.1.0')
@@ -31,22 +30,12 @@ const ports = (overrides: { ensureFails?: boolean; registerFails?: boolean } = {
     ensure: EnsureMock;
     save: typeof save;
   } = {
-    discovery: {
-      discover: async () => [],
-      probe: async () => ok({ frameDataUrl: 'data:image/jpeg;base64,x', codec: 'H264', width: 640, height: 360 }),
-    },
     images: { ensure },
-    lens: {
-      newTwinKey: () => 'abcdef0123456789',
-      registerTwin: async () =>
-        overrides.registerFails
-          ? err(domainError('unknown', 'Lens unavailable.'))
-          : ok({ bootstrapToken: 'one-time-token', lensUri: 'https://lens.chirpwireless.io' }),
-    },
     containers: { createTwin },
-    // Camera-add is one consumer of the shared allocator, so here it is just
-    // another fake — which is the point of hoisting it out of the runtime.
-    ports: { allocate: async () => ok(18081) },
+    ports: {
+      allocate: async () => (overrides.portFails ? err<number>(domainError('unknown', 'No free port.')) : ok(8_100)),
+    },
+    secrets: { newPassword: () => 'a-generated-password' },
     records: { save },
     createTwin,
     ensure,
@@ -57,110 +46,97 @@ const ports = (overrides: { ensureFails?: boolean; registerFails?: boolean } = {
 };
 
 describe('camera-add', () => {
-  it('runs end to end with four fakes and no Docker', async () => {
-    const result = await handleCameraAdd(ports(), config);
+  it('starts a Twin for the camera and records it', async () => {
+    const deps = ports();
+    const result = await handleCameraAdd(deps, camera);
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.camera.displayName).toBe('Front door');
-      expect(result.value.camera.hostPort).toBe(18081);
-    }
+    expect(deps.createTwin).toHaveBeenCalledOnce();
+    expect(deps.save).toHaveBeenCalledOnce();
   });
 
-  it('pre-seeds config.json rather than relying on environment variables', async () => {
-    const p = ports();
-    await handleCameraAdd(p, config);
+  /**
+   * The heart of the rework. Camera configuration — credentials, stream paths,
+   * recording mode, retention, the Lens connection — belongs to the Twin's own
+   * settings screens. Sending any of it here made the user answer the same
+   * questions twice and gave us a second copy to keep in step.
+   */
+  it('sends no camera configuration to the container', async () => {
+    const deps = ports();
+    await handleCameraAdd(deps, camera);
 
-    const seeded = p.createTwin.mock.calls[0]?.[0]?.config as Record<string, unknown>;
-    const capture = seeded?.['capture'] as { ipcamera?: Record<string, unknown> } | undefined;
-
-    // The Twin refuses camera configuration via env: connection details and the
-    // display name are operator-owned UI input. Pre-seeding the mounted volume
-    // is the documented automation path, and this app IS the operator UI.
-    expect(capture?.ipcamera?.['main_source']).toContain('rtsp://');
-    expect(capture?.ipcamera?.['onvif_username']).toBe('admin');
-    expect(seeded?.['name']).toBe('Front door');
+    const input = deps.createTwin.mock.calls[0]?.[0];
+    expect(input).toBeDefined();
+    expect(Object.keys(input ?? {}).sort()).toEqual(['hostPort', 'id', 'imageTag', 'seedPassword', 'seedUsername']);
   });
 
-  it('writes the one-time bootstrap token straight into the config', async () => {
-    const p = ports();
-    const result = await handleCameraAdd(p, config);
+  it('seeds first-login credentials so the Twin never boots on a known default', async () => {
+    const deps = ports();
+    await handleCameraAdd(deps, camera);
 
-    const seeded = p.createTwin.mock.calls[0]?.[0]?.config as Record<string, unknown>;
-
-    // The token is returned exactly once and cannot be retrieved again, so it
-    // goes straight into the config and is never surfaced — showing it would
-    // invite the user to write down something that must not be lost.
-    expect(seeded?.['bootstrap_token']).toBe('one-time-token');
-    expect(JSON.stringify(result)).not.toContain('one-time-token');
+    expect(deps.createTwin.mock.calls[0]?.[0].seedPassword).toBe('a-generated-password');
   });
 
-  it('percent-encodes credentials in the RTSP URL', async () => {
-    const p = ports();
-    await handleCameraAdd(p, config);
+  /**
+   * The user has to be able to find these again: the Twin consumes them on
+   * first boot and forces a change, so a screen that forgets them locks them
+   * out of their own camera (Contract 2 rule 6).
+   */
+  it('keeps the first-login credentials on the record', async () => {
+    const deps = ports();
+    const result = await handleCameraAdd(deps, camera);
 
-    const seeded = p.createTwin.mock.calls[0]?.[0]?.config as Record<string, unknown>;
-    const capture = seeded?.['capture'] as { ipcamera?: Record<string, unknown> };
-
-    // A '$' or '@' in a password silently corrupts an un-encoded RTSP URL, and
-    // the camera then reports an authentication failure that looks like a wrong
-    // password rather than a malformed URL.
-    expect(capture.ipcamera?.['main_source']).toContain('videocamera1%24');
+    expect(result.ok && result.value.camera.firstLoginPassword).toBe('a-generated-password');
+    expect(result.ok && result.value.camera.firstLoginUsername).toBe('admin');
   });
 
-  it('allocates a host port so several Twins can coexist', async () => {
-    const p = ports();
-    await handleCameraAdd(p, config);
+  it('derives the container name from the address, so one camera cannot get two Twins', async () => {
+    const deps = ports();
+    await handleCameraAdd(deps, camera);
 
-    // Every Twin listens on port 80 internally; without per-Twin host ports the
-    // second camera would collide with the first.
-    expect(p.createTwin.mock.calls[0]?.[0]?.hostPort).toBe(18081);
+    expect(deps.createTwin.mock.calls[0]?.[0].id).toBe('twin-192-168-2-205');
   });
 
-  it('does not register with Lens when the image could not be fetched', async () => {
-    const p = ports({ ensureFails: true });
-    const result = await handleCameraAdd(p, config);
+  it('names the camera from its model until the user renames it in the Twin', async () => {
+    const result = await handleCameraAdd(ports(), camera);
+
+    expect(result.ok && result.value.camera.displayName).toBe('TC71');
+  });
+
+  it('stops if the camera software cannot be downloaded', async () => {
+    const deps = ports({ ensureFails: true });
+    const result = await handleCameraAdd(deps, camera);
 
     expect(result.ok).toBe(false);
-    expect(p.createTwin).not.toHaveBeenCalled();
+    expect(deps.createTwin).not.toHaveBeenCalled();
   });
 
-  it('does not create a container when Lens registration failed', async () => {
-    const p = ports({ registerFails: true });
-    const result = await handleCameraAdd(p, config);
+  /** A Twin with no port must fail before it exists, not half-exist. */
+  it('stops if no port can be allocated', async () => {
+    const deps = ports({ portFails: true });
+    const result = await handleCameraAdd(deps, camera);
 
-    // A Twin without a bootstrap token can never pair, so creating it would
-    // leave a broken container the user has to discover and remove.
     expect(result.ok).toBe(false);
-    expect(p.createTwin).not.toHaveBeenCalled();
+    expect(deps.createTwin).not.toHaveBeenCalled();
   });
 
-  it('reports progress in plain language', async () => {
+  it('records nothing when the container fails to start', async () => {
+    const deps = ports({ createFails: true });
+    const result = await handleCameraAdd(deps, camera);
+
+    expect(result.ok).toBe(false);
+    expect(deps.save).not.toHaveBeenCalled();
+  });
+
+  it('reports progress in words a non-technical user can read', async () => {
     const steps: string[] = [];
-    await handleCameraAdd(ports(), config, (step) => steps.push(step));
+    await handleCameraAdd(ports(), camera, (step) => steps.push(step));
 
+    expect(steps.length).toBeGreaterThan(0);
     for (const step of steps) {
-      expect(step).not.toMatch(/docker|container|twin|rtsp|onvif/i);
+      for (const word of ['Docker', 'container', 'Twin', 'image']) {
+        expect(step).not.toContain(word);
+      }
     }
-  });
-
-  it('saves the camera only after its container exists', async () => {
-    const p = ports();
-    await handleCameraAdd(p, config);
-
-    expect(p.save).toHaveBeenCalledTimes(1);
-    // A record written before the container would survive a failed start and
-    // leave a camera the user can neither open nor remove.
-    expect(p.save.mock.invocationCallOrder[0]).toBeGreaterThan(p.createTwin.mock.invocationCallOrder[0] ?? 0);
-  });
-
-  it('saves nothing when the Twin could not be created', async () => {
-    const p = ports();
-    p.createTwin.mockResolvedValueOnce(err(domainError('unknown', 'no space left')));
-
-    const result = await handleCameraAdd(p, config);
-
-    expect(result.ok).toBe(false);
-    expect(p.save).not.toHaveBeenCalled();
   });
 });

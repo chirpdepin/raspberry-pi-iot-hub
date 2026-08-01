@@ -657,3 +657,94 @@ is exactly what appeared first time. `DataTable` defaults it to `false`.
   router and Devices tables when the Thread runtime is wired up.
 - 🚧 `no-bare-jsx-text` — the second rule `CLAUDE.md` claims — is still not
   implemented. Untranslated strings remain review-caught rather than build-caught.
+
+## Cameras: the app deploys Twins, the Twin configures cameras (2026-08-01)
+
+Two things were wrong at once — a scan that never found anything, and a flow
+that reimplemented the Twin. Both are fixed, and the second was the larger one.
+
+### The scan found nothing because it timed out mid-sweep
+
+Discovery sent a multicast probe plus a unicast sweep of the local subnet, then
+closed the socket on a **4 s timer started when the first probe was sent**. A
+/24 sweep does not finish in 4 s: Node serializes sends on one UDP socket and
+every probe to an address with no ARP entry waits on neighbour resolution.
+
+Measured inside Electron with the real module: **194 of 255 probes sent, 61
+cancelled with `ECANCELED`**, and the only camera on this network sits at
+`192.168.2.205` — index 204, among the cancelled. `tcpdump` showed the camera
+replying on runs where its probe did go out, which is what ruled out the socket,
+the multicast group and Electron itself as causes.
+
+The reply window now starts **when the last probe has left the socket**
+(`ONVIF.replyWindowMs`), with `ONVIF.maxScanMs` bounding the whole scan so slow
+neighbour resolution ends it rather than hanging the screen. A longer fixed
+timer would only have moved the race.
+
+**Verified in the running app:** `TC71 @ 192.168.2.205` appears in *Found on
+your network*. A full scan takes ~10 s (~6 s sending, 4 s listening). A smoke
+check drives the real IPC channel and asserts it.
+
+### The wizard was a second copy of the Twin's settings screen
+
+The five-step wizard asked for credentials, pulled a frame to prove them, asked
+for a recording mode and a retention period, registered the Twin with Lens, and
+wrote all of it into `config.json` before first boot. Auditing the Twin
+(`/home/timkrav/Coding/Lens/twin`) showed every one of those already has a home:
+
+| Twin screen | Owns |
+|---|---|
+| `Settings/CameraTab` | ONVIF discovery, stream sources, camera credentials |
+| `Settings/LensTab` | `lens_uri`, `bootstrap_token`, Lens Key ID, MQTT, STUN/TURN, **camera name** |
+| `Settings/RecordingTab`, `StorageTab` | recording mode, retention |
+| `localauth.EnsureSeed` | first-login account, forced password change |
+
+`config/defaults.go` also boots a fresh Twin with **recording off** by design —
+the operator turns it on. Pre-seeding a config fought that.
+
+So the app now does only the part the user cannot: **install and run**. Scan →
+click a camera → its Twin is created and opened. Everything about the camera is
+configured there, once.
+
+Deleted rather than left orphaned: `AddCameraWizard`, `config/cameras.ts`,
+`LensPort` (`newTwinKey`/`registerTwin` and its stub), `CameraDiscoveryPort.probe`,
+`camera:probe` and its IPC/preload/api/hook chain, and from the domain
+`CameraConfig`, `CameraCredentials`, `RecordingMode`, `SourceProfile`,
+`SOURCE_PROFILES`, `profileFor`, `rtspUrl`, `ProbeFailure`,
+`probeFailureMessage`, `classifyProbeError` — plus **22 now-dead locale keys**
+across all five languages.
+
+### Two things the rework fixed on the way
+
+- **A Twin was published on `0.0.0.0`.** `-p ${hostPort}:80` put a camera's live
+  view and settings on the LAN for anyone who guessed the port, during exactly
+  the window before the user has set a password. Now `127.0.0.1:${hostPort}:80`.
+- **Discovery was gated on the unpublished Twin image.** Every scan failed before
+  a packet was sent, and the screen blamed the network. Scanning needs nothing
+  installed now; the *setup* blocker is stated on the page up front instead of
+  being discovered partway through.
+
+### First-login credentials
+
+The Twin fails closed on first boot: it needs `TWIN_USERNAME`/`TWIN_PASSWORD`,
+or `TWIN_ALLOW_DEFAULT_LOCAL_CREDENTIALS=true` which fills in `root`/`root`. That
+override is documented there as a dev override, and shipping a known login in an
+image strangers flash is what it warns against — so the app **generates a
+password per Twin** and shows it once. The Twin marks the account
+must-change, so it stops working at first login.
+
+It is kept on the camera record, **encrypted with `safeStorage`** like the Chirp
+session token, because the Twin consumes it on first boot and a screen that
+forgets it locks the user out of their own camera (Contract 2 rule 6).
+
+### Still open
+
+- 🚧 Setting a camera up end to end is still blocked on the **unpublished Twin
+  image** — the one remaining blocker, now stated on the page before the user
+  invests in the flow rather than partway through it. Scanning works without it.
+- 🚧 `192.168.2.202` (HiLook) has **ONVIF disabled entirely** and answers 404 on
+  every ONVIF path, so no discovery method can find it. With manual entry removed
+  as duplicated logic, such a camera is reached through the Twin's own Camera tab
+  once a Twin exists — but there is no way to create a Twin for a camera that
+  cannot be discovered. **Next action:** an "add by address" row that creates a
+  Twin from a typed address and opens it, doing no camera configuration.

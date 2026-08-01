@@ -308,16 +308,15 @@ This table *is* the product.
 | Gateway EUI — read from the concentrator chip | Chirp sign-in |
 | Zigbee adapter type (`ember`/`zstack`/`deconz`) — from the USB descriptor | Gateway name (pre-filled) |
 | LNS URL — derived from the region | Region (defaulted from locale) |
-| Region default — from system locale | Camera username + password |
-| Camera discovery — ONVIF WS-Discovery | Camera display name (pre-filled from model) |
-| RTSP path — vendor profile registry | Recording mode: motion or continuous |
+| Region default — from system locale | *(Camera credentials are set in the Twin, not here)* |
+| Camera discovery — ONVIF WS-Discovery | *(Camera name is asked by the Twin, not here)* |
 | Certificate download, unzip, CRLF fix, install | The physical pairing action on the Zigbee device |
 | Docker install | Zigbee device display name |
 | Twin image download, SHA-256 verify, `docker load` | Confirm the proposed sensor mappings |
-| Twin Key generation, Lens registration, bootstrap token | |
-| Host port allocation per Twin | |
+| Twin first-login password generation | |
+| Host port allocation per Twin, bound to loopback | |
 | MQTT bridge credentials and topic prefixes | |
-| `configuration.yaml`, `station.conf`, `config.json` rendering | |
+| `configuration.yaml` and `station.conf` rendering | |
 | Container lifecycle, systemd units, restart on replug | |
 
 Everything in the left column is a step a person would otherwise perform in a terminal.
@@ -350,7 +349,7 @@ button: "Camera *Front door* is offline `[Check camera]`", "Docker isn't running
 | Card | Shows | Action |
 |---|---|---|
 | This device | Hostname, OS, arch, CPU + RAM gauges, disk free, Docker version | `[Settings]` |
-| Cameras | N recording / N offline, capacity bar with headroom | `[Add camera]` |
+| Cameras | N running / N offline, capacity bar with headroom | `[Scan for cameras]` |
 | LoRaWAN | EUI, ● LNS state, uplinks today, last packet | `[Set up]` / `[View]` |
 | Zigbee | Coordinator model, N devices, N offline, join state | `[Add device]` |
 | Thread | ● state, N nodes | `[Set up]` / `[View]` |
@@ -364,54 +363,83 @@ recorded 12s of motion", "Gateway received 43 uplinks".
 
 ### 7.2 Cameras
 
+> **Revised 2026-08-01 — the wizard is gone.** What was here (a five-step
+> credentials → preview → settings flow that pre-seeded `config.json` and
+> registered with Lens) was a second implementation of the Twin's own settings
+> screens. An audit of `Lens/twin` found every one of those fields already owned
+> there: `Settings/CameraTab` (ONVIF discovery, stream sources, camera
+> credentials), `Settings/LensTab` (`lens_uri`, `bootstrap_token`, Lens Key ID,
+> MQTT, STUN/TURN and the camera name), `Settings/RecordingTab` and `StorageTab`
+> (mode, retention). `config/defaults.go` also boots a fresh Twin with recording
+> **off** by design. The app now does only what the user cannot do themselves —
+> install and run — and the Twin does what it owns.
+
 **Empty:** "No cameras yet. Chirp Hub can find cameras on your network automatically."
-`[Scan for cameras]` · `[Add manually]`. **Docker missing:** `[Install Docker]` + licence note.
+**Docker missing:** its own state, naming Docker as the cause.
 
-**List:** thumbnail · Name · Status (● Recording / ● Idle / ⚠ Offline) · Resolution · Storage used · Last
-motion. Header: `[Add camera]` + a capacity bar ("4 of about 6 cameras on this device").
+**Header action, always present:** `[Scan for cameras]` / `[Scan again]`.
+Scanning is **never** blocked — finding your cameras proves they are powered on
+and reachable, which is useful on its own, and blocking it would make a blocked
+flow look like a broken app.
 
-**Add camera wizard:**
+**The whole flow is three moves:**
 
-| Step | Shows | Fields | Buttons |
-|---|---|---|---|
-| 1 Discover | Live list: IP, manufacturer, model, ✓ if already added | — | `[Scan again]` `[Add manually]` `[Next]` |
-| 2 Connect | Selected camera | `Username` (default `admin`) · `Password` · **Advanced:** `RTSP path` (vendor-prefilled), `ONVIF port` (80), `Stream` (main/sub) | `[Back]` `[Test connection]` |
-| 3 Preview | **The captured frame**, resolution, codec, fps | — | `[Back]` `[Looks right — continue]` |
-| 4 Settings | | `Camera name` (prefilled from model) · `Recording` (Motion / Continuous) · `Keep recordings for` (7/14/30/90 days) · **Advanced:** sensitivity, pre/post-roll | `[Back]` `[Add camera]` |
-| 5 Progress | *Downloading camera software…* (first camera only, size + time left) → *Setting up…* → *Connecting to your camera…* → *Linking to Chirp…* | — | `[Cancel]` |
-| 6 Done | Live preview | — | `[Open camera]` `[Add another camera]` `[Finish]` |
+| Step | Shows | What happens |
+|---|---|---|
+| 1 Scan | *Found on your network*: camera label, address, one button per row | ONVIF WS-Discovery in the main process. ~10 s on a /24 |
+| 2 Click a camera | `[Set up]`, or `[Open camera]` when it already has a Twin | The Twin is created and started; a camera that has one just opens |
+| 3 Configure | The Twin's own UI, in the system browser | Everything about the camera: stream, credentials, recording, retention, Chirp connection |
 
-**Failure mapping at step 2** — never a stack trace:
+**First-login credentials.** The Twin fails closed on first boot — it wants
+`TWIN_USERNAME`/`TWIN_PASSWORD`, or `TWIN_ALLOW_DEFAULT_LOCAL_CREDENTIALS=true`,
+which fills in `root`/`root` and is documented there as a **dev override**.
+Shipping a known login in an image strangers flash is exactly what that warns
+against, so the app generates a password per Twin and shows it once, with the
+username. The Twin marks the account must-change, so it stops working the moment
+the user sets their own — which is the first thing it asks them to do.
 
-| Cause | Message |
-|---|---|
-| 401 | "Wrong username or password for this camera. `[Try again]`" |
-| timeout | "Can't reach the camera at 192.168.2.40. Check it's powered on and on the same network. `[Try again]` `[Enter address manually]`" |
-| codec | "This camera streams in a format we can't record yet (H.265 on the main stream). `[Use sub-stream]`" |
-| no route | "Found the camera but not a video stream. `[Enter RTSP path manually]`" |
+The pair is kept on the camera record, **encrypted with `safeStorage`** like the
+Chirp session token: the Twin consumes it on first boot, so a screen that forgets
+it locks the user out of their own camera (Contract 2 rule 6).
 
-**Detail:** live preview · status · recording mode · storage · recent recordings.
-`[Open in Chirp]` `[Settings]` `[Restart]` `[Remove camera]` (confirm dialog naming what gets deleted).
-`[Technical details]` → container name, ports, Twin Key, log tail.
+**Setup availability is stated up front**, not discovered partway through. The
+Twin image is unpublished, and `camera-availability` says so on the page before
+the user picks a camera.
 
-**How the Twin is actually created** — the Twin refuses camera configuration via environment variables:
-*"Camera connection and the camera display name are operator-owned UI input… never injected by env."*
-**Pre-seeding `config.json` on the mounted config volume is the documented automation path**, and this app
-*is* the operator UI. So `camera-add`:
+**How the Twin is actually created** — `camera-add`, in full:
 
 1. ensures the Twin image (download → SHA-256 verify → `docker load`) — first camera only
-2. generates a Twin Key
-3. registers with Lens → receives `bootstrap_token`, **returned exactly once**, so it goes straight into
-   the config file and is never displayed
-4. pre-seeds `config.json` with the camera source, credentials, `twin_key`, `bootstrap_token`, `lens_uri`
-   and recording settings
-5. starts the container with the Twin's port 80 mapped to a free host port
-6. waits for bootstrap to complete
+2. allocates a free host port, **before** the container exists, so a Twin that cannot
+   be given one fails with an explanation rather than half-existing
+3. generates the first-login password
+4. `docker run` with the data volume mounted, `TWIN_USERNAME`/`TWIN_PASSWORD`/
+   `TWIN_PUBLIC_URL` set, and **no configuration written**
+5. saves the record — only after the container exists
 
-Discovery **reuses the Twin's own ONVIF implementation** (`twin/machinery/src/onvif/discovery.go`, exposed
-as `POST /api/camera/onvif/discovery` and `./main -action discover`) by running a short-lived
-host-network Twin container. No new discovery code. Twins themselves run on **bridge networking with a
-mapped port** — 20 Twins on host networking would all collide on port 80.
+Bound to **`127.0.0.1:${hostPort}:80`**, not `0.0.0.0`. Publishing on all
+interfaces put a camera's live view and settings on the LAN for anyone who
+guessed the port, during exactly the window before the user has set a password.
+Twins stay on bridge networking with a mapped port — 20 Twins on host networking
+would all collide on port 80.
+
+Discovery runs **in the main process** (`adapters/camera/onvif-discovery.ts`).
+It used to run inside a short-lived host-network Twin calling
+`POST /api/camera/onvif/discovery`, which cannot work before the first Twin
+exists — and choosing the camera to create one *for* is the step that comes
+first. The Twin keeps its own discovery for use inside its settings screen.
+
+Both a multicast probe and a unicast sweep of the local subnet are sent:
+multicast is the textbook method and returned **zero responders** on the network
+this was built on, while a unicast probe to the same camera answers instantly.
+The reply window starts when the **last** probe has left the socket — timing it
+from the first is a race that silently truncated the sweep and missed the only
+camera on the network.
+
+**Known gap:** a camera with ONVIF switched off (verified: the HiLook at
+`192.168.2.202`, 404 on every ONVIF path) cannot be discovered, and with manual
+entry removed there is no way to create a Twin for it. Next action is an "add by
+address" row that creates a Twin from a typed address and opens it — creating
+only, no camera configuration.
 
 ### 7.3 LoRaWAN Gateway
 

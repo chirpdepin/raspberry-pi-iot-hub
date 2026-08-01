@@ -1,11 +1,13 @@
-import { memo, useMemo, useState } from 'react';
+import { Stack, Typography } from '@mui/material';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CAPABILITY_COPY } from '../config/capabilities';
+import { LAYOUT } from '../config/defaults';
 import { DataTable } from '../features/common/DataTable';
 import { EmptyState } from '../features/common/EmptyState';
-import { AddCameraWizard } from '../features/cameras/AddCameraWizard';
-import { cameraColumns } from '../features/cameras/columns';
+import { Notice } from '../features/common/Notice';
+import { cameraColumns, discoveredColumns } from '../features/cameras/columns';
 import { CapacityBar } from '../features/cameras/CapacityBar';
 import { useCameras } from '../features/cameras/hooks/useCameras';
 import { PageAction } from '../features/common/PageAction';
@@ -15,69 +17,66 @@ import { useHostDetailsQuery } from '../services/api/host/hooks/useHostDetailsQu
 /**
  * The Cameras screen.
  *
- * Docker missing is its own state; otherwise the table is always rendered and
- * owns its empty message, so adding the first camera changes a row rather than
- * the shape of the page. The wizard opens over the top.
+ * **Two tables, one flow.** The configured cameras are the page; scanning adds
+ * a second table of what is on the network, and clicking a row there sets that
+ * camera up and opens it. There is no wizard between the two — the Twin's own
+ * UI is where a camera is configured, so getting the user there *is* the setup.
  *
  * Contract 5: a view. Every decision lives in useCameras.
  */
 export const Cameras = memo(() => {
   const { t } = useTranslation();
   const hostQuery = useHostDetailsQuery();
-  const [isAdding, setIsAdding] = useState(false);
 
   const {
     cameras,
     capacity,
+    availability,
     discovered,
     isScanning,
-    hasScannedEmpty,
-    isTesting,
-    isAdding: isSubmitting,
-    step,
-    config,
-    frame,
+    busyAddress,
+    justAdded,
     errorMessage,
-    reset,
-    setStep,
     handleScan,
-    handleSelect,
-    handleManual,
-    updateConfig,
-    handleTestConnection,
-    handleAdd,
+    clearScan,
+    handleSetUp,
     handleOpen,
     handleRemove,
+    dismissJustAdded,
   } = useCameras();
 
   const dockerReady = hostQuery.data?.capabilities.cameras.available ?? false;
-
-  const openWizard = () => {
-    reset();
-    setIsAdding(true);
-  };
-
-  const closeWizard = () => {
-    setIsAdding(false);
-    reset();
-  };
+  const canAdd = availability?.canAdd ?? false;
 
   const columns = useMemo(
     () => cameraColumns(t, { onOpen: handleOpen, onRemove: (id) => handleRemove(id, true) }),
     [t, handleOpen, handleRemove]
   );
 
+  const scanColumns = useMemo(
+    () => discoveredColumns(t, { onSetUp: handleSetUp, busyAddress, canAdd }),
+    [t, handleSetUp, busyAddress, canAdd]
+  );
+
   return (
     <PageLayout
       title='Cameras'
       subtitle='Record and stream your cameras through Chirp.'
-      // Always rendered, never moved. Without Docker it says why rather than
-      // disappearing, so the header keeps its shape in every state.
+      // Always rendered, never moved. Scanning is never blocked: finding your
+      // cameras proves they are reachable, which is useful even when setting
+      // one up is not available yet.
       actions={
         <PageAction
-          label='Add camera'
-          onClick={openWizard}
-          disabledReason={dockerReady ? undefined : 'Cameras need Docker, which is not running.'}
+          label={discovered ? 'Scan again' : 'Scan for cameras'}
+          showPlus={false}
+          onClick={handleScan}
+          disabledReason={
+            dockerReady
+              ? isScanning
+                ? 'Looking for cameras on your network…'
+                : undefined
+              : 'Cameras need Docker, which is not running.'
+          }
         />
       }
     >
@@ -90,37 +89,65 @@ export const Cameras = memo(() => {
         />
       ) : null}
 
-      {dockerReady && isAdding ? (
-        <AddCameraWizard
-          step={step}
-          discovered={discovered}
-          isScanning={isScanning}
-          hasScannedEmpty={hasScannedEmpty}
-          isTesting={isTesting}
-          isAdding={isSubmitting}
-          config={config}
-          frame={frame}
-          errorMessage={errorMessage}
-          onScan={handleScan}
-          onSelect={handleSelect}
-          onManual={handleManual}
-          onChange={updateConfig}
-          onTest={handleTestConnection}
-          onAdd={handleAdd}
-          onBack={setStep}
-          onFinish={closeWizard}
-        />
-      ) : null}
-
-      {dockerReady && !isAdding ? (
+      {dockerReady ? (
         <>
+          {/* Stated up front rather than discovered halfway through setting a
+              camera up, which is where it used to fail. */}
+          {availability && !availability.canAdd ? (
+            <Notice title={availability.reason ?? ''} description={availability.technicalDetail} tone='warning' />
+          ) : null}
+
+          {errorMessage ? <Notice title={errorMessage} tone='error' /> : null}
+
+          {justAdded ? (
+            <Notice
+              title='Your camera is ready.'
+              description='Sign in with these details the first time. The camera will ask you to choose your own password, and these stop working.'
+              onDismiss={dismissJustAdded}
+            >
+              <Stack sx={{ gap: LAYOUT.gapSm }}>
+                <Typography variant='body2'>
+                  {t('Username')}: {justAdded.firstLoginUsername}
+                </Typography>
+                <Typography variant='body2'>
+                  {t('Password')}: {justAdded.firstLoginPassword}
+                </Typography>
+              </Stack>
+
+              <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+                <PageAction label='Open camera' showPlus={false} onClick={() => handleOpen(justAdded.id)} />
+              </Stack>
+            </Notice>
+          ) : null}
+
           {capacity ? <CapacityBar capacity={capacity} /> : null}
 
+          {/* Results come first. The user pressed Scan a moment ago and this is
+              the answer; leaving it under a full-height empty state put it
+              below the fold on the one screen where it was the whole point. */}
+          {discovered ? (
+            <>
+              <DataTable
+                heading='Found on your network'
+                data={discovered}
+                columns={scanColumns}
+                isLoading={isScanning}
+                emptyTitle='No cameras found'
+                emptyDescription='Check the camera is powered on and on the same network. Some cameras need ONVIF switched on in their own settings.'
+              />
+
+              <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+                <PageAction label='Hide results' variant='secondary' showPlus={false} onClick={clearScan} />
+              </Stack>
+            </>
+          ) : null}
+
           <DataTable
+            heading='Your cameras'
             data={cameras}
             columns={columns}
             emptyTitle={CAPABILITY_COPY.cameras.unconfiguredTitle}
-            emptyDescription='Use Add camera to set up your first one.'
+            emptyDescription='Scan for cameras to set up your first one.'
           />
         </>
       ) : null}

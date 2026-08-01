@@ -1,38 +1,25 @@
 import type { Result } from '../../domain/errors';
-import type { Camera, CameraConfig, DiscoveredCamera } from '../../domain/camera';
+import type { Camera } from '../../domain/camera';
 
 /**
- * Contract 1 (D): four narrow ports, all declared here by the consumer.
+ * Contract 1 (D): five narrow ports, all declared here by the consumer.
  *
- * `camera-add` must be unit-testable end to end with four fakes and no Docker,
- * which is the check that the layering is real.
+ * `camera-add` must be unit-testable end to end with fakes and no Docker, which
+ * is the check that the layering is real.
+ *
+ * **What is no longer here matters as much as what is.** This contract used to
+ * carry a `LensPort` that minted a Twin Key and registered the Twin with Lens,
+ * and a `probe` on the discovery port that pulled a frame to prove credentials.
+ * Both duplicated the Twin: its Lens tab owns the connection token, key ID, MQTT
+ * and STUN/TURN settings, and its Camera tab owns the stream and its
+ * credentials. Registering from here meant asking the user for things the Twin
+ * asks for again, and it made adding a camera fail on an API that is not wired
+ * up yet — for a step the user did not need us to take.
  */
-
-export interface CameraDiscoveryPort {
-  /** ONVIF WS-Discovery. Reuses the Twin's own implementation. */
-  discover(timeoutMs: number): Promise<DiscoveredCamera[]>;
-  /**
-   * Frame probe. Returns a still image as a data URL on success — the picture
-   * of their own camera is what tells a non-technical user it worked.
-   */
-  probe(config: CameraConfig): Promise<Result<{ frameDataUrl: string; codec: string; width: number; height: number }>>;
-}
 
 export interface ImageEnsurePort {
   /** Ensures the Twin image is present, returning its tag. */
   ensure(onProgress?: (received: number, total: number) => void): Promise<Result<string>>;
-}
-
-export interface LensPort {
-  /** Generates the immutable Twin Key. */
-  newTwinKey(): string;
-  /**
-   * Registers the Twin with Lens and returns a bootstrap token.
-   *
-   * The token is returned EXACTLY ONCE, so it is written straight into the
-   * Twin's config and never displayed or stored elsewhere.
-   */
-  registerTwin(input: { twinKey: string; name: string }): Promise<Result<{ bootstrapToken: string; lensUri: string }>>;
 }
 
 /**
@@ -47,41 +34,52 @@ export interface PortAllocationPort {
   allocate(): Promise<Result<number>>;
 }
 
+/**
+ * The Twin's first-login secret.
+ *
+ * Its own port because it is the one value here that must not be predictable,
+ * and a use case that generated it internally could not be tested for what it
+ * does with it. The Twin refuses to boot without either these or an explicit
+ * ship-a-known-default override — which is exactly the override a product
+ * flashed by strangers must not use.
+ */
+export interface CredentialSeedPort {
+  newPassword(): string;
+}
+
 export interface ContainerRuntimePort {
   /**
-   * Writes the Twin's config.json into its volume BEFORE first start.
+   * Starts a Twin for one camera and nothing else.
    *
-   * The Twin refuses camera configuration via environment variables — camera
-   * connection and display name are operator-owned UI input. Pre-seeding
-   * config.json on the mounted volume is the documented automation path, and
-   * this app is the operator UI.
+   * **No configuration is written.** The Twin boots on its own defaults, with
+   * recording off, and the user configures the camera in its UI. Pre-seeding a
+   * config.json here is what made this app a second, worse copy of the Twin's
+   * settings screen.
    */
   createTwin(input: {
     id: string;
     imageTag: string;
     hostPort: number;
-    config: Record<string, unknown>;
+    seedUsername: string;
+    seedPassword: string;
   }): Promise<Result<void>>;
 }
 
 /**
  * Persistence of the camera record.
  *
- * The container alone is not enough: it carries no display name, and its
- * config.json holds the camera password. Reading names back out of container
- * configs would mean handling that secret on every list refresh, so the record
- * the UI needs is stored separately and deliberately holds no credentials.
+ * The container alone is not enough: it carries no display name and cannot tell
+ * us the one-time password we gave it, which the user may still need.
  */
 export interface CameraRecordPort {
   save(camera: Camera): Promise<void>;
 }
 
 export interface CameraAddPorts {
-  discovery: CameraDiscoveryPort;
   images: ImageEnsurePort;
-  lens: LensPort;
   containers: ContainerRuntimePort;
   ports: PortAllocationPort;
+  secrets: CredentialSeedPort;
   records: CameraRecordPort;
 }
 

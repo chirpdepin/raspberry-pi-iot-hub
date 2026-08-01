@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { existsSync } from 'node:fs';
 
@@ -33,8 +33,8 @@ import { createCameraProbe, createLorawanProbe, createZigbeeProbe } from './adap
 import { createContainerState, createCredentialsCheck, createTwinInventory } from './adapters/status/inventory';
 import { createCameraStore } from './adapters/store/cameras';
 import { createTwinRuntime } from './adapters/camera/twin-runtime';
+import { createOnvifDiscovery } from './adapters/camera/onvif-discovery';
 import { createImageStore } from './adapters/images/image-store';
-import { IMAGES } from './config/images';
 import { handleTwinImageEnsure } from './usecase/twin-image-ensure/usecase';
 import { handlePortAllocate } from './usecase/port-allocate/usecase';
 import type { IpcDependencies } from './ipc/register';
@@ -117,20 +117,11 @@ export const buildDependencies = (): IpcDependencies => {
 
   const images = createImageStore({ paths });
 
-  /**
-   * The image tag the runtime should use for discovery and for new Twins.
-   *
-   * Resolved from the same use case that downloads it, so discovery can never
-   * run against a tag that was never loaded.
-   */
-  let resolvedImageTag = `${IMAGES.twin}:latest`;
-  const twinRuntime = createTwinRuntime({ paths, imageTag: () => resolvedImageTag });
+  const twinRuntime = createTwinRuntime({ paths });
+  const onvifDiscovery = createOnvifDiscovery();
 
-  const ensureTwinImage = async (onProgress?: (received: number, total: number) => void) => {
-    const result = await handleTwinImageEnsure({ images, arch: () => process.arch }, onProgress);
-    if (result.ok) resolvedImageTag = result.value;
-    return result;
-  };
+  const ensureTwinImage = async (onProgress?: (received: number, total: number) => void) =>
+    handleTwinImageEnsure({ images, arch: () => process.arch }, onProgress);
 
   const cameraStore = createCameraStore();
   const twinInventory = createTwinInventory();
@@ -194,32 +185,22 @@ export const buildDependencies = (): IpcDependencies => {
       payloads: zigbee2mqtt.payloads,
     },
     cameraDiscover: {
-      discovery: twinRuntime.discovery,
-      // Same ensure the wizard uses, so the image downloads once rather than
-      // once per entry point.
-      runtime: { ensure: () => ensureTwinImage() },
+      discovery: onvifDiscovery,
+      configured: { addresses: async () => (await cameraStore.all()).map((camera) => camera.address) },
+    },
+    cameraAvailability: {
+      blockers: { isImageAvailable: async () => (await ensureTwinImage()).ok },
     },
     cameraAdd: {
-      discovery: twinRuntime.discovery,
       images: { ensure: ensureTwinImage },
-      lens: {
-        // A v4 UUID: the Twin Key is immutable and must be unique across every
-        // hub, so it is generated locally rather than handed out by a server
-        // the hub may not be able to reach.
-        newTwinKey: () => randomUUID(),
-        // The Lens registration API is not wired up yet — see the blocked list
-        // in app/electron.md. An honest failure here is better than a Twin that
-        // starts and silently never reaches Chirp.
-        registerTwin: async () =>
-          err(
-            domainError(
-              'unknown',
-              'Connecting cameras to Chirp needs the Lens registration API, which is not wired up yet.'
-            )
-          ),
-      },
       containers: twinRuntime.containers,
       ports: { allocate: allocatePort },
+      secrets: {
+        // The Twin's first-login password. Base64url of 18 random bytes: long
+        // enough that guessing it is not a strategy, and typable from the
+        // dialog that shows it once.
+        newPassword: () => randomBytes(18).toString('base64url'),
+      },
       records: cameraStore,
     },
     cameraList: {

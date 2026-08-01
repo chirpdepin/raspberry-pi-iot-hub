@@ -10,6 +10,7 @@ export const cameraQueryKeys = {
   list: () => [...cameraQueryKeys.all, 'list'] as const,
   capacity: () => [...cameraQueryKeys.all, 'capacity'] as const,
   discovered: () => [...cameraQueryKeys.all, 'discovered'] as const,
+  availability: () => [...cameraQueryKeys.all, 'availability'] as const,
 };
 
 export const useCamerasQuery = () =>
@@ -25,12 +26,14 @@ export const useCapacityQuery = () =>
   useQuery({ queryKey: cameraQueryKeys.capacity(), queryFn: camerasApi.capacity });
 
 /**
- * Discovery is a mutation, not a query: it takes five seconds of multicast and
- * must run when the user presses Scan, never on mount or on a timer.
+ * Discovery is a mutation, not a query: a full subnet sweep takes ten seconds
+ * and must run when the user presses Scan, never on mount or on a timer.
  */
 export const useDiscoverCamerasMutation = () => useMutation({ mutationFn: camerasApi.discover });
 
-export const useProbeCameraMutation = () => useMutation({ mutationFn: camerasApi.probe });
+/** Whether setting a camera up can succeed — asked before the user tries. */
+export const useCameraAvailabilityQuery = () =>
+  useQuery({ queryKey: cameraQueryKeys.availability(), queryFn: camerasApi.availability });
 
 export const useAddCameraMutation = () => {
   const queryClient = useQueryClient();

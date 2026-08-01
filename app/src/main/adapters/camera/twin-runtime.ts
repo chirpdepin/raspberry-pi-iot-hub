@@ -2,89 +2,30 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import { domainError, err, ok, type Result } from '../../domain/errors';
-import {
-  classifyProbeError,
-  probeFailureMessage,
-  rtspUrl,
-  type CameraConfig,
-  type DiscoveredCamera,
-} from '../../domain/camera';
-import type { CameraDiscoveryPort, ContainerRuntimePort } from '../../usecase/camera-add/contract';
+import type { ContainerRuntimePort } from '../../usecase/camera-add/contract';
 import type { TwinRemovalPort } from '../../usecase/camera-remove/contract';
 import type { PathsPort } from '../paths/paths';
-import { TWIN_API } from '../../config/defaults';
 
 const run = promisify(execFile);
 
 /**
- * Camera discovery and Twin lifecycle.
+ * Twin lifecycle: start one, remove one, delete its recordings.
  *
- * Discovery **reuses the Twin's own ONVIF implementation** through its HTTP API
- * (`POST /api/camera/onvif/discovery`) rather than a second implementation
- * here. A short-lived host-network container runs the scan: WS-Discovery is L2
- * multicast, so it cannot work from a bridge network.
+ * **Discovery is not here.** It used to be, shelling out to a short-lived
+ * host-network Twin to call its ONVIF API — which cannot work before the first
+ * Twin exists. It lives in `onvif-discovery.ts` now, which is its own adapter
+ * for its own port: scanning a network and running containers have nothing in
+ * common beyond having once shared a file.
  *
- * The container is host-network and short-lived; Twins themselves run on bridge
- * networking with a mapped port, because every Twin listens on port 80 and
- * twenty of them on host networking would all collide.
- *
- * Discovery needs host networking because WS-Discovery is L2 multicast. Twins
- * themselves run on bridge networking with a mapped port, because every Twin
- * listens on port 80 internally and twenty of them on host networking would all
- * collide.
- */
-
-/**
- * The Twin answers discovery as a JSON array; older builds print one object per
- * line. Both are accepted so the hub is not broken by a Twin release, and an
- * unparseable line is skipped rather than failing the whole scan.
- */
-const parseDiscovered = (raw: string): DiscoveredCamera[] => {
-  const toCamera = (value: unknown): DiscoveredCamera[] => {
-    const parsed = value as { xaddr?: string; name?: string; model?: string };
-    if (!parsed?.xaddr) return [];
-
-    return [
-      {
-        xaddr: parsed.xaddr,
-        address: new URL(parsed.xaddr).hostname,
-        manufacturer: parsed.name ?? null,
-        model: parsed.model ?? null,
-      },
-    ];
-  };
-
-  try {
-    const parsed: unknown = JSON.parse(raw.trim());
-    if (Array.isArray(parsed)) return parsed.flatMap(toCamera);
-    return toCamera(parsed);
-  } catch {
-    return raw
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith('{'))
-      .flatMap((line) => {
-        try {
-          return toCamera(JSON.parse(line));
-        } catch {
-          return [];
-        }
-      });
-  }
-};
-
-/**
- * Port allocation used to live here. It now belongs to `usecase/port-allocate`,
- * because the host's port space is shared with the MQTT broker, Zigbee2MQTT and
- * the Thread border router — none of which this adapter knows about.
+ * Twins run on bridge networking with a mapped port, because every Twin listens
+ * on port 80 internally and twenty of them on host networking would collide.
  */
 
 export interface TwinRuntimeDeps {
   paths: PathsPort;
-  imageTag(): string;
 }
 
-export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
+export const createTwinRuntime = ({ paths }: TwinRuntimeDeps) => {
   /**
    * Where Twin data lives. Derived once so creation and deletion cannot build
    * the path differently — the version of this bug that deletes the wrong
@@ -92,81 +33,15 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
    */
   const camerasDir = (): string => paths.serviceDir('lorawan').replace(/lorawan$/, 'cameras');
 
-  const discovery: CameraDiscoveryPort = {
-    async discover(timeoutMs: number): Promise<DiscoveredCamera[]> {
-      // Host networking, because WS-Discovery is L2 multicast and cannot reach
-      // the LAN from a bridge network. `-P` maps the Twin's port to a random
-      // free host port, so a scan never collides with a running Twin.
-      const name = `twin-discovery-${Date.now()}`;
-
-      try {
-        await run('docker', [
-          'run', '-d', '--rm', '--name', name, '--network', 'host', imageTag(),
-        ]);
-
-        const { stdout } = await run(
-          'docker',
-          [
-            'exec', name,
-            'curl', '-sS', '-X', 'POST', '--max-time', String(Math.floor(timeoutMs / 1000)),
-            `http://127.0.0.1:${TWIN_API.containerPort}${TWIN_API.discoverPath}`,
-          ],
-          { timeout: timeoutMs }
-        );
-
-        return parseDiscovered(stdout);
-      } finally {
-        // Always, even when the scan threw: a leaked host-network container
-        // would hold the port and make the next scan fail for a different
-        // reason than the first.
-        await run('docker', ['rm', '-f', name]).catch(() => undefined);
-      }
-    },
-
-    async probe(config: CameraConfig) {
-      try {
-        const { stdout } = await run(
-          'docker',
-          ['run', '--rm', imageTag(), '-action', 'probe', '-source', rtspUrl(config)],
-          { timeout: TWIN_API.discoverTimeoutMs }
-        );
-
-        const parsed = JSON.parse(stdout.trim()) as {
-          frame?: string;
-          codec?: string;
-          width?: number;
-          height?: number;
-        };
-
-        if (!parsed.frame) {
-          return err(domainError('unknown', probeFailureMessage('no-stream', config.address)));
-        }
-
-        return ok({
-          frameDataUrl: `data:image/jpeg;base64,${parsed.frame}`,
-          codec: parsed.codec ?? 'unknown',
-          width: parsed.width ?? 0,
-          height: parsed.height ?? 0,
-        });
-      } catch (error) {
-        const raw = error instanceof Error ? error.message : String(error);
-        const failure = classifyProbeError(raw);
-
-        // Contract 2 rule 2: a mapped cause plus the raw text behind
-        // [Technical details], never ECONNREFUSED on its own.
-        return err(domainError('unknown', probeFailureMessage(failure, config.address), raw));
-      }
-    },
-  };
-
   const containers: ContainerRuntimePort = {
-    async createTwin({ id, imageTag: tag, hostPort, config }): Promise<Result<void>> {
+    async createTwin({ id, imageTag, hostPort, seedUsername, seedPassword }): Promise<Result<void>> {
       try {
-        const configDir = `${camerasDir()}/${id}/config`;
-
-        // Pre-seed config.json into the volume BEFORE the container first runs.
-        await run('mkdir', ['-p', configDir]);
-        await run('sh', ['-c', `cat > ${configDir}/config.json <<'JSON'\n${JSON.stringify(config, null, 2)}\nJSON`]);
+        // The Twin's own data directory, mounted so its configuration and
+        // credentials survive a restart. Nothing is written into it here: the
+        // Twin writes its own defaults on first boot and the user configures it
+        // from its UI.
+        const dataDir = `${camerasDir()}/${id}`;
+        await run('mkdir', ['-p', dataDir]);
 
         await run('docker', [
           'run',
@@ -175,11 +50,24 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
           id,
           '--restart',
           'unless-stopped',
+          // Loopback only. A Twin published on 0.0.0.0 would put a camera's live
+          // view and its settings on the LAN for anyone who guessed the port,
+          // during the window before the user has set their own password.
           '-p',
-          `${hostPort}:80`,
+          `127.0.0.1:${hostPort}:80`,
           '-v',
-          `${configDir}:/home/twin/data/config`,
-          tag,
+          `${dataDir}:/home/twin/data`,
+          // Consumed once, on first boot. The Twin marks the account as
+          // must-change, so these stop working as soon as the user logs in.
+          '-e',
+          `TWIN_USERNAME=${seedUsername}`,
+          '-e',
+          `TWIN_PASSWORD=${seedPassword}`,
+          // The Twin builds its own links from this; without it they point at
+          // the container's own hostname, which resolves nowhere in a browser.
+          '-e',
+          `TWIN_PUBLIC_URL=http://127.0.0.1:${hostPort}`,
+          imageTag,
         ]);
 
         return ok(undefined);
@@ -231,5 +119,5 @@ export const createTwinRuntime = ({ paths, imageTag }: TwinRuntimeDeps) => {
     },
   };
 
-  return { discovery, containers, removal };
+  return { containers, removal };
 };

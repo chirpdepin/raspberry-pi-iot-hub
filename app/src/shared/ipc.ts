@@ -48,13 +48,13 @@ export const IPC = {
    */
   subsystemStatus: 'subsystem:status',
 
-  /** ONVIF discovery, with vendor defaults pre-filled. */
+  /** ONVIF discovery — which cameras are on the network. */
   cameraDiscover: 'camera:discover',
-  /** Frame probe — the picture that proves the credentials work. */
-  cameraProbe: 'camera:probe',
-  /** Create the Twin. */
+  /** Whether a camera can be set up at all right now. */
+  cameraAvailability: 'camera:availability',
+  /** Start a Twin for a discovered camera. */
   cameraAdd: 'camera:add',
-  /** Configured cameras and whether each is recording. */
+  /** Configured cameras and whether each is running. */
   cameraList: 'camera:list',
   /** Remove a Twin, optionally with its recordings. */
   cameraRemove: 'camera:remove',
@@ -104,18 +104,9 @@ export interface DiscoveredCameraPayload {
   address: string;
   manufacturer: string | null;
   model: string | null;
-  suggestedRtspPath: string;
-  suggestedOnvifPort: number;
-}
-
-export interface CameraConfigPayload {
-  displayName: string;
-  address: string;
-  credentials: { username: string; password: string };
-  rtspPath: string;
-  onvifPort: number;
-  recording: 'motion' | 'continuous';
-  retentionDays: number;
+  label: string;
+  /** Already has a Twin — the row opens it rather than offering setup again. */
+  alreadyAdded: boolean;
 }
 
 export interface CameraPayload {
@@ -123,16 +114,19 @@ export interface CameraPayload {
   displayName: string;
   address: string;
   hostPort: number;
-  recording: 'motion' | 'continuous';
+  /**
+   * Shown until the user replaces them. The Twin consumes them on first boot
+   * and forces a change at first login, so there is no other way back in.
+   */
+  firstLoginUsername: string;
+  firstLoginPassword: string;
   online: boolean;
 }
 
-export interface CameraProbePayload {
-  /** A data: URL. Contract 2 rule 5 — the proof it worked. */
-  frameDataUrl: string;
-  codec: string;
-  width: number;
-  height: number;
+export interface CameraAvailabilityPayload {
+  canAdd: boolean;
+  reason?: string;
+  technicalDetail?: string;
 }
 
 export interface CapacityPayload {
@@ -257,12 +251,12 @@ export interface ChirpHubApi {
   getSubsystemStatus(): Promise<SubsystemStatusPayload[]>;
 
   /**
-   * A Result, not a bare list: "the camera software is not installed" and "your
-   * network has no cameras" are different answers and need different advice.
+   * A Result, not a bare list: "the scan could not run" and "your network has no
+   * cameras" are different answers and need different advice.
    */
   discoverCameras(): Promise<IpcResult<DiscoveredCameraPayload[]>>;
-  probeCamera(config: CameraConfigPayload): Promise<IpcResult<CameraProbePayload>>;
-  addCamera(config: CameraConfigPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
+  getCameraAvailability(): Promise<CameraAvailabilityPayload>;
+  addCamera(camera: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
   listCameras(): Promise<CameraPayload[]>;
   removeCamera(input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>>;
   getCameraCapacity(): Promise<CapacityPayload>;

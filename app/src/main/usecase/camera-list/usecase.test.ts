@@ -10,7 +10,8 @@ const camera = (id: string, online = false): Camera => ({
   displayName: `Camera ${id}`,
   address: '192.168.2.40',
   hostPort: 18_080,
-  recording: 'motion',
+  firstLoginUsername: 'admin',
+  firstLoginPassword: 'a-generated-password',
   online,
 });
 

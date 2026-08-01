@@ -1,52 +1,48 @@
-import { err, ok, type Result } from '../../domain/errors';
-import { profileFor, type DiscoveredCamera } from '../../domain/camera';
+import { ok, type Result } from '../../domain/errors';
+import { cameraLabel, type DiscoveredCamera } from '../../domain/camera';
 
 import type { CameraDiscoverPorts } from './contract';
 
-/** ONVIF WS-Discovery is multicast; anything not answering in this window is not going to. */
-const DISCOVERY_TIMEOUT_MS = 5_000;
-
-export interface DiscoveredCameraWithDefaults extends DiscoveredCamera {
-  /** Pre-filled from the vendor registry so the user never types an RTSP path. */
-  suggestedRtspPath: string;
-  suggestedOnvifPort: number;
+export interface DiscoveredCameraView extends DiscoveredCamera {
+  /** A friendly name, so the list is readable before anything is set up. */
+  label: string;
+  /**
+   * True when this camera already has a Twin. The row then opens it instead of
+   * offering to set it up again — the same camera set up twice is two
+   * containers fighting over one stream.
+   */
+  alreadyAdded: boolean;
 }
 
 /**
- * Finds cameras on the local network and pre-fills what can be inferred.
+ * Finds cameras on the local network and marks the ones already set up.
  *
- * Contract 2 rule 3: the RTSP path and ONVIF port come from the vendor profile
- * registry, so they sit under Advanced rather than being asked for.
+ * **No longer gated on the Twin image.** Scanning used to call `images.ensure()`
+ * first, on the reasoning that discovery ran inside a Twin container — so with
+ * the image unpublished, every scan failed before a single packet was sent, and
+ * the screen blamed the network. Discovery runs in this process now and needs
+ * nothing installed, so a scan works on a machine that has never run a
+ * container. Finding your cameras is useful on its own: it proves they are
+ * powered on and reachable.
  *
- * **Returns a Result, and that is the point.** This used to return a bare array,
- * so a scan that could not run at all was indistinguishable from a scan that
- * found nothing — the adapter swallowed the failure and the user was told "no
- * cameras found" when the truth was that the camera software was never
- * installed. An empty list must mean an empty network and nothing else.
+ * **No vendor RTSP registry either.** This used to attach a guessed stream path
+ * and ONVIF port from a table of manufacturers. The Twin resolves both itself
+ * from the camera, and a guess of ours that disagreed would be a bug the user
+ * would have to discover by watching recording fail.
  */
 export const handleCameraDiscover = async (
-  ports: CameraDiscoverPorts,
-  timeoutMs: number = DISCOVERY_TIMEOUT_MS
-): Promise<Result<DiscoveredCameraWithDefaults[]>> => {
-  // Nothing can be scanned until the Twin image exists, and saying so is far
-  // more useful than an empty list.
-  const ready = await ports.runtime.ensure();
-  if (!ready.ok) return err(ready.error);
+  ports: CameraDiscoverPorts
+): Promise<Result<DiscoveredCameraView[]>> => {
+  const found = await ports.discovery.discover();
+  if (!found.ok) return found;
 
-  const found = await ports.discovery.discover(timeoutMs);
+  const configured = new Set(await ports.configured.addresses());
 
-  const cameras = found.map((camera) => {
-    const profile = profileFor(camera.manufacturer, camera.model);
-
-    return {
+  return ok(
+    found.value.map((camera) => ({
       ...camera,
-      // The sub-stream is the default: it is lower resolution, far cheaper to
-      // decode for motion detection, and much more likely to be H.264 rather
-      // than H.265 which the Twin cannot record.
-      suggestedRtspPath: profile.subPath,
-      suggestedOnvifPort: profile.onvifPort,
-    };
-  });
-
-  return ok(cameras);
+      label: cameraLabel(camera),
+      alreadyAdded: configured.has(camera.address),
+    }))
+  );
 };

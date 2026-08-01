@@ -6,7 +6,8 @@ import {
   type DockerStatus,
   type GatewayRegisterInput,
   type HostCapabilities,
-  type CameraConfigPayload,
+  type CameraAvailabilityPayload,
+  type DiscoveredCameraPayload,
   type CapacityPayload,
   type LnsCredentialsPayload,
   type SubsystemStatusPayload,
@@ -32,6 +33,8 @@ import type { ZigbeeStartPorts } from '../usecase/zigbee-start/contract';
 import { handleZigbeeStart } from '../usecase/zigbee-start/usecase';
 import { handleHostCapabilities } from '../usecase/host-capabilities/usecase';
 import type { CameraAddPorts } from '../usecase/camera-add/contract';
+import type { CameraAvailabilityPorts } from '../usecase/camera-availability/contract';
+import { handleCameraAvailability } from '../usecase/camera-availability/usecase';
 import { handleCameraAdd } from '../usecase/camera-add/usecase';
 import type { CameraDiscoverPorts } from '../usecase/camera-discover/contract';
 import { handleCameraDiscover } from '../usecase/camera-discover/usecase';
@@ -67,6 +70,7 @@ export interface IpcDependencies {
   subsystemStatus: SubsystemStatusPorts;
   cameraDiscover: CameraDiscoverPorts;
   cameraAdd: CameraAddPorts;
+  cameraAvailability: CameraAvailabilityPorts;
   cameraList: CameraListPorts;
   cameraRemove: CameraRemovePorts;
   cameraOpen: CameraOpenPorts;
@@ -141,13 +145,13 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
 
   ipcMain.handle(IPC.cameraDiscover, async () => handleCameraDiscover(deps.cameraDiscover));
 
-
-  ipcMain.handle(IPC.cameraProbe, async (_event, config: CameraConfigPayload) =>
-    deps.cameraAdd.discovery.probe(config)
+  ipcMain.handle(
+    IPC.cameraAvailability,
+    async (): Promise<CameraAvailabilityPayload> => handleCameraAvailability(deps.cameraAvailability)
   );
 
-  ipcMain.handle(IPC.cameraAdd, async (_event, config: CameraConfigPayload) =>
-    handleCameraAdd(deps.cameraAdd, config)
+  ipcMain.handle(IPC.cameraAdd, async (_event, camera: DiscoveredCameraPayload) =>
+    handleCameraAdd(deps.cameraAdd, camera)
   );
 
   ipcMain.handle(IPC.cameraList, async () => handleCameraList(deps.cameraList));

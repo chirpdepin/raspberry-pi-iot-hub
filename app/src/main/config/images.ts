@@ -26,6 +26,17 @@ export const IMAGES = {
 export const TWIN_CONTAINER_PREFIX = 'twin-';
 
 /**
+ * The account name a Twin is seeded with on first boot.
+ *
+ * The password beside it is generated per Twin and shown to the user once; the
+ * Twin forces a change at first login. The alternative the Twin offers —
+ * `TWIN_ALLOW_DEFAULT_LOCAL_CREDENTIALS`, which fills in root/root — is
+ * documented there as a dev override, and shipping a known login in an image
+ * strangers flash is exactly what it warns against.
+ */
+export const TWIN_SEED_USERNAME = 'admin';
+
+/**
  * The Twin update feed.
  *
  * Twin is closed-source, so it is published as a `docker save` tarball on the

@@ -34,14 +34,20 @@ export const LOCAL_TOPICS = {
 export type Producer = keyof typeof LOCAL_TOPICS;
 
 /**
- * Remote prefix for the Mosquitto bridge, namespaced by gateway EUI.
+ * The remote prefix is **assigned by Chirp**, not derived here.
  *
- * The EUI is the only identifier this hub has that is globally unique and not
- * user-editable — a hostname is neither. Two hubs in one Chirp organization
- * would otherwise publish into the same remote tree and interleave their
- * devices.
+ * Creating a Cloud MQTT connector returns a `topic_prefix` of the form
+ * `iot/<organization-id>/<connection-id>` (verified on 2026-08-01). It is
+ * per-connection, so a hub with two connectors has two prefixes and no device
+ * -side identifier — gateway EUI included — can reproduce it.
+ *
+ * An earlier version computed `chirp/<eui>/` locally. That would have published
+ * into a tree Chirp does not read, so telemetry would have left the hub and
+ * silently gone nowhere: the bridge connects, messages flow, and nothing
+ * arrives. It is stored with the connector credentials instead.
  */
-export const remoteTopicPrefix = (hubId: string): string => `chirp/${hubId.toLowerCase()}/`;
+export const normaliseRemotePrefix = (topicPrefix: string): string =>
+  topicPrefix.endsWith('/') ? topicPrefix : `${topicPrefix}/`;
 
 /**
  * A bridge whose remote prefix equals its local prefix loops: every message it
@@ -57,12 +63,16 @@ export const isBridgeLoopSafe = (localPrefix: string, remotePrefix: string): boo
 /**
  * One bridge topic line per producer, all in the `out` direction.
  *
- * Outbound only. The hub publishes telemetry to Chirp; it does not subscribe to
- * the whole remote tree, which would pull every other hub's traffic in the
- * organization down a home broadband connection.
+ * Outbound only, deliberately. The hub publishes telemetry to Chirp; it does
+ * not subscribe to the remote tree. A matching `in` line is a loop unless the
+ * remote honours `try_private`, and Chirp's broker is not Mosquitto — so the
+ * return path is not taken on trust. Nothing on the hub needs the cloud copy
+ * anyway: Zigbee2MQTT already has the local one.
+ *
+ * `topicPrefix` comes from the connector, not from this device.
  */
-export const bridgeTopicLines = (hubId: string): string[] => {
-  const remote = remoteTopicPrefix(hubId);
+export const bridgeTopicLines = (topicPrefix: string): string[] => {
+  const remote = normaliseRemotePrefix(topicPrefix);
 
   return Object.values(LOCAL_TOPICS).map((local) => `topic # out 1 ${local}/ ${remote}${local}/`);
 };

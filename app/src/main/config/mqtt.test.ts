@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { bridgeTopicLines, isBridgeLoopSafe, LOCAL_TOPICS, remoteTopicPrefix } from './mqtt';
+import { bridgeTopicLines, isBridgeLoopSafe, LOCAL_TOPICS, normaliseRemotePrefix } from './mqtt';
 
-const HUB_EUI = '0016C001FF1E96BB';
+/** A real prefix as Chirp issued it on 2026-08-01. */
+const TOPIC_PREFIX = 'iot/100eb045-022b-4272-bf7b-0005ad66c40a/961f5f12-3dde-42c1-837e-c9bed06bb122';
 
 /**
  * The Phase 11 "one broker, three producers" risk, as tests.
@@ -26,19 +27,22 @@ describe('mqtt namespace', () => {
     }
   });
 
-  it('namespaces the remote side by hub, so two hubs in one organization do not interleave', () => {
-    expect(remoteTopicPrefix(HUB_EUI)).toBe('chirp/0016c001ff1e96bb/');
-    expect(remoteTopicPrefix('0016C001FF1E96BB')).not.toBe(remoteTopicPrefix('0016C001FF1E96BC'));
+  it('takes the remote prefix from the connector rather than inventing one', () => {
+    // Chirp assigns iot/<org>/<connection>. Nothing on the device can derive
+    // it, and a locally invented prefix publishes where Chirp does not read.
+    expect(normaliseRemotePrefix(TOPIC_PREFIX)).toBe(`${TOPIC_PREFIX}/`);
+    // Idempotent, so a prefix that already ends in / is not doubled.
+    expect(normaliseRemotePrefix(`${TOPIC_PREFIX}/`)).toBe(`${TOPIC_PREFIX}/`);
   });
 
   it('detects a bridge configuration that would loop', () => {
     expect(isBridgeLoopSafe('zigbee2mqtt/', 'zigbee2mqtt/')).toBe(false);
     expect(isBridgeLoopSafe('zigbee2mqtt/', 'zigbee2mqtt/remote/')).toBe(false);
-    expect(isBridgeLoopSafe('zigbee2mqtt/', remoteTopicPrefix(HUB_EUI))).toBe(true);
+    expect(isBridgeLoopSafe('zigbee2mqtt/', normaliseRemotePrefix(TOPIC_PREFIX))).toBe(true);
   });
 
   it('produces one outbound bridge line per producer, none of which loops', () => {
-    const lines = bridgeTopicLines(HUB_EUI);
+    const lines = bridgeTopicLines(TOPIC_PREFIX);
 
     expect(lines).toHaveLength(Object.keys(LOCAL_TOPICS).length);
 

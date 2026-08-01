@@ -35,11 +35,27 @@ describe('gateway-register', () => {
   });
 
   it('derives a different URL for a different region', async () => {
-    const result = await handleGatewayRegister(ports(), { ...registration, region: 'US915' });
+    const result = await handleGatewayRegister(ports(), { ...registration, region: 'AS923' });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.uri).toBe('wss://lora-us915.cloud.chirpwireless.io:443');
+      expect(result.value.uri).toBe('wss://lora-as923.cloud.chirpwireless.io:443');
+    }
+  });
+
+  /**
+   * `US915-0` and `US915-1` are two channel plans on one network server, so the
+   * sub-plan suffix belongs in the registration band but not in the hostname.
+   * Sending `lora-us915-0` would resolve to nothing.
+   */
+  it('drops the sub-plan suffix from the LNS hostname', async () => {
+    for (const region of ['US915-0', 'US915-1'] as const) {
+      const result = await handleGatewayRegister(ports(), { ...registration, region });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.uri).toBe('wss://lora-us915.cloud.chirpwireless.io:443');
+      }
     }
   });
 

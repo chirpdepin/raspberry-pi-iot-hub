@@ -6,27 +6,29 @@
  */
 
 /**
- * Regions accepted by Chirp, taken from `device_provision_lorawan`'s enum.
+ * Bands accepted when registering a gateway.
  *
- * NOTE: `POST /nodes/nonminer/{band}/{gatewayId}` does not enumerate its
- * accepted `band` values anywhere in the BFF. This list is inferred from the
- * device-provisioning enum plus the LNS hostname pattern, and is flagged in
- * app/electron.md as needing one confirmation from the backend team — a wrong
- * value fails at gateway creation.
+ * Read off the Chirp console's own region picker on 2026-08-01, which is the
+ * authority for `POST /nodes/nonminer/{band}/{gatewayId}` — the BFF does not
+ * enumerate them anywhere.
+ *
+ * This replaces a list inferred from `device_provision_lorawan`'s enum, which
+ * was wrong in three ways and would have failed at gateway creation: the
+ * Australian and US bands carry a sub-plan suffix (`AU915-0`, `US915-0`,
+ * `US915-1`, not `AU915`/`US915`), and CN470, CN779 and ISM2400 are offered for
+ * devices but not for gateways.
  */
 export const LORAWAN_REGIONS = [
-  'EU868',
-  'US915',
-  'AU915',
   'AS923',
   'AS923-2',
+  'AU915-0',
   'EU433',
+  'EU868',
   'IN865',
   'KR920',
   'RU864',
-  'CN470',
-  'CN779',
-  'ISM2400',
+  'US915-0',
+  'US915-1',
 ] as const;
 
 export type LorawanRegion = (typeof LORAWAN_REGIONS)[number];
@@ -60,12 +62,17 @@ export interface LnsCredentials {
  * The LNS URL is **derived**, not returned by the API.
  *
  * `GET /nodes/signed-cert/{gateway_id}` returns only tc.trust, tc.crt and
- * tc.key; the URI is a documented per-region hostname pattern
- * (docs/configuration.md). Deriving it is what keeps the user from having to
- * know or type it (Contract 2 rule 3).
+ * tc.key; the URI is a per-region hostname pattern. Deriving it is what keeps
+ * the user from having to know or type it (Contract 2 rule 3).
+ *
+ * Verified against the console on 2026-08-01: registering EU868 displayed
+ * exactly `wss://lora-eu868.cloud.chirpwireless.io:443`.
+ *
+ * The sub-plan suffix is dropped. `US915-0` and `US915-1` are two channel plans
+ * on one network server, so the host is `lora-us915`, not `lora-us915-0`.
  */
 export const lnsUrlForRegion = (region: LorawanRegion): string =>
-  `wss://lora-${region.toLowerCase()}.cloud.chirpwireless.io:443`;
+  `wss://lora-${region.toLowerCase().replace(/-\d+$/, '')}.cloud.chirpwireless.io:443`;
 
 /**
  * Basic Station rejects CRLF in its certificate files quietly enough to waste an

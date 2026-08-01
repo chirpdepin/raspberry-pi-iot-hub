@@ -413,3 +413,60 @@ to be downloaded and modified meant nobody had permission to use it.
 - `/boot/firmware/network-config` holds the home Wi-Fi PSK **in plaintext**.
 - SSH is **key-only** with keys no adopter holds — a flashed image would lock them out.
 - `README.md` still advertises the old image's `iotmaster` / `123qweASD` credentials.
+
+## Phase 11 — end-to-end wiring and the live run (2026-08-01)
+
+Ran against a real Chirp account and the real hardware, which is where the
+remaining assumptions got tested.
+
+### Cross-cutting risks, verified on the device
+
+| Risk | Result |
+|---|---|
+| Port collisions | No collision. Mosquitto 1883 and Zigbee2MQTT 8080, both loopback-only. **All four containers use host networking**, so they publish no Docker port mappings — which is exactly why the allocator needs a reserved-port table rather than Docker's list |
+| One broker, three producers | One Mosquitto, `$SYS` and `zigbee2mqtt/bridge/state` both live, no topic overlap |
+| Shared config tree | Each subsystem owns its own directory under `/etc/iot-hub/`; no overlap |
+| Reboot survival | All four units `enabled`; both containers `restart=unless-stopped` |
+| Resource contention | Basic Station, Mosquitto and Zigbee2MQTT ran together throughout |
+| Partial failure | Each subsystem probed independently; `allSettled` means one broken probe cannot blank the others |
+
+### Defects found and fixed in this repo
+
+- **Port allocation was camera-local.** It only asked the kernel whether a bind
+  would succeed, so a *stopped* container's port read as free — hand it to a
+  second Twin and both break when the first restarts. Now one use case with a
+  reserved-port table, consulting Docker's mappings including stopped
+  containers, returning a `Result` instead of a plausible-but-unbindable port.
+- **Health was read from systemd alone.** The units are `Type=oneshot` +
+  `RemainAfterExit=yes` around `docker compose up -d`, so systemd keeps
+  reporting `active` after the container dies. Confirmed on the Pi. Probes now
+  combine unit state and container state.
+- **Cameras were unreachable.** Phase 8's use cases had no IPC channels and no
+  page, and `camera-add` returned a record nothing stored — the list could never
+  have survived a restart.
+- **`isServiceActive` was stubbed to `false`**, so Zigbee showed as stopped
+  while running.
+- Duplicated systemd unit names and MQTT topic constants centralised.
+
+### Corrections from the live platform
+
+Recorded in `docs/platform-findings.md`, with the three platform-side defects.
+
+| Was | Is |
+|---|---|
+| 12 gateway bands inferred from `device_provision_lorawan` | **10**, from the console's own picker. `AU915-0`/`US915-0`/`US915-1` carry a sub-plan suffix; CN470, CN779, ISM2400 are device-only. **This closes the open question from the plan** |
+| LNS host = `lora-{band}` | Right, but the sub-plan suffix is dropped: `US915-0` → `lora-us915` |
+| Remote MQTT prefix = `chirp/<eui>/` | **Assigned by Chirp** as `iot/<org>/<connection>`. A locally invented prefix publishes where Chirp does not read — telemetry leaves the hub and silently goes nowhere |
+
+### Live run — what got through
+
+| Step | Result |
+|---|---|
+| Register gateway in Chirp | ✅ EUI `0016C001FF1E96BB`, EU868, certificates issued |
+| Install credentials, start Basic Station | ✅ Reaches the LNS, INFOS handshake completes, MUXS URI returned |
+| Gateway stays connected | ❌ **Blocked by Chirp** — `tc.trust` has no root CA, and the LNS ingress 502s on some connections |
+| Create Cloud MQTT connector | ✅ Credentials valid; broker accepts the session and a publish |
+| Zigbee telemetry to Chirp | ❌ **Blocked by Chirp** — the broker's TLS certificate expired 2026-07-23 |
+| Bridge configured on the hub | ✅ Correct and outbound-only; connects as soon as the certificate is renewed |
+| Pair the Zigbee bulb | ⏸ Needs the physical reset (off/on 5×). Join window opened and closed cleanly; the radio layer works |
+| Camera Twins | ⏸ Deferred — no published Twin image, and testing needs a Lens login |

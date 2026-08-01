@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react';
 
-import type { CameraPayload, DiscoveredCameraPayload } from '@shared/ipc';
+import type { CameraPayload, CameraScanPayload, DiscoveredCameraPayload } from '@shared/ipc';
 
 import {
   useAddCameraMutation,
-  useCameraAvailabilityQuery,
   useCamerasQuery,
   useCapacityQuery,
   useDiscoverCamerasMutation,
@@ -20,18 +19,28 @@ import {
  * create — and four of them asked for settings the Twin asks for again in its
  * own UI. The flow is now: scan, pick a camera, and its Twin opens. Everything
  * about the camera is configured there, once, in the tool that owns it.
+ *
+ * **Scanning is optional.** It finds only cameras that advertise themselves, so
+ * `[Add camera]` starts a Twin with no camera attached and the user gives it an
+ * address in the Twin. A found camera is a shortcut, not the way in.
  */
+
+/**
+ * Sentinel for "a camera is being set up that has no address" — the blank add.
+ * A row keyed by address cannot represent it, and `null` already means idle.
+ */
+export const BLANK_ADD = '__blank__';
+
 export const useCameras = () => {
   const camerasQuery = useCamerasQuery();
   const capacityQuery = useCapacityQuery();
-  const availabilityQuery = useCameraAvailabilityQuery();
 
   const discoverMutation = useDiscoverCamerasMutation();
   const addMutation = useAddCameraMutation();
   const removeMutation = useRemoveCameraMutation();
   const openMutation = useOpenCameraMutation();
 
-  const [discovered, setDiscovered] = useState<DiscoveredCameraPayload[] | null>(null);
+  const [scan, setScan] = useState<CameraScanPayload | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busyAddress, setBusyAddress] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<CameraPayload | null>(null);
@@ -47,7 +56,7 @@ export const useCameras = () => {
       return;
     }
 
-    setDiscovered(result.value);
+    setScan(result.value);
   }, [discoverMutation]);
 
   const handleOpen = useCallback(
@@ -99,15 +108,34 @@ export const useCameras = () => {
 
   const dismissJustAdded = useCallback(() => setJustAdded(null), []);
   const clearScan = useCallback(() => {
-    setDiscovered(null);
+    setScan(null);
     setErrorMessage(null);
   }, []);
+
+  /**
+   * Setting up a camera we never found. The main route, not a fallback: a scan
+   * only ever finds cameras that advertise themselves, so most of someone's
+   * cameras will never appear in one.
+   */
+  const handleAddBlank = useCallback(async () => {
+    setErrorMessage(null);
+    setBusyAddress(BLANK_ADD);
+
+    const result = await addMutation.mutateAsync(undefined);
+    setBusyAddress(null);
+
+    if (!result.ok) {
+      setErrorMessage(result.error.message);
+      return;
+    }
+
+    setJustAdded(result.value.camera);
+  }, [addMutation]);
 
   return {
     cameras: camerasQuery.data ?? [],
     capacity: capacityQuery.data ?? null,
-    availability: availabilityQuery.data ?? null,
-    discovered,
+    scan,
     isScanning: discoverMutation.isPending,
     busyAddress,
     justAdded,
@@ -115,6 +143,7 @@ export const useCameras = () => {
     handleScan,
     clearScan,
     handleSetUp,
+    handleAddBlank,
     handleOpen,
     handleRemove,
     dismissJustAdded,

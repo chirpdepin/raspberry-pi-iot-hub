@@ -1,5 +1,5 @@
 import { ok, type Result } from '../../domain/errors';
-import { cameraLabel, type DiscoveredCamera } from '../../domain/camera';
+import { cameraLabel, type DiscoveredCamera, type ScannedNetwork } from '../../domain/camera';
 
 import type { CameraDiscoverPorts } from './contract';
 
@@ -14,8 +14,15 @@ export interface DiscoveredCameraView extends DiscoveredCamera {
   alreadyAdded: boolean;
 }
 
+export interface CameraScanView {
+  cameras: DiscoveredCameraView[];
+  /** What was searched, so the screen can justify the number it is showing. */
+  networks: ScannedNetwork[];
+}
+
 /**
- * Finds cameras on the local network and marks the ones already set up.
+ * Finds cameras on the local network, marks the ones already set up, and passes
+ * on what was actually searched.
  *
  * **No longer gated on the Twin image.** Scanning used to call `images.ensure()`
  * first, on the reasoning that discovery ran inside a Twin container — so with
@@ -29,20 +36,26 @@ export interface DiscoveredCameraView extends DiscoveredCamera {
  * and ONVIF port from a table of manufacturers. The Twin resolves both itself
  * from the camera, and a guess of ours that disagreed would be a bug the user
  * would have to discover by watching recording fail.
+ *
+ * **The networks come back untouched.** Discovery reports facts; whether "1 of
+ * 254 addresses on 192.168.2.0/24" is reassuring or alarming is a sentence for
+ * the view to write, not a judgement for this layer to make.
  */
-export const handleCameraDiscover = async (
-  ports: CameraDiscoverPorts
-): Promise<Result<DiscoveredCameraView[]>> => {
+export const handleCameraDiscover = async (ports: CameraDiscoverPorts): Promise<Result<CameraScanView>> => {
   const found = await ports.discovery.discover();
   if (!found.ok) return found;
 
   const configured = new Set(await ports.configured.addresses());
 
-  return ok(
-    found.value.map((camera) => ({
+  return ok({
+    networks: found.value.networks,
+    cameras: found.value.cameras.map((camera) => ({
       ...camera,
       label: cameraLabel(camera),
-      alreadyAdded: configured.has(camera.address),
-    }))
-  );
+      // A camera added without a scan has an empty address, so it can never
+      // match here — which is honest: we do not know which camera it is until
+      // the user configures it in the Twin.
+      alreadyAdded: camera.address !== '' && configured.has(camera.address),
+    })),
+  });
 };

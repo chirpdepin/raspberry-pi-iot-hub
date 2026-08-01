@@ -9,7 +9,6 @@ export const cameraQueryKeys = {
   all: ['cameras'] as const,
   list: () => [...cameraQueryKeys.all, 'list'] as const,
   capacity: () => [...cameraQueryKeys.all, 'capacity'] as const,
-  availability: () => [...cameraQueryKeys.all, 'availability'] as const,
 };
 
 export const useCamerasQuery = () =>
@@ -30,9 +29,6 @@ export const useCapacityQuery = () =>
  */
 export const useDiscoverCamerasMutation = () => useMutation({ mutationFn: camerasApi.discover });
 
-/** Whether setting a camera up can succeed — asked before the user tries. */
-export const useCameraAvailabilityQuery = () =>
-  useQuery({ queryKey: cameraQueryKeys.availability(), queryFn: camerasApi.availability });
 
 export const useAddCameraMutation = () => {
   const queryClient = useQueryClient();

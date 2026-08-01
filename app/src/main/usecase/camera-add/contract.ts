@@ -45,6 +45,14 @@ export interface PortAllocationPort {
  */
 export interface CredentialSeedPort {
   newPassword(): string;
+  /**
+   * A unique container-name seed for a camera added without a scan.
+   *
+   * Beside `newPassword` rather than in a port of its own: both are "an
+   * unpredictable value from the platform", so they change for the same reason
+   * and a test fakes them together.
+   */
+  newId(): string;
 }
 
 export interface ContainerRuntimePort {
@@ -73,6 +81,14 @@ export interface ContainerRuntimePort {
  */
 export interface CameraRecordPort {
   save(camera: Camera): Promise<void>;
+  /**
+   * How many cameras exist, for numbering the next one.
+   *
+   * A count, not `all()` (Contract 1 I) — naming a camera does not need every
+   * record, and asking for them would let this use case grow a dependency on
+   * fields it has no business reading.
+   */
+  count(): Promise<number>;
 }
 
 export interface CameraAddPorts {

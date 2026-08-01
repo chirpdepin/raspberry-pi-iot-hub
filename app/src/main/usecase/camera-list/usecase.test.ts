@@ -16,7 +16,12 @@ const camera = (id: string, online = false): Camera => ({
 });
 
 const ports = (records: Camera[], running: string[]): CameraListPorts => ({
-  records: { all: async () => records, save: async () => undefined, remove: async () => undefined },
+  records: {
+    all: async () => records,
+    count: async () => records.length,
+    save: async () => undefined,
+    remove: async () => undefined,
+  },
   state: { running: async () => running },
 });
 

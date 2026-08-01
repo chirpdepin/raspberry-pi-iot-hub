@@ -1,5 +1,5 @@
 import { err, ok, type Result } from '../../domain/errors';
-import { cameraLabel, twinIdFor, type DiscoveredCamera } from '../../domain/camera';
+import { cameraLabel, numberedCameraLabel, twinIdFor, type DiscoveredCamera } from '../../domain/camera';
 import { TWIN_CONTAINER_PREFIX, TWIN_SEED_USERNAME } from '../../config/images';
 
 import type { CameraAddPorts, CameraAddResult } from './contract';
@@ -15,12 +15,20 @@ import type { CameraAddPorts, CameraAddResult } from './contract';
  * settings it did not own. What the user actually needs from us is the part they
  * cannot do themselves — installing and running the thing.
  *
+ * **The camera is optional, and that is the main route.** Discovery can only
+ * ever find some cameras: many have ONVIF switched off, and one on another
+ * network is unreachable by any sweep. So `[Add camera]` starts a Twin with no
+ * camera attached at all, and the user gives it an address in the Twin's own
+ * Camera tab — the same place they would have had to confirm one anyway. A
+ * discovered camera is a shortcut that pre-fills the name and lets us recognise
+ * it in a later scan, not a precondition.
+ *
  * The Twin boots on its defaults with recording off, and the user turns it on
  * when they have chosen what they want recorded.
  */
 export const handleCameraAdd = async (
   ports: CameraAddPorts,
-  camera: DiscoveredCamera,
+  camera?: DiscoveredCamera,
   onProgress?: (step: string) => void
 ): Promise<Result<CameraAddResult>> => {
   onProgress?.('Downloading camera software…');
@@ -36,7 +44,9 @@ export const handleCameraAdd = async (
   onProgress?.('Setting up…');
 
   const hostPort = port.value;
-  const id = twinIdFor(TWIN_CONTAINER_PREFIX, camera.address);
+  // Seeded by address when we have one, so the same discovered camera cannot
+  // quietly get two Twins; by a generated token when we do not.
+  const id = twinIdFor(TWIN_CONTAINER_PREFIX, camera?.address ?? ports.secrets.newId());
   const seedPassword = ports.secrets.newPassword();
 
   const created = await ports.containers.createTwin({
@@ -51,8 +61,10 @@ export const handleCameraAdd = async (
 
   const record = {
     id,
-    displayName: cameraLabel(camera),
-    address: camera.address,
+    displayName: camera ? cameraLabel(camera) : numberedCameraLabel(await ports.records.count()),
+    // Left empty rather than guessed when there was no scan: the user gives the
+    // Twin its address, and a placeholder here would show in the list as fact.
+    address: camera?.address ?? '',
     hostPort,
     firstLoginUsername: TWIN_SEED_USERNAME,
     firstLoginPassword: seedPassword,

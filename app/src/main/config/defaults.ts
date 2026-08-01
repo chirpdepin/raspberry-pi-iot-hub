@@ -48,6 +48,21 @@ export const ONVIF = {
    * scan.
    */
   maxSweepHosts: 1024,
+  /**
+   * Interface names that never carry a camera, matched case-insensitively
+   * against the start of the name.
+   *
+   * A **registry, not a branch** (Contract 1 O): a new virtualisation stack is a
+   * row here. Found by running the scan on this machine — Docker alone
+   * contributed seven networks, six of them /16s, so the screen would have
+   * warned the user seven times that networks they have never heard of were too
+   * large to search. That is worse than saying nothing: it buries the one line
+   * about their real network in noise about virtual ones.
+   *
+   * These are host-local bridges to containers and VMs. A camera cannot be on
+   * one, so probing them is wasted and reporting them is misleading.
+   */
+  virtualInterfacePrefixes: ['docker', 'br-', 'veth', 'virbr', 'vmnet', 'vboxnet', 'cni', 'flannel'],
 } as const;
 
 export const WINDOW = {

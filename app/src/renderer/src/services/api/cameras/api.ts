@@ -1,6 +1,6 @@
 import type {
-  CameraAvailabilityPayload,
   CameraPayload,
+  CameraScanPayload,
   CapacityPayload,
   DiscoveredCameraPayload,
   IpcResult,
@@ -8,9 +8,8 @@ import type {
 
 /** Transport layer — plain functions, no React (Contract 5). */
 export const camerasApi = {
-  discover: (): Promise<IpcResult<DiscoveredCameraPayload[]>> => window.chirpHub.discoverCameras(),
-  availability: (): Promise<CameraAvailabilityPayload> => window.chirpHub.getCameraAvailability(),
-  add: (camera: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>> =>
+  discover: (): Promise<IpcResult<CameraScanPayload>> => window.chirpHub.discoverCameras(),
+  add: (camera?: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>> =>
     window.chirpHub.addCamera(camera),
   list: (): Promise<CameraPayload[]> => window.chirpHub.listCameras(),
   remove: (input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>> =>

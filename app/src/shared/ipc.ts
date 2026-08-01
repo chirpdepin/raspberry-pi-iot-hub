@@ -50,9 +50,7 @@ export const IPC = {
 
   /** ONVIF discovery — which cameras are on the network. */
   cameraDiscover: 'camera:discover',
-  /** Whether a camera can be set up at all right now. */
-  cameraAvailability: 'camera:availability',
-  /** Start a Twin for a discovered camera. */
+  /** Start a Twin, for a discovered camera or on its own. */
   cameraAdd: 'camera:add',
   /** Configured cameras and whether each is running. */
   cameraList: 'camera:list',
@@ -123,10 +121,20 @@ export interface CameraPayload {
   online: boolean;
 }
 
-export interface CameraAvailabilityPayload {
-  canAdd: boolean;
-  reason?: string;
-  technicalDetail?: string;
+/**
+ * One network the scan considered. Mirrors `main/domain/camera.ts`, restated
+ * because the renderer cannot import from `main/`.
+ */
+export interface ScannedNetworkPayload {
+  cidr: string;
+  hosts: number;
+  skipped?: 'too-large';
+}
+
+export interface CameraScanPayload {
+  cameras: DiscoveredCameraPayload[];
+  /** What was searched, so the screen can justify the number it shows. */
+  networks: ScannedNetworkPayload[];
 }
 
 export interface CapacityPayload {
@@ -254,9 +262,9 @@ export interface ChirpHubApi {
    * A Result, not a bare list: "the scan could not run" and "your network has no
    * cameras" are different answers and need different advice.
    */
-  discoverCameras(): Promise<IpcResult<DiscoveredCameraPayload[]>>;
-  getCameraAvailability(): Promise<CameraAvailabilityPayload>;
-  addCamera(camera: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
+  discoverCameras(): Promise<IpcResult<CameraScanPayload>>;
+  /** Omit the camera to start a Twin that has not been matched to one yet. */
+  addCamera(camera?: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>>;
   listCameras(): Promise<CameraPayload[]>;
   removeCamera(input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>>;
   getCameraCapacity(): Promise<CapacityPayload>;

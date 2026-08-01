@@ -25,9 +25,35 @@ export interface DiscoveredCamera {
   model: string | null;
 }
 
+/**
+ * One network the scan considered, and whether it actually searched it.
+ *
+ * Reported rather than kept private because a scan that finds one camera on a
+ * network of twenty looks like a broken app unless the screen can say what it
+ * looked at. `skipped` is a value, not a branch (Contract 1 O) — a new reason to
+ * skip a network is a new member here, not an `if` in the adapter.
+ */
+export interface ScannedNetwork {
+  /** e.g. `192.168.2.0/24` — the network, not this machine's address on it. */
+  cidr: string;
+  /** Usable host addresses, so the screen can say "searched 254 addresses". */
+  hosts: number;
+  /** Absent when the network was searched. */
+  skipped?: 'too-large';
+}
+
+export interface CameraScan {
+  cameras: DiscoveredCamera[];
+  networks: ScannedNetwork[];
+}
+
 export interface Camera {
   id: string;
   displayName: string;
+  /**
+   * Empty for a camera added without a scan — we genuinely do not know it until
+   * the user enters it in the Twin, and inventing one would make the list lie.
+   */
   address: string;
   /** Host port the Twin's web UI is mapped to, on loopback. */
   hostPort: number;
@@ -46,14 +72,25 @@ export interface Camera {
 }
 
 /**
- * The container name for a camera's Twin, derived from its address.
+ * The container name for a camera's Twin, built from a seed.
  *
- * Deterministic on purpose: it makes setting up the same camera twice
- * impossible to do by accident, and it means the id can be recomputed from a
- * discovered camera without consulting anything.
+ * The seed is the camera's address when we have one, which makes it
+ * deterministic: setting the same discovered camera up twice becomes impossible
+ * to do by accident, and the id can be recomputed without consulting anything.
+ * A camera added without a scan has no address to use, so it is seeded with a
+ * generated token instead — unique, just not derivable.
  */
-export const twinIdFor = (prefix: string, address: string): string =>
-  `${prefix}${address.replace(/[^a-z0-9]+/gi, '-')}`;
+export const twinIdFor = (prefix: string, seed: string): string =>
+  `${prefix}${seed.replace(/[^a-z0-9]+/gi, '-')}`;
+
+/**
+ * What to call a camera added without a scan.
+ *
+ * Numbered rather than "New camera", because someone setting up twenty of them
+ * needs to tell the rows apart before any of them is configured. The real name
+ * is set in the Twin, which is also where the address and credentials go.
+ */
+export const numberedCameraLabel = (existing: number): string => `Camera ${existing + 1}`;
 
 /**
  * What to call a camera in our list before the user names it in the Twin.

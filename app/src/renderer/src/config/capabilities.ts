@@ -27,7 +27,7 @@ export interface CapabilityCopy {
 export const CAPABILITY_COPY: Record<CapabilityKey, CapabilityCopy> = {
   cameras: {
     emptyTitle: 'Camera recording needs Docker.',
-    unconfiguredTitle: 'No cameras yet. Chirp Hub can find cameras on your network automatically.',
+    unconfiguredTitle: 'No cameras yet. Add a camera and set it up in its own window.',
     unconfiguredAction: 'Scan for cameras',
   },
   lorawan: {

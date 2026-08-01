@@ -13,6 +13,17 @@ export const IMAGES = {
   otbr: 'openthread/otbr@sha256:0cfccb10c3d5f878028e07ea4f652f72fc967592ee9591978c41dcced0ede4e6',
   /** Loaded from a downloaded tarball, not pulled — see TWIN_MANIFEST_URL. */
   twin: 'lens-twin',
+  /**
+   * A Twin built from the Lens repo on this machine, which is the tag that
+   * repo's own README and compose files use (`docker build -t lens/twin:local
+   * -f twin/Dockerfile .`).
+   *
+   * Checked **before** the update feed. A machine that already has a Twin
+   * should not need the network to run one, and during development the feed
+   * does not exist at all — which is not a fact worth telling a user about, it
+   * is a reason to use what is already here.
+   */
+  twinLocal: 'lens/twin:local',
 } as const;
 
 /**

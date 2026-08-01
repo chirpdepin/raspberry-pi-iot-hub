@@ -4,7 +4,6 @@ import { promisify } from 'node:util';
 import { domainError, err, ok, type Result } from '../../domain/errors';
 import type { ContainerRuntimePort } from '../../usecase/camera-add/contract';
 import type { TwinRemovalPort } from '../../usecase/camera-remove/contract';
-import type { PathsPort } from '../paths/paths';
 
 const run = promisify(execFile);
 
@@ -19,30 +18,29 @@ const run = promisify(execFile);
  *
  * Twins run on bridge networking with a mapped port, because every Twin listens
  * on port 80 internally and twenty of them on host networking would collide.
+ *
+ * **State lives in a named Docker volume, not a host directory.** A bind mount
+ * was tried and failed on the first camera: the host directory is owned by the
+ * desktop user, the Twin runs as its own `twin:lens` account, and the container
+ * sat in a retry loop logging `mkdir ./data/config: permission denied` while
+ * reporting itself healthy-ish and answering nothing. A named volume is seeded
+ * from the image, ownership included, so the Twin's own `chown` in its
+ * Dockerfile actually applies. It is also the only option that behaves the same
+ * on Windows and macOS, where Docker runs in a VM and host paths and uids do not
+ * map through (Contract 3).
  */
 
-export interface TwinRuntimeDeps {
-  paths: PathsPort;
-}
-
-export const createTwinRuntime = ({ paths }: TwinRuntimeDeps) => {
+export const createTwinRuntime = () => {
   /**
-   * Where Twin data lives. Derived once so creation and deletion cannot build
-   * the path differently — the version of this bug that deletes the wrong
-   * directory is not one worth risking.
+   * The volume holding one Twin's data. Derived once so creation and deletion
+   * cannot build the name differently — the version of this bug that deletes
+   * another camera's recordings is not one worth risking.
    */
-  const camerasDir = (): string => paths.serviceDir('lorawan').replace(/lorawan$/, 'cameras');
+  const dataVolume = (id: string): string => `${id}-data`;
 
   const containers: ContainerRuntimePort = {
     async createTwin({ id, imageTag, hostPort, seedUsername, seedPassword }): Promise<Result<void>> {
       try {
-        // The Twin's own data directory, mounted so its configuration and
-        // credentials survive a restart. Nothing is written into it here: the
-        // Twin writes its own defaults on first boot and the user configures it
-        // from its UI.
-        const dataDir = `${camerasDir()}/${id}`;
-        await run('mkdir', ['-p', dataDir]);
-
         await run('docker', [
           'run',
           '-d',
@@ -55,8 +53,11 @@ export const createTwinRuntime = ({ paths }: TwinRuntimeDeps) => {
           // during the window before the user has set their own password.
           '-p',
           `127.0.0.1:${hostPort}:80`,
+          // Named volume, so its configuration and credentials survive a
+          // restart. Nothing is written into it here: the Twin writes its own
+          // defaults on first boot and the user configures it from its UI.
           '-v',
-          `${dataDir}:/home/twin/data`,
+          `${dataVolume(id)}:/home/twin/data`,
           // Consumed once, on first boot. The Twin marks the account as
           // must-change, so these stop working as soon as the user logs in.
           '-e',
@@ -103,9 +104,9 @@ export const createTwinRuntime = ({ paths }: TwinRuntimeDeps) => {
 
     async purgeData(id: string): Promise<Result<void>> {
       try {
-        // Only ever the one Twin's own directory. `camerasDir` is built the
-        // same way it is at creation, so this cannot reach outside it.
-        await run('rm', ['-rf', `${camerasDir()}/${id}`]);
+        // Only ever the one Twin's own volume, named the same way it is at
+        // creation, so this cannot reach another camera's recordings.
+        await run('docker', ['volume', 'rm', dataVolume(id)]);
         return ok(undefined);
       } catch (error) {
         return err(

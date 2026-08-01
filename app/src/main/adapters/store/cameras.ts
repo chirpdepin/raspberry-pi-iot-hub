@@ -63,6 +63,10 @@ export const createCameraStore = (): CameraRecordsPort => {
       }));
     },
 
+    async count(): Promise<number> {
+      return store.get('cameras').length;
+    },
+
     async save(camera: Camera): Promise<void> {
       const { firstLoginPassword, ...rest } = camera;
       const existing = store.get('cameras').filter((entry) => entry.id !== camera.id);

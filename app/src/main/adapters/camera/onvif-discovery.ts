@@ -3,7 +3,7 @@ import { networkInterfaces } from 'node:os';
 import { randomUUID } from 'node:crypto';
 
 import { domainError, err, ok, type Result } from '../../domain/errors';
-import type { DiscoveredCamera } from '../../domain/camera';
+import type { CameraScan, DiscoveredCamera, ScannedNetwork } from '../../domain/camera';
 import type { CameraDiscoveryPort } from '../../usecase/camera-discover/contract';
 import { ONVIF } from '../../config/defaults';
 
@@ -80,38 +80,73 @@ export const parseProbeMatch = (xml: string, fromAddress: string): DiscoveredCam
   };
 };
 
-/**
- * Every host address on this machine's IPv4 subnets.
- *
- * Exported for testing from a plain interface object. Capped: a /16 is 65k
- * probes, which is a denial of service against our own machine rather than a
- * scan, so anything larger than the configured limit is skipped rather than
- * silently truncated to a misleading subset.
- */
-export const sweepAddresses = (interfaces: ReturnType<typeof networkInterfaces>): string[] => {
-  const out: string[] = [];
+const toInt = (ip: string): number => ip.split('.').reduce((acc, part) => (acc << 8) + Number(part), 0) >>> 0;
 
-  for (const entries of Object.values(interfaces)) {
+const toDotted = (value: number): string =>
+  [value >>> 24, (value >>> 16) & 255, (value >>> 8) & 255, value & 255].join('.');
+
+/** Mask length from a dotted netmask: 255.255.255.0 → 24. */
+const prefixLength = (netmask: string): number => (toInt(netmask).toString(2).match(/1/g) ?? []).length;
+
+export interface ScanPlan {
+  network: ScannedNetwork;
+  /** Empty when the network was skipped. */
+  addresses: string[];
+}
+
+/**
+ * What this machine's IPv4 interfaces mean for a scan: which networks, how many
+ * addresses each, and which were too large to sweep.
+ *
+ * **The skipped ones are returned, not dropped.** They used to be silently
+ * `continue`d, so a machine on a flat /16 produced an empty address list, and
+ * the caller then reported "this device isn't on a network we can scan" — which
+ * reads as "you have no network" to someone who plainly does, on exactly the
+ * large networks most likely to hold twenty cameras.
+ *
+ * Capped because a /16 is 65k probes, which is a denial of service against our
+ * own machine rather than a scan.
+ *
+ * Exported for testing from a plain interface object, with no sockets involved.
+ */
+export const planScan = (interfaces: ReturnType<typeof networkInterfaces>): ScanPlan[] => {
+  const plans = new Map<string, ScanPlan>();
+
+  for (const [name, entries] of Object.entries(interfaces)) {
+    // Container and VM bridges are skipped silently, not reported: a camera
+    // cannot be on one, so naming them would be noise in the very sentence that
+    // exists to make the result legible.
+    const virtual = ONVIF.virtualInterfacePrefixes.some((prefix) => name.toLowerCase().startsWith(prefix));
+    if (virtual) continue;
+
     for (const entry of entries ?? []) {
       if (entry.family !== 'IPv4' || entry.internal) continue;
-
-      const toInt = (ip: string) =>
-        ip.split('.').reduce((acc, part) => (acc << 8) + Number(part), 0) >>> 0;
 
       const mask = toInt(entry.netmask);
       const base = toInt(entry.address) & mask;
       const size = (~mask >>> 0) + 1;
 
-      if (size < 2 || size > ONVIF.maxSweepHosts) continue;
+      if (size < 2) continue;
 
-      for (let offset = 1; offset < size - 1; offset++) {
-        const value = (base + offset) >>> 0;
-        out.push([value >>> 24, (value >>> 16) & 255, (value >>> 8) & 255, value & 255].join('.'));
+      const cidr = `${toDotted(base)}/${prefixLength(entry.netmask)}`;
+      if (plans.has(cidr)) continue;
+
+      // Usable hosts: the network and broadcast addresses are not probed.
+      const hosts = size - 2;
+
+      if (size > ONVIF.maxSweepHosts) {
+        plans.set(cidr, { network: { cidr, hosts, skipped: 'too-large' }, addresses: [] });
+        continue;
       }
+
+      const addresses: string[] = [];
+      for (let offset = 1; offset < size - 1; offset++) addresses.push(toDotted((base + offset) >>> 0));
+
+      plans.set(cidr, { network: { cidr, hosts }, addresses });
     }
   }
 
-  return [...new Set(out)];
+  return [...plans.values()];
 };
 
 /**
@@ -128,6 +163,7 @@ export const sweepAddresses = (interfaces: ReturnType<typeof networkInterfaces>)
  * fixed timer would not fix it; it would move the race.
  */
 export const discoverOnvifCameras = async (
+  targets: string[],
   replyWindowMs: number = ONVIF.replyWindowMs
 ): Promise<DiscoveredCamera[]> =>
   new Promise((resolve) => {
@@ -186,9 +222,7 @@ export const discoverOnvifCameras = async (
       const send = (address: string) =>
         new Promise<void>((sent) => socket.send(message, ONVIF.port, address, () => sent()));
 
-      const targets = [ONVIF.multicastAddress, ...sweepAddresses(networkInterfaces())];
-
-      void Promise.all(targets.map(send)).then(() => {
+      void Promise.all([ONVIF.multicastAddress, ...targets].map(send)).then(() => {
         if (settled) return;
         setTimeout(finish, replyWindowMs);
       });
@@ -198,14 +232,20 @@ export const discoverOnvifCameras = async (
 /**
  * The `CameraDiscoveryPort` implementation.
  *
- * The one failure worth reporting as a failure is having nothing to scan: no
- * usable IPv4 interface means the machine is not on a network, and reporting
- * that as "no cameras found" would send the user hunting for a camera fault
- * (Contract 2 rule 2).
+ * Reports the networks alongside the cameras, because "found 1" means nothing
+ * without "out of 254 addresses on 192.168.2.0/24" — that is the difference
+ * between a user believing the scan worked and believing the app is broken.
+ *
+ * The one failure worth reporting as a failure is having no network at all. A
+ * network too large to sweep is a **successful** scan that searched nothing, and
+ * says so through `skipped` — reporting it as an error would tell someone with a
+ * large flat network that they have no network (Contract 2 rule 2).
  */
 export const createOnvifDiscovery = (): CameraDiscoveryPort => ({
-  async discover(): Promise<Result<DiscoveredCamera[]>> {
-    if (sweepAddresses(networkInterfaces()).length === 0) {
+  async discover(): Promise<Result<CameraScan>> {
+    const plans = planScan(networkInterfaces());
+
+    if (plans.length === 0) {
       return err(
         domainError(
           'unknown',
@@ -215,6 +255,12 @@ export const createOnvifDiscovery = (): CameraDiscoveryPort => ({
       );
     }
 
-    return ok(await discoverOnvifCameras());
+    const networks: ScannedNetwork[] = plans.map((plan) => plan.network);
+    const targets = plans.flatMap((plan) => plan.addresses);
+
+    // Multicast still goes out even when every network was skipped: it costs one
+    // datagram and is the only thing that can find a camera on a network we
+    // refused to sweep.
+    return ok({ cameras: await discoverOnvifCameras(targets), networks });
   },
 });

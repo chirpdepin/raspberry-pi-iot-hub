@@ -117,7 +117,7 @@ export const buildDependencies = (): IpcDependencies => {
 
   const images = createImageStore({ paths });
 
-  const twinRuntime = createTwinRuntime({ paths });
+  const twinRuntime = createTwinRuntime();
   const onvifDiscovery = createOnvifDiscovery();
 
   const ensureTwinImage = async (onProgress?: (received: number, total: number) => void) =>
@@ -188,9 +188,6 @@ export const buildDependencies = (): IpcDependencies => {
       discovery: onvifDiscovery,
       configured: { addresses: async () => (await cameraStore.all()).map((camera) => camera.address) },
     },
-    cameraAvailability: {
-      blockers: { isImageAvailable: async () => (await ensureTwinImage()).ok },
-    },
     cameraAdd: {
       images: { ensure: ensureTwinImage },
       containers: twinRuntime.containers,
@@ -200,6 +197,9 @@ export const buildDependencies = (): IpcDependencies => {
         // enough that guessing it is not a strategy, and typable from the
         // dialog that shows it once.
         newPassword: () => randomBytes(18).toString('base64url'),
+        // Only ever a container-name seed, so it is short and need not be a
+        // full UUID — it just has to not collide with an existing Twin.
+        newId: () => randomBytes(6).toString('hex'),
       },
       records: cameraStore,
     },

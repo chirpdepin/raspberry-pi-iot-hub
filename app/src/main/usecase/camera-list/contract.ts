@@ -12,6 +12,7 @@ import type { Camera } from '../../domain/camera';
 
 export interface CameraRecordsPort {
   all(): Promise<Camera[]>;
+  count(): Promise<number>;
   save(camera: Camera): Promise<void>;
   remove(id: string): Promise<void>;
 }

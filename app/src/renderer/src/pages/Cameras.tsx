@@ -9,7 +9,8 @@ import { EmptyState } from '../features/common/EmptyState';
 import { Notice } from '../features/common/Notice';
 import { cameraColumns, discoveredColumns } from '../features/cameras/columns';
 import { CapacityBar } from '../features/cameras/CapacityBar';
-import { useCameras } from '../features/cameras/hooks/useCameras';
+import { ScanScope } from '../features/cameras/ScanScope';
+import { BLANK_ADD, useCameras } from '../features/cameras/hooks/useCameras';
 import { PageAction } from '../features/common/PageAction';
 import { PageLayout } from '../features/common/PageLayout';
 import { useHostDetailsQuery } from '../services/api/host/hooks/useHostDetailsQuery';
@@ -17,10 +18,12 @@ import { useHostDetailsQuery } from '../services/api/host/hooks/useHostDetailsQu
 /**
  * The Cameras screen.
  *
- * **Two tables, one flow.** The configured cameras are the page; scanning adds
- * a second table of what is on the network, and clicking a row there sets that
- * camera up and opens it. There is no wizard between the two — the Twin's own
- * UI is where a camera is configured, so getting the user there *is* the setup.
+ * **`[Add camera]` is the main route and scanning is optional.** Discovery only
+ * ever finds cameras that advertise themselves, so a user with twenty cameras
+ * may see one — the screen has to make that legible rather than let a partial
+ * result read as a broken app. `[Add camera]` starts a Twin with no camera
+ * attached; the user gives it an address in the Twin, which is where every other
+ * camera setting lives anyway.
  *
  * Contract 5: a view. Every decision lives in useCameras.
  */
@@ -31,8 +34,7 @@ export const Cameras = memo(() => {
   const {
     cameras,
     capacity,
-    availability,
-    discovered,
+    scan,
     isScanning,
     busyAddress,
     justAdded,
@@ -40,13 +42,13 @@ export const Cameras = memo(() => {
     handleScan,
     clearScan,
     handleSetUp,
+    handleAddBlank,
     handleOpen,
     handleRemove,
     dismissJustAdded,
   } = useCameras();
 
   const dockerReady = hostQuery.data?.capabilities.cameras.available ?? false;
-  const canAdd = availability?.canAdd ?? false;
 
   const columns = useMemo(
     () => cameraColumns(t, { onOpen: handleOpen, onRemove: (id) => handleRemove(id, true) }),
@@ -54,8 +56,8 @@ export const Cameras = memo(() => {
   );
 
   const scanColumns = useMemo(
-    () => discoveredColumns(t, { onSetUp: handleSetUp, busyAddress, canAdd }),
-    [t, handleSetUp, busyAddress, canAdd]
+    () => discoveredColumns(t, { onSetUp: handleSetUp, busyAddress }),
+    [t, handleSetUp, busyAddress]
   );
 
   return (
@@ -65,19 +67,35 @@ export const Cameras = memo(() => {
       // Always rendered, never moved. Scanning is never blocked: finding your
       // cameras proves they are reachable, which is useful even when setting
       // one up is not available yet.
+      // `[Add camera]` is primary; scanning is secondary, because most cameras
+      // will never turn up in a scan and setting one up must not depend on it.
       actions={
-        <PageAction
-          label={discovered ? 'Scan again' : 'Scan for cameras'}
-          showPlus={false}
-          onClick={handleScan}
-          disabledReason={
-            dockerReady
-              ? isScanning
-                ? 'Looking for cameras on your network…'
-                : undefined
-              : 'Cameras need Docker, which is not running.'
-          }
-        />
+        <>
+          <PageAction
+            label='Add camera'
+            onClick={handleAddBlank}
+            disabledReason={
+              !dockerReady
+                ? 'Cameras need Docker, which is not running.'
+                : busyAddress === BLANK_ADD
+                  ? 'Setting up…'
+                  : undefined
+            }
+          />
+          <PageAction
+            label={scan ? 'Scan again' : 'Scan for cameras'}
+            variant='secondary'
+            showPlus={false}
+            onClick={handleScan}
+            disabledReason={
+              dockerReady
+                ? isScanning
+                  ? 'Looking for cameras on your network…'
+                  : undefined
+                : 'Cameras need Docker, which is not running.'
+            }
+          />
+        </>
       }
     >
       {/* Docker missing is its own state: cameras cannot run without it, and
@@ -91,12 +109,6 @@ export const Cameras = memo(() => {
 
       {dockerReady ? (
         <>
-          {/* Stated up front rather than discovered halfway through setting a
-              camera up, which is where it used to fail. */}
-          {availability && !availability.canAdd ? (
-            <Notice title={availability.reason ?? ''} description={availability.technicalDetail} tone='warning' />
-          ) : null}
-
           {errorMessage ? <Notice title={errorMessage} tone='error' /> : null}
 
           {justAdded ? (
@@ -125,16 +137,21 @@ export const Cameras = memo(() => {
           {/* Results come first. The user pressed Scan a moment ago and this is
               the answer; leaving it under a full-height empty state put it
               below the fold on the one screen where it was the whole point. */}
-          {discovered ? (
+          {scan ? (
             <>
               <DataTable
                 heading='Found on your network'
-                data={discovered}
+                data={scan.cameras}
                 columns={scanColumns}
                 isLoading={isScanning}
                 emptyTitle='No cameras found'
-                emptyDescription='Check the camera is powered on and on the same network. Some cameras need ONVIF switched on in their own settings.'
+                emptyDescription="Only cameras that advertise themselves can be found this way, and many don't. Use Add camera to set one up directly."
               />
+
+              {/* Below the table so it explains the result, and shown whether or
+                  not anything was found — one camera out of twenty needs the
+                  explanation just as much as none does. */}
+              <ScanScope networks={scan.networks} />
 
               <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
                 <PageAction label='Hide results' variant='secondary' showPlus={false} onClick={clearScan} />
@@ -147,7 +164,7 @@ export const Cameras = memo(() => {
             data={cameras}
             columns={columns}
             emptyTitle={CAPABILITY_COPY.cameras.unconfiguredTitle}
-            emptyDescription='Scan for cameras to set up your first one.'
+            emptyDescription='Use Add camera to set one up, or scan to find cameras that advertise themselves.'
           />
         </>
       ) : null}

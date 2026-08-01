@@ -34,8 +34,7 @@ const api: ChirpHubApi = {
   getSubsystemStatus: () => ipcRenderer.invoke(IPC.subsystemStatus),
 
   discoverCameras: () => ipcRenderer.invoke(IPC.cameraDiscover),
-  getCameraAvailability: () => ipcRenderer.invoke(IPC.cameraAvailability),
-  addCamera: (camera) => ipcRenderer.invoke(IPC.cameraAdd, camera),
+  addCamera: (camera) => ipcRenderer.invoke(IPC.cameraAdd, camera ?? null),
   listCameras: () => ipcRenderer.invoke(IPC.cameraList),
   removeCamera: (input) => ipcRenderer.invoke(IPC.cameraRemove, input),
   getCameraCapacity: () => ipcRenderer.invoke(IPC.cameraCapacity),

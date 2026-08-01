@@ -16,7 +16,9 @@ const camera: DiscoveredCamera = {
 type CreateTwinMock = ReturnType<typeof vi.fn<ContainerRuntimePort['createTwin']>>;
 type EnsureMock = ReturnType<typeof vi.fn<ImageEnsurePort['ensure']>>;
 
-const ports = (overrides: { ensureFails?: boolean; portFails?: boolean; createFails?: boolean } = {}) => {
+const ports = (
+  overrides: { ensureFails?: boolean; portFails?: boolean; createFails?: boolean; existing?: number } = {}
+) => {
   const createTwin: CreateTwinMock = vi.fn(async () =>
     overrides.createFails ? err<void>(domainError('unknown', "Couldn't set up this camera on the device.")) : ok(undefined)
   );
@@ -35,8 +37,8 @@ const ports = (overrides: { ensureFails?: boolean; portFails?: boolean; createFa
     ports: {
       allocate: async () => (overrides.portFails ? err<number>(domainError('unknown', 'No free port.')) : ok(8_100)),
     },
-    secrets: { newPassword: () => 'a-generated-password' },
-    records: { save },
+    secrets: { newPassword: () => 'a-generated-password', newId: () => 'generated1234' },
+    records: { save, count: async () => overrides.existing ?? 0 },
     createTwin,
     ensure,
     save,
@@ -101,6 +103,48 @@ describe('camera-add', () => {
     const result = await handleCameraAdd(ports(), camera);
 
     expect(result.ok && result.value.camera.displayName).toBe('TC71');
+  });
+
+  /**
+   * The main route, not a fallback. Discovery finds only cameras that advertise
+   * themselves, so someone with twenty cameras and one ONVIF-enabled model has
+   * to be able to set up the other nineteen without one.
+   */
+  describe('without a discovered camera', () => {
+    it('still starts a Twin', async () => {
+      const deps = ports();
+      const result = await handleCameraAdd(deps);
+
+      expect(result.ok).toBe(true);
+      expect(deps.createTwin).toHaveBeenCalledOnce();
+    });
+
+    it('still writes no configuration to the container', async () => {
+      const deps = ports();
+      await handleCameraAdd(deps);
+
+      const input = deps.createTwin.mock.calls[0]?.[0];
+      expect(Object.keys(input ?? {}).sort()).toEqual(['hostPort', 'id', 'imageTag', 'seedPassword', 'seedUsername']);
+    });
+
+    it('numbers the camera, so twenty of them are still tellable apart', async () => {
+      const result = await handleCameraAdd(ports({ existing: 3 }));
+
+      expect(result.ok && result.value.camera.displayName).toBe('Camera 4');
+    });
+
+    it('leaves the address empty rather than inventing one', async () => {
+      const result = await handleCameraAdd(ports());
+
+      expect(result.ok && result.value.camera.address).toBe('');
+    });
+
+    it('seeds the container name from a generated token, since there is no address', async () => {
+      const deps = ports();
+      await handleCameraAdd(deps);
+
+      expect(deps.createTwin.mock.calls[0]?.[0].id).toBe('twin-generated1234');
+    });
   });
 
   it('stops if the camera software cannot be downloaded', async () => {

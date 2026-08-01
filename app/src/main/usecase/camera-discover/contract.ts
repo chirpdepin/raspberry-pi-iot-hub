@@ -1,5 +1,5 @@
 import type { Result } from '../../domain/errors';
-import type { DiscoveredCamera } from '../../domain/camera';
+import type { CameraScan } from '../../domain/camera';
 
 /**
  * Finding cameras on the network.
@@ -15,7 +15,15 @@ import type { DiscoveredCamera } from '../../domain/camera';
  * advice.
  */
 export interface CameraDiscoveryPort {
-  discover(): Promise<Result<DiscoveredCamera[]>>;
+  /**
+   * Returns the networks it considered alongside the cameras it found.
+   *
+   * The scope is part of the answer, not decoration: "found 1" is indefensible
+   * on its own to someone who owns twenty cameras, and "searched 254 addresses
+   * on 192.168.2.0/24" is what turns it from a suspected bug into a fact they
+   * can act on.
+   */
+  discover(): Promise<Result<CameraScan>>;
 }
 
 /**

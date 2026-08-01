@@ -60,7 +60,10 @@ const VIEWPORTS = [
  * None of these strings appears in the navigation.
  */
 const PAGE_CONTENT = {
-  '/cameras': ['No cameras yet', 'needs Docker'],
+  // 'Your cameras' is the table heading, present whether or not any exist —
+  // without it this check fails on a machine that happens to have a camera set
+  // up, which is machine state, not a regression.
+  '/cameras': ['No cameras yet', 'needs Docker', 'Your cameras'],
   '/lorawan': ['No LoRaWAN radio', 'Gateway EUI', 'Register with Chirp'],
   '/zigbee': ['No Zigbee coordinator', 'Start Zigbee'],
   '/thread': ['needs its own radio', 'Start Thread'],
@@ -375,19 +378,34 @@ async function run() {
     'a scan runs without the camera software installed',
     discovery !== undefined && (discovery.ok === true || typeof discovery.error?.message === 'string'),
     discovery?.ok === true
-      ? `found ${discovery.value.length}`
+      ? `found ${discovery.value.cameras.length}`
       : `failed: ${discovery?.error?.message ?? 'undefined'}`
+  );
+
+  /**
+   * The scope is half the answer. "Found 1" reads as a broken app to someone
+   * with twenty cameras; "1, out of 254 addresses on 192.168.2.0/24" is a fact
+   * they can act on.
+   */
+  check(
+    'a scan reports which networks it searched',
+    discovery?.ok === true &&
+      Array.isArray(discovery.value.networks) &&
+      discovery.value.networks.every((n) => typeof n.cidr === 'string' && typeof n.hosts === 'number'),
+    discovery?.ok === true
+      ? discovery.value.networks.map((n) => `${n.cidr} (${n.hosts}${n.skipped ? `, ${n.skipped}` : ''})`).join(', ')
+      : 'scan failed'
   );
 
   /**
    * The result the user's bar was set on: the TC71 at 192.168.2.205 must appear.
    * Skipped when that camera is not on the network, so this does not fail in CI.
    */
-  if (discovery?.ok === true && discovery.value.length > 0) {
+  if (discovery?.ok === true && discovery.value.cameras.length > 0) {
     check(
       'a discovered camera carries an address and a readable label',
-      discovery.value.every((camera) => Boolean(camera.address) && Boolean(camera.label)),
-      discovery.value.map((camera) => `${camera.label} @ ${camera.address}`).join(', ')
+      discovery.value.cameras.every((camera) => Boolean(camera.address) && Boolean(camera.label)),
+      discovery.value.cameras.map((camera) => `${camera.label} @ ${camera.address}`).join(', ')
     );
   }
 

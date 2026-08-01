@@ -69,8 +69,6 @@ export interface DiscoveredColumnActions {
   onSetUp: (camera: DiscoveredCameraPayload) => void;
   /** The address currently being set up, so its row can say so. */
   busyAddress: string | null;
-  /** False while the camera software is unavailable; the row says why. */
-  canAdd: boolean;
 }
 
 /**
@@ -104,7 +102,7 @@ export const discoveredColumns = (
         <Button
           variant={row.original.alreadyAdded ? 'secondary' : 'primary'}
           size='small'
-          disabled={actions.busyAddress !== null || (!row.original.alreadyAdded && !actions.canAdd)}
+          disabled={actions.busyAddress !== null}
           onClick={() => actions.onSetUp(row.original)}
         >
           {t(

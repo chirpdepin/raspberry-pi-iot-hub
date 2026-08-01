@@ -132,6 +132,39 @@ the same wall.
 
 ---
 
+## Is restreamed footage a fair stand-in for a live camera?
+
+Mostly yes, and the check is worth understanding because it is easy to misread.
+
+Two Twins were run against the live Tapo, then reconfigured to the restream and
+measured again:
+
+| Phase | RSS/Twin | CPU/Twin | load1 |
+|---|---|---|---|
+| live camera | 113.9 MiB | 6.18% | 0.97 |
+| restream | 162.1 MiB | 16.83% | 0.99 |
+
+**That is not a transport difference.** The live phase ran at night against a
+quiet room; the restream loops footage with a person moving. It is finding 2
+again, measured a third time.
+
+The comparison that *is* like-for-like is live-quiet against
+**restreamed-static**, which is the same kind of scene over a different transport:
+
+| Same scene type | RSS/Twin |
+|---|---|
+| live camera, quiet | 113.9 MiB |
+| restreamed static footage (N=1–7) | 112.4–114.8 MiB |
+
+Agreement within ~1%, and the 162.1 MiB figure sits in the motion-footage range
+(137–159 MiB) where it belongs. **The restream is a fair stand-in.**
+
+A perfectly clean test would need the live scene and the recording to contain
+identical activity, which is not reproducible on demand. Anyone repeating this
+should compare like scene against like scene, not live against recorded.
+
+---
+
 ## Method notes, including what went wrong
 
 - **Saturation criteria were fixed before the run** — load > cores, MemAvailable
@@ -146,6 +179,13 @@ the same wall.
   and reports non-decoding Twins as failures rather than averaging them in.
 - **The keyframe counter resets to 0** when a Twin restarts its machinery, which
   makes a naive `after − before` go hugely negative and fake a stall.
+- **Parse the counter, do not strip the line.** `tr -dc '0-9'` on a whole log
+  line concatenates the ISO timestamp into the number and yields values like
+  3.3e21. Cut to the value after `mainstream: ` first.
+- **A bespoke copy of the configuration routine failed silently** and left both
+  Twins with no camera while still reporting plausible-looking RSS and CPU. Reuse
+  the configuration path that is already proven, and make the harness refuse to
+  report a number when a Twin is not demonstrably decoding.
 - **Throttling was never observed.** The board stayed at 51–62 °C throughout,
   `get_throttled` = `0x0` even at load 24. Heat is not the limit here.
 

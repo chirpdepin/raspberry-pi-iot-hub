@@ -911,6 +911,12 @@ No throttling at any point (`get_throttled` = `0x0`, 51–62 °C). Heat is not t
 - **The Tapo refuses a 3rd concurrent RTSP session**, so the ramp had to run on
   restreamed real footage (`-c copy`, identical profile), one session per Twin.
 
+- ✅ **The restream was validated as a stand-in for the live camera.** Two Twins
+  on the live Tapo measured 113.9 MiB each against a quiet scene; restreamed
+  static footage measured 112.4–114.8 MiB — agreement within ~1%. The naive
+  live-vs-restream comparison looks like a 1.4× gap only because the live scene
+  was quiet while the restream loops motion footage, which is finding 2 again.
+
 ### Open
 
 - 🚧 **Cloud upload and live viewing are not in these numbers.** Every Twin

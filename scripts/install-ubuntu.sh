@@ -27,11 +27,13 @@ SX1302_HAL_REPO="https://github.com/Lora-net/sx1302_hal.git"
 SKIP_UPGRADE=0
 SKIP_DOCKER=0
 SKIP_RADIOS=0
+WITH_DESKTOP=0
 for arg in "$@"; do
     case "$arg" in
         --skip-upgrade) SKIP_UPGRADE=1 ;;
         --skip-docker)  SKIP_DOCKER=1 ;;
         --skip-radios)  SKIP_RADIOS=1 ;;
+        --with-desktop) WITH_DESKTOP=1 ;;
         *) echo "unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -188,6 +190,14 @@ systemctl enable iot-hub-lorawan.service
 if [ "$SKIP_RADIOS" -eq 0 ]; then
     step "Zigbee/Thread radios"
     "$REPO_DIR/scripts/install-radios.sh"
+fi
+
+# ---------------------------------------------------------------------------
+# Optional and last, because it is the only part that is not needed on a headless
+# unit. Everything above must already be working before a screen is involved.
+if [ "$WITH_DESKTOP" -eq 1 ]; then
+    step "Desktop session"
+    "$REPO_DIR/scripts/install-desktop.sh"
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Chirp Hub
+Comment=Set up cameras, LoRaWAN and Zigbee on this device
+Exec=chirp-hub
+Icon=chirp-hub
+Terminal=false
+Categories=Utility;Settings;
+StartupNotify=true

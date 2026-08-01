@@ -17,7 +17,9 @@
     "check": "npm run lint && npm run check:boundaries:self-test && npm run check:boundaries && npm run typecheck && npm run build && npm run test:smoke",
     "test:smoke": "electron tests/smoke.mjs",
     "lint": "oxlint",
-    "format": "prettier --write \"src/**/*.{ts,tsx,json}\" \"scripts/**/*.ts\" \"tests/**/*.mjs\" \"*.ts\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,json}\" \"scripts/**/*.ts\" \"tests/**/*.mjs\" \"*.ts\"",
+    "package": "electron-vite build && electron-builder",
+    "package:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
     "@chirpwireless/ui-kit": "git+https://github.com/chirpwireless/ui-kit.git#542ddde4e0d7ceecada5ae3de32b4611dd22f2c0",
@@ -65,8 +67,8 @@
     "vitest": "^4.1.10"
   },
   "comments": {
-    "react-router-dom": "PINNED to 6.30.4, NOT 7.x. The ui-kit peer range is ^6.26.1 and RouterLink/Link/GeneralInfoCard import from it directly. A deliberate exception to 'use the latest version' — see app/electron.md.",
-    "typescript": "7.0.2, the current stable release. The fallback to 5.x described in electron.md was NOT needed: TS 7 typechecks MUI v9, React 19, generics, sx callbacks and the ui-kit subpath imports with zero errors — including the 37 ui-kit dist .d.ts files that reference node_modules paths, which skipLibCheck covers. Verified 2026-08-01 before pinning.",
+    "react-router-dom": "PINNED to 6.30.4, NOT 7.x. The ui-kit peer range is ^6.26.1 and RouterLink/Link/GeneralInfoCard import from it directly. A deliberate exception to 'use the latest version' \u2014 see app/electron.md.",
+    "typescript": "7.0.2, the current stable release. The fallback to 5.x described in electron.md was NOT needed: TS 7 typechecks MUI v9, React 19, generics, sx callbacks and the ui-kit subpath imports with zero errors \u2014 including the 37 ui-kit dist .d.ts files that reference node_modules paths, which skipLibCheck covers. Verified 2026-08-01 before pinning.",
     "@chirpwireless/ui-kit": "Pinned to a commit SHA rather than a branch so builds are reproducible. 542ddde is v1.0.0 with MUI v9 peers and a committed dist/, the same tree chirp-frontend consumes.",
     "oxlint": "oxlint instead of ESLint: typescript-eslint peers >=4.8.4 <6.1.0, so it supports neither TypeScript 7 (current stable, used here) nor TypeScript 6 (still beta), and cannot parse these files at all. oxlint is Rust-based with its own parser, never invokes tsc, and reads ESLint v8-style config. eslint.config.js.pending is kept for when typescript-eslint catches up."
   },
@@ -75,5 +77,71 @@
     "electron@43.2.0": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.1": true
+  },
+  "build": {
+    "appId": "io.chirpwireless.hub",
+    "productName": "Chirp Hub",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "desktop": {
+        "entry": {
+          "Name": "Chirp Hub",
+          "Comment": "Set up cameras, LoRaWAN and Zigbee on this device"
+        }
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "chirpdepin",
+        "repo": "raspberry-pi-iot-hub"
+      }
+    ]
   }
 }

@@ -239,6 +239,14 @@ async function run() {
   check('language selector present', sidebar.hasLanguage);
   check('theme label present', sidebar.hasThemeLabel);
 
+  // Chirp insets page content by 24px, from PageWrapper alone. <main> carried
+  // another 48px on top, so every screen sat at 72px. That line looked
+  // deliberate, which is exactly why it needs a test rather than an eye.
+  const mainPadding = await window.webContents.executeJavaScript(
+    `getComputedStyle(document.querySelector('main')).padding`
+  );
+  check('main adds no padding of its own', /^0px/.test(mainPadding), mainPadding);
+
   // ---------------------------------------------------------------------
   // Phase 11: every section the user can reach must actually render.
   //

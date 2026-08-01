@@ -1,12 +1,11 @@
-import { PageWrapper, StackRowJB } from '@chirpwireless/ui-kit/primitives';
-import { Stack, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CAPABILITY_COPY } from '../config/capabilities';
-import { LAYOUT } from '../config/defaults';
 import type { CapabilityKey, NavItem } from '../config/navigation';
 import { EmptyState } from '../features/common/EmptyState';
+import { PageLayout } from '../features/common/PageLayout';
 import { useHostDetailsQuery } from '../services/api/host/hooks/useHostDetailsQuery';
 
 interface CapabilityPageProps {
@@ -33,29 +32,23 @@ export const CapabilityPage = memo<CapabilityPageProps>(({ item }) => {
   const isAvailable = capability?.available ?? false;
 
   return (
-    <PageWrapper>
-      <Stack sx={{ gap: LAYOUT.pageGap, width: '100%' }}>
-        <StackRowJB>
-          <Typography variant='h2'>{t(item.label)}</Typography>
-        </StackRowJB>
+    <PageLayout title={item.label}>
+      <Typography variant='body1' sx={(theme) => ({ color: theme.palette.text.secondary })}>
+        {t(item.subtitle)}
+      </Typography>
 
-        <Typography variant='body1' sx={(theme) => ({ color: theme.palette.text.secondary })}>
-          {t(item.subtitle)}
-        </Typography>
-
-        {isAvailable ? (
-          <EmptyState title={copy.unconfiguredTitle} actionLabel={copy.unconfiguredAction} onAction={() => undefined} />
-        ) : (
-          <EmptyState
-            // Prefer the reason the main process computed — it distinguishes
-            // "Docker missing" from "Docker stopped", which the static registry
-            // copy cannot.
-            title={capability?.reason ?? copy.emptyTitle}
-            secondaryLabel={copy.learnMore}
-            onSecondary={() => undefined}
-          />
-        )}
-      </Stack>
-    </PageWrapper>
+      {isAvailable ? (
+        <EmptyState title={copy.unconfiguredTitle} actionLabel={copy.unconfiguredAction} onAction={() => undefined} />
+      ) : (
+        <EmptyState
+          // Prefer the reason the main process computed — it distinguishes
+          // "Docker missing" from "Docker stopped", which the static registry
+          // copy cannot.
+          title={capability?.reason ?? copy.emptyTitle}
+          secondaryLabel={copy.learnMore}
+          onSecondary={() => undefined}
+        />
+      )}
+    </PageLayout>
   );
 });

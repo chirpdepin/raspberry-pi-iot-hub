@@ -63,6 +63,8 @@ export const LAYOUT = {
   /** Menu row height in the language dropdown, matching chirp. */
   menuItemHeight: '40px',
 
+  /** Readable line length for a form column, so fields do not stretch. */
+  formMaxWidth: '640px',
   /** Empty-state icon, matching chirp's 56x56 Chirp mark. */
   emptyIconSize: 56,
   /** Empty-state block height, so a mostly-empty page still has weight. */

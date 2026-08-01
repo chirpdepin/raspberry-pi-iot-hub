@@ -1,4 +1,3 @@
-import { Button, PageWrapper, StackRowJB } from '@chirpwireless/ui-kit/primitives';
 import { Stack, Typography } from '@mui/material';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { CAPABILITY_COPY } from '../config/capabilities';
 import { LAYOUT } from '../config/defaults';
 import { EmptyState } from '../features/common/EmptyState';
+import { PageAction } from '../features/common/PageAction';
+import { PageLayout } from '../features/common/PageLayout';
 import { DeviceRow } from '../features/zigbee/DeviceRow';
 import { JoinWindow } from '../features/zigbee/JoinWindow';
 import { useZigbee } from '../features/zigbee/hooks/useZigbee';
@@ -46,50 +47,46 @@ export const Zigbee = memo(() => {
   const hasDevices = devices.length > 0;
 
   return (
-    <PageWrapper>
-      <Stack sx={{ gap: LAYOUT.pageGap, width: '100%' }}>
-        <StackRowJB>
-          <Typography variant='h2'>{t('Zigbee')}</Typography>
+    <PageLayout
+      title='Zigbee'
+      // Chirp's rule: the header action appears only once the page has content.
+      // With no devices yet, the action belongs in the empty state, where it is
+      // the obvious next step rather than a control in the corner.
+      action={
+        coordinator && hasDevices && !isJoining ? <PageAction label='Add device' onClick={handleAddDevice} /> : null
+      }
+    >
+      {errorMessage ? (
+        <Typography variant='body1' sx={(theme) => ({ color: theme.palette.error.main })}>
+          {t(errorMessage)}
+        </Typography>
+      ) : null}
 
-          {coordinator && !isJoining ? (
-            <Button variant='primary' size='medium' onClick={handleAddDevice}>
-              {t('Add device')}
-            </Button>
-          ) : null}
-        </StackRowJB>
+      {!coordinator && !isDetecting ? (
+        <EmptyState title={CAPABILITY_COPY.zigbee.emptyTitle} secondaryLabel={CAPABILITY_COPY.zigbee.learnMore} />
+      ) : null}
 
-        {errorMessage ? (
-          <Typography variant='body1' sx={(theme) => ({ color: theme.palette.error.main })}>
-            {t(errorMessage)}
+      {coordinator ? (
+        <Stack sx={{ gap: LAYOUT.cardGap }}>
+          <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
+            {coordinator.model} · {coordinator.port}
           </Typography>
-        ) : null}
 
-        {!coordinator && !isDetecting ? (
-          <EmptyState title={CAPABILITY_COPY.zigbee.emptyTitle} secondaryLabel={CAPABILITY_COPY.zigbee.learnMore} />
-        ) : null}
+          {isJoining ? <JoinWindow secondsRemaining={secondsRemaining} onStop={handleStopJoin} /> : null}
 
-        {coordinator ? (
-          <Stack sx={{ gap: '16px' }}>
-            <Typography variant='body2' sx={(theme) => ({ color: theme.palette.text.secondary })}>
-              {coordinator.model} · {coordinator.port}
-            </Typography>
-
-            {isJoining ? <JoinWindow secondsRemaining={secondsRemaining} onStop={handleStopJoin} /> : null}
-
-            {hasDevices ? (
-              devices.map((device) => <DeviceRow key={device.ieeeAddress} device={device} onLink={handleLinkDevice} />)
-            ) : isJoining ? null : (
-              <EmptyState
-                title={CAPABILITY_COPY.zigbee.unconfiguredTitle}
-                actionLabel={isStarting ? 'Starting…' : CAPABILITY_COPY.zigbee.unconfiguredAction}
-                onAction={handleAddDevice}
-                secondaryLabel='Start Zigbee'
-                onSecondary={handleStart}
-              />
-            )}
-          </Stack>
-        ) : null}
-      </Stack>
-    </PageWrapper>
+          {hasDevices ? (
+            devices.map((device) => <DeviceRow key={device.ieeeAddress} device={device} onLink={handleLinkDevice} />)
+          ) : isJoining ? null : (
+            <EmptyState
+              title={CAPABILITY_COPY.zigbee.unconfiguredTitle}
+              actionLabel={isStarting ? 'Starting…' : CAPABILITY_COPY.zigbee.unconfiguredAction}
+              onAction={handleAddDevice}
+              secondaryLabel='Start Zigbee'
+              onSecondary={handleStart}
+            />
+          )}
+        </Stack>
+      ) : null}
+    </PageLayout>
   );
 });

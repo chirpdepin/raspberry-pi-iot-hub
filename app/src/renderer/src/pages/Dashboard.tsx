@@ -1,13 +1,12 @@
-import { PageWrapper, StackRowJB } from '@chirpwireless/ui-kit/primitives';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { LAYOUT } from '../config/defaults';
 import { AttentionStrip } from '../features/dashboard/AttentionStrip';
 import { CapabilityCard } from '../features/dashboard/CapabilityCard';
 import { DeviceCard } from '../features/dashboard/DeviceCard';
 import { useDashboard } from '../features/dashboard/hooks/useDashboard';
+import { PageLayout } from '../features/common/PageLayout';
 
 /**
  * The dashboard.
@@ -17,19 +16,13 @@ import { useDashboard } from '../features/dashboard/hooks/useDashboard';
  * needing attention.
  */
 export const Dashboard = memo(() => {
-  const { t } = useTranslation();
   const { host, appInfo, docker, cards, attention } = useDashboard();
 
   return (
-    <PageWrapper>
-      <Stack sx={{ gap: LAYOUT.pageGap, width: '100%' }}>
-        <StackRowJB>
-          <Typography variant='h2'>{t('Dashboard')}</Typography>
-        </StackRowJB>
+    <PageLayout title='Dashboard'>
+      <AttentionStrip items={attention} />
 
-        <AttentionStrip items={attention} />
-
-        <Box
+      <Box
           sx={{
             display: 'grid',
             gap: LAYOUT.cardGap,
@@ -38,13 +31,12 @@ export const Dashboard = memo(() => {
             gridTemplateColumns: `repeat(auto-fill, minmax(${LAYOUT.cardMinWidth}, 1fr))`,
           }}
         >
-          <DeviceCard host={host} appInfo={appInfo} docker={docker} />
+        <DeviceCard host={host} appInfo={appInfo} docker={docker} />
 
-          {cards.map((card) => (
-            <CapabilityCard key={card.key} card={card} />
-          ))}
-        </Box>
-      </Stack>
-    </PageWrapper>
+        {cards.map((card) => (
+          <CapabilityCard key={card.key} card={card} />
+        ))}
+      </Box>
+    </PageLayout>
   );
 });

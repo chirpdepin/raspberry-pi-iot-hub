@@ -119,6 +119,29 @@ So this is purely a failed certificate renewal.
 
 **Fix:** renew the certificate and check auto-renewal for `mqtt-iot`.
 
+`mqtt-iot.dev.chirpwireless.io` is valid until 2026-09-07, so this is production
+only.
+
+### Everything downstream of it is proven
+
+Publishing the lamp's real payload to the exact topic the bridge uses — stepping
+past the expired certificate, and nothing else — makes the whole chain work:
+
+```
+topic:   iot/<org>/<connection>/zigbee2mqtt/0x00158d00053c075f
+payload: {"brightness":80,"linkquality":188,"state":"ON"}
+```
+
+Chirp accepted it, resolved the device from the topic, parsed the JSON, and its
+mapping picker — empty until then — offered exactly `state`, `brightness` and
+`linkquality`, showing `state = OFF` with a timestamp. So topic construction,
+device-ID resolution, payload parsing and sensor mapping are all correct, and
+the expired certificate is the only thing between the hub and live telemetry.
+
+That the picker is populated **from payloads actually received** also confirms
+the onboarding design: mappings are proposed from what a device really sends,
+so a device nobody has modelled still works.
+
 ---
 
 ## 4. Corrections to our own assumptions

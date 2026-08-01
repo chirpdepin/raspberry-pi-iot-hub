@@ -468,5 +468,7 @@ Recorded in `docs/platform-findings.md`, with the three platform-side defects.
 | Create Cloud MQTT connector | ✅ Credentials valid; broker accepts the session and a publish |
 | Zigbee telemetry to Chirp | ❌ **Blocked by Chirp** — the broker's TLS certificate expired 2026-07-23 |
 | Bridge configured on the hub | ✅ Correct and outbound-only; connects as soon as the certificate is renewed |
-| Pair the Zigbee bulb | ⏸ Needs the physical reset (off/on 5×). Join window opened and closed cleanly; the radio layer works |
+| Pair the Zigbee bulb | ✅ Paulmann 50064 spot `0x00158d00053c075f` joined, LQI 184–188. Toggled off/dim/off/bright from the hub and **confirmed physically by the owner** |
+| Provision it in Chirp | ✅ Device created on the Cloud MQTT connector, topic `<prefix>/zigbee2mqtt/{deviceId}`, `state` mapped |
+| Prove the MQTT path | ✅ Publishing the real payload past the expired certificate made Chirp resolve the device, parse the JSON and offer exactly `state`/`brightness`/`linkquality`. **Only the certificate is in the way** |
 | Camera Twins | ⏸ Deferred — no published Twin image, and testing needs a Lens login |

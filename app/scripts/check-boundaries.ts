@@ -241,7 +241,11 @@ const rules: Rule[] = [
   {
     id: 'no-hardcoded-path',
     why: 'System paths come from PathsPort so the same code runs on Ubuntu Server today and Ubuntu Core later, where these become $SNAP_DATA.',
-    applies: (p) => !p.startsWith('main/adapters/paths/') && !p.startsWith('main/config/'),
+    // Tests are exempt: asserting that PathsPort produces "/etc/iot-hub/..." is
+    // exactly how we prove the port is correct, and that assertion has to name
+    // the concrete value.
+    applies: (p) =>
+      !p.startsWith('main/adapters/paths/') && !p.startsWith('main/config/') && !p.endsWith('.test.ts'),
     check: (p, lines) => {
       const out: Violation[] = [];
       lines.forEach((text, i) => {

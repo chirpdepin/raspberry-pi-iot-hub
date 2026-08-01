@@ -1,8 +1,22 @@
 import { app, ipcMain } from 'electron';
 
-import { IPC, type AppInfo, type DockerStatus, type HostCapabilities } from '../../shared/ipc';
+import {
+  IPC,
+  type AppInfo,
+  type DockerStatus,
+  type GatewayRegisterInput,
+  type HostCapabilities,
+  type LnsCredentialsPayload,
+} from '../../shared/ipc';
+import type { LorawanRegion } from '../domain/gateway';
 import { handleDockerEnsure, handleDockerInstall } from '../usecase/docker-ensure/usecase';
 import type { DockerEnsurePorts } from '../usecase/docker-ensure/contract';
+import type { GatewayDetectPorts } from '../usecase/gateway-detect/contract';
+import { handleGatewayDetect } from '../usecase/gateway-detect/usecase';
+import type { GatewayProvisionPorts } from '../usecase/gateway-provision/contract';
+import { handleGatewayProvision } from '../usecase/gateway-provision/usecase';
+import type { GatewayRegisterPorts } from '../usecase/gateway-register/contract';
+import { handleGatewayRegister } from '../usecase/gateway-register/usecase';
 import type { HostCapabilitiesPorts } from '../usecase/host-capabilities/contract';
 import { handleHostCapabilities } from '../usecase/host-capabilities/usecase';
 
@@ -17,6 +31,9 @@ import { handleHostCapabilities } from '../usecase/host-capabilities/usecase';
 export interface IpcDependencies {
   hostCapabilities: HostCapabilitiesPorts;
   docker: DockerEnsurePorts;
+  gatewayDetect: GatewayDetectPorts;
+  gatewayRegister: GatewayRegisterPorts;
+  gatewayProvision: GatewayProvisionPorts;
 }
 
 export const registerIpcHandlers = (deps: IpcDependencies): void => {
@@ -49,6 +66,20 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   });
 
   ipcMain.handle(IPC.dockerInstall, async () => handleDockerInstall(deps.docker));
+
+  ipcMain.handle(IPC.gatewayDetect, async () => handleGatewayDetect(deps.gatewayDetect));
+
+  ipcMain.handle(IPC.gatewayRegister, async (_event, input: GatewayRegisterInput) =>
+    handleGatewayRegister(deps.gatewayRegister, {
+      eui: input.eui,
+      name: input.name,
+      region: input.region as LorawanRegion,
+    })
+  );
+
+  ipcMain.handle(IPC.gatewayProvision, async (_event, credentials: LnsCredentialsPayload) =>
+    handleGatewayProvision(deps.gatewayProvision, credentials)
+  );
 
   ipcMain.handle(IPC.hostDetails, async () => {
     const { host, capabilities } = await handleHostCapabilities(deps.hostCapabilities);

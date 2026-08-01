@@ -1,9 +1,14 @@
 import { shell } from 'electron';
 
+import { createChirpGatewayClient } from './adapters/chirp/gateway-client';
+import { readZipEntries } from './adapters/chirp/zip';
 import { createDockerRuntime } from './adapters/container/docker-runtime';
+import { createConcentratorDiscovery } from './adapters/discovery/concentrator';
 import { createHostInfo } from './adapters/discovery/host-info';
 import { createRadioDiscovery } from './adapters/discovery/radio-discovery';
 import { createPaths } from './adapters/paths/paths';
+import { createPrivilegedRunner } from './adapters/privileged/privileged-runner';
+import { createSessionStore } from './adapters/store/session';
 import type { IpcDependencies } from './ipc/register';
 
 /**
@@ -42,5 +47,13 @@ export const buildDependencies = (): IpcDependencies => {
       },
     },
     docker: { runtime: containerRuntime },
+    gatewayDetect: { concentrator: createConcentratorDiscovery(paths) },
+    gatewayRegister: {
+      chirp: createChirpGatewayClient({ auth: createSessionStore(), unzip: readZipEntries }),
+    },
+    gatewayProvision: {
+      privileged: createPrivilegedRunner(),
+      paths: { credentialsDir: () => paths.lorawanCredentialsDir() },
+    },
   };
 };

@@ -19,6 +19,10 @@ const api: ChirpHubApi = {
   getHostDetails: () => ipcRenderer.invoke(IPC.hostDetails),
   getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
   installDocker: () => ipcRenderer.invoke(IPC.dockerInstall),
+
+  detectGateway: () => ipcRenderer.invoke(IPC.gatewayDetect),
+  registerGateway: (input) => ipcRenderer.invoke(IPC.gatewayRegister, input),
+  provisionGateway: (credentials) => ipcRenderer.invoke(IPC.gatewayProvision, credentials),
 };
 
 contextBridge.exposeInMainWorld('chirpHub', api);

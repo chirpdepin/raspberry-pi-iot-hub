@@ -36,7 +36,8 @@
     "react-perf/jsx-no-jsx-as-prop": "off",
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
-    "unicorn/require-module-specifiers": "off"
+    "unicorn/require-module-specifiers": "off",
+    "no-await-in-loop": "off"
   },
   "overrides": [
     {

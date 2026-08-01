@@ -21,6 +21,13 @@ export const IPC = {
   dockerInstall: 'docker:install',
   /** Host facts plus per-capability availability and reasons. */
   hostDetails: 'host:details',
+
+  /** The fitted LoRaWAN concentrator, or null. */
+  gatewayDetect: 'gateway:detect',
+  /** Register with Chirp and fetch credentials. */
+  gatewayRegister: 'gateway:register',
+  /** Write credentials and start the gateway service. */
+  gatewayProvision: 'gateway:provision',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -87,6 +94,26 @@ export interface HostDetails {
 export type IpcResult<T> =
   { ok: true; value: T } | { ok: false; error: { code: string; message: string; technicalDetail?: string } };
 
+export interface ConcentratorInfo {
+  eui: string;
+  model: string;
+  interface: string;
+  devicePath: string;
+}
+
+export interface GatewayRegisterInput {
+  eui: string;
+  name: string;
+  region: string;
+}
+
+export interface LnsCredentialsPayload {
+  uri: string;
+  trust: string;
+  cert: string;
+  key: string;
+}
+
 /** The surface `preload` exposes on `window.chirpHub`. */
 export interface ChirpHubApi {
   getAppInfo(): Promise<AppInfo>;
@@ -94,4 +121,8 @@ export interface ChirpHubApi {
   getHostDetails(): Promise<HostDetails>;
   getDockerStatus(): Promise<DockerStatus>;
   installDocker(): Promise<IpcResult<void>>;
+
+  detectGateway(): Promise<ConcentratorInfo | null>;
+  registerGateway(input: GatewayRegisterInput): Promise<IpcResult<LnsCredentialsPayload>>;
+  provisionGateway(credentials: LnsCredentialsPayload): Promise<IpcResult<void>>;
 }

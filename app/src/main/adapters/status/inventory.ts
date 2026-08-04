@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { TWIN_CONTAINER_PREFIX } from '../../config/images';
 import { SERVICE_CONTAINERS, type ServiceName } from '../../config/services';
 import type { ContainerState } from './subsystem-probes';
+import type { DockerCommandPort } from '../container/docker-command';
 
 const run = promisify(execFile);
 
@@ -40,12 +41,12 @@ export const createCredentialsCheck = (credentialsDir: string) => async (): Prom
  * `docker compose up -d` stays active once the command has returned, whatever
  * the container does afterwards.
  */
-export const createContainerState = () => async (unit: string): Promise<ContainerState> => {
+export const createContainerState = (docker: DockerCommandPort) => async (unit: string): Promise<ContainerState> => {
   const container = SERVICE_CONTAINERS[unit as ServiceName];
   if (!container) return 'missing';
 
   try {
-    const { stdout } = await run('docker', ['inspect', '-f', '{{.State.Status}}', container]);
+    const { stdout } = await docker.run(['inspect', '-f', '{{.State.Status}}', container]);
     return stdout.trim() === 'running' ? 'running' : 'stopped';
   } catch {
     // `docker inspect` fails when the container has never been created — which
@@ -62,9 +63,9 @@ export const createContainerState = () => async (unit: string): Promise<Containe
  * probe exists to report, so filtering to running containers would make the
  * problem invisible.
  */
-export const createTwinInventory = () => async (): Promise<{ id: string; running: boolean }[]> => {
+export const createTwinInventory = (docker: DockerCommandPort) => async (): Promise<{ id: string; running: boolean }[]> => {
   try {
-    const { stdout } = await run('docker', [
+    const { stdout } = await docker.run([
       'ps',
       '-a',
       '--filter',

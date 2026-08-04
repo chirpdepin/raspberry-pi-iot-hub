@@ -1,4 +1,11 @@
-import type { AppInfo, DockerStatus, HostDetails, IpcResult, SystemLoadPayload } from '@shared/ipc';
+import type {
+  AppInfo,
+  DiscoveredCameraPayload,
+  DockerStatus,
+  HostDetails,
+  IpcResult,
+  SystemLoadPayload,
+} from '@shared/ipc';
 
 /**
  * Transport layer — plain functions, no React.
@@ -14,5 +21,7 @@ export const hostApi = {
   getHostDetails: (): Promise<HostDetails> => window.chirpHub.getHostDetails(),
   getSystemLoad: (): Promise<SystemLoadPayload> => window.chirpHub.getSystemLoad(),
   getDockerStatus: (): Promise<DockerStatus> => window.chirpHub.getDockerStatus(),
-  installDocker: (): Promise<IpcResult<void>> => window.chirpHub.installDocker(),
+  installDocker: (camera?: DiscoveredCameraPayload | null): Promise<IpcResult<void>> =>
+    window.chirpHub.installDocker(camera),
+  startDocker: (): Promise<IpcResult<void>> => window.chirpHub.startDocker(),
 };

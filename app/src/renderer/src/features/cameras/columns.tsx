@@ -34,7 +34,18 @@ export const cameraColumns = (t: TFunction, actions: CameraColumnActions): Table
   {
     header: t('Address'),
     accessorKey: 'address',
-    cell: ({ row }) => <Typography variant='body2'>{row.original.address}</Typography>,
+    cell: ({ row }) => (
+      // A camera added without a scan has no address here: the user gives it one
+      // inside the Twin, and nothing ever writes it back to this record. An
+      // empty cell made a real row look like seeded placeholder data.
+      //
+      // The text names where the setting LIVES rather than claiming a state.
+      // This app cannot know whether setup finished, so "Not set up yet" would
+      // still be showing a year after the user finished it.
+      <Typography variant='body2' sx={(theme) => (row.original.address ? {} : { color: theme.palette.text.secondary })}>
+        {row.original.address || t('Set in camera setup')}
+      </Typography>
+    ),
   },
   {
     header: t('Status'),

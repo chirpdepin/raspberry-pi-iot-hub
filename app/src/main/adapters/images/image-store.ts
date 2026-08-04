@@ -11,6 +11,7 @@ import { domainError, err, ok, type Result } from '../../domain/errors';
 import { TWIN_MANIFEST_URL } from '../../config/images';
 import type { ImageStorePort, TwinArtifact } from '../../usecase/twin-image-ensure/contract';
 import type { PathsPort } from '../paths/paths';
+import type { DockerCommandPort } from '../container/docker-command';
 
 const run = promisify(execFile);
 
@@ -30,13 +31,15 @@ interface ManifestFile {
 
 export interface ImageStoreDeps {
   paths: PathsPort;
+  /** The one way this app runs Docker — see adapters/container/docker-command.ts. */
+  docker: DockerCommandPort;
   fetchImpl?: typeof fetch;
 }
 
-export const createImageStore = ({ paths, fetchImpl = fetch }: ImageStoreDeps): ImageStorePort => ({
+export const createImageStore = ({ paths, docker, fetchImpl = fetch }: ImageStoreDeps): ImageStorePort => ({
   async has(tag: string): Promise<boolean> {
     try {
-      const { stdout } = await run('docker', ['image', 'inspect', tag, '--format', '{{.Id}}']);
+      const { stdout } = await docker.run(['image', 'inspect', tag, '--format', '{{.Id}}']);
       return stdout.trim().length > 0;
     } catch {
       return false;
@@ -133,7 +136,7 @@ export const createImageStore = ({ paths, fetchImpl = fetch }: ImageStoreDeps): 
         );
       }
 
-      await run('docker', ['load', '--input', target], { maxBuffer: 1024 * 1024 * 32 });
+      await docker.run(['load', '--input', target], { maxBufferBytes: 1024 * 1024 * 32 });
 
       return ok(undefined);
     } catch (error) {

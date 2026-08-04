@@ -39,6 +39,12 @@ import { createImageStore } from './adapters/images/image-store';
 import { handleTwinImageEnsure } from './usecase/twin-image-ensure/usecase';
 import { handlePortAllocate } from './usecase/port-allocate/usecase';
 import type { IpcDependencies } from './ipc/register';
+import { createDockerCommand } from './adapters/container/docker-command';
+import { createDockerInstaller } from './adapters/container/docker-installer';
+import { createUserAttention } from './adapters/attention/user-attention';
+import { createPendingJobStore } from './adapters/store/pending-job';
+import { createElevatedCommand } from './adapters/privileged/elevated-command';
+import { createCameraJobCoordinator } from './ipc/camera-job';
 
 /**
  * One allocator, shared by every subsystem that needs a host port. Module scope
@@ -46,7 +52,18 @@ import type { IpcDependencies } from './ipc/register';
  * be exactly one, or the reserved-port table is honoured inconsistently
  * (Phase 11 SOLID gate).
  */
-const allocatePort = () => handlePortAllocate({ probe: createPortProbe(), claims: createPortClaims() });
+/**
+ * The one Docker executor for this process.
+ *
+ * Module scope for the same reason as the allocator: there must be exactly one,
+ * so the strategy it resolves (PATH, an absolute path, or `sg docker`) is shared
+ * by every adapter. Two of these would mean the status probe could succeed while
+ * the Twin runtime still failed.
+ */
+const dockerCommand = createDockerCommand();
+
+const allocatePort = () =>
+  handlePortAllocate({ probe: createPortProbe(), claims: createPortClaims(dockerCommand) });
 
 /**
  * Builds the real dependency graph, with **no side effects**.
@@ -63,6 +80,10 @@ export const buildDependencies = (): IpcDependencies => {
   const isHubImage = existsSync(HUB_IMAGE_MARKER);
   const paths = createPaths(isHubImage);
   const privileged = createPrivilegedRunner();
+  // Its own narrow capability: gateway-provision's runner offers only
+  // writeFile and startService, and widening it to "run anything as root"
+  // would hand that reach to every existing consumer.
+  const elevated = createElevatedCommand();
   const services = createServiceState(process.platform);
 
   /**
@@ -97,6 +118,7 @@ export const buildDependencies = (): IpcDependencies => {
         platform: process.platform,
         scanRoles,
         isPortFree: (port) => createPortProbe().isFree(port),
+        docker: dockerCommand,
         configTemplate: readZigbeeTemplate([
           // Packaged: shipped alongside the app by electron-builder.
           join(process.resourcesPath ?? '', TEMPLATE_NAME),
@@ -110,43 +132,85 @@ export const buildDependencies = (): IpcDependencies => {
   const zigbee2mqtt = createZigbee2MqttClient();
 
   const containerRuntime = createDockerRuntime({
+    docker: dockerCommand,
     platform: process.platform,
+    // Starting an installed-but-stopped Docker. On Linux the daemon is a
+    // service; elsewhere it belongs to Docker Desktop, so the honest action is
+    // to open that application and let it start its own engine.
+    openApp: async () => {
+      if (process.platform === 'linux') return elevated.run('systemctl', ['start', 'docker']);
+      await shell.openExternal(process.platform === 'darwin' ? 'docker://' : 'docker-desktop://');
+      return ok(undefined);
+    },
+  });
+
+  const dockerInstaller = createDockerInstaller({
+    platform: process.platform,
+    arch: process.arch,
+    osReleasePath: paths.osRelease(),
     openExternal: async (url) => shell.openExternal(url),
+    runPrivileged: (command, args) => elevated.run(command, args),
   });
 
   const concentrator = createConcentratorDiscovery(paths);
 
-  const images = createImageStore({ paths });
+  const images = createImageStore({ paths, docker: dockerCommand });
 
-  const twinRuntime = createTwinRuntime();
+  const twinRuntime = createTwinRuntime(dockerCommand);
   const onvifDiscovery = createOnvifDiscovery();
 
   const ensureTwinImage = async (onProgress?: (received: number, total: number) => void) =>
     handleTwinImageEnsure({ images, arch: () => process.arch }, onProgress);
 
   const cameraStore = createCameraStore();
-  const twinInventory = createTwinInventory();
-  const containerState = createContainerState();
+  const twinInventory = createTwinInventory(dockerCommand);
+  const containerState = createContainerState(dockerCommand);
 
   return {
     hostCapabilities: {
       hostInfo: createHostInfo(),
       radios: createRadioDiscovery({ paths, scanRoles }),
-      // host-capabilities wants a boolean pair; docker-ensure wants the
-      // three-state view. Adapted at the seam rather than widening either port
-      // to satisfy both (Contract 1 I).
+      // host-capabilities wants a boolean pair; docker-status reports five
+      // states. Adapted at the seam rather than widening either port to satisfy
+      // both (Contract 1 I).
       containerRuntime: {
         async status() {
           const status = await containerRuntime.status();
           return {
-            installed: status.state !== 'missing',
+            // 'needs-permission' and 'stopped' both mean Docker is present:
+            // reporting either as "not installed" would tell the user to
+            // reinstall software they already have.
+            installed: status.state !== 'missing' && status.state !== 'unknown',
             running: status.state === 'ready',
             version: status.version,
           };
         },
       },
     },
-    docker: { runtime: containerRuntime },
+    dockerStatus: { runtime: containerRuntime },
+    dockerInstall: { installer: dockerInstaller },
+    cameraJob: createCameraJobCoordinator({
+      jobs: createPendingJobStore(),
+      attention: createUserAttention(),
+      // A container without a record is a half-finished attempt; it must go
+      // before the retry, or recreating it fails on the name.
+      // Recordings are kept: this discards a container the user never got to
+      // use, not their footage.
+      cleanup: { discard: async (id) => void (await twinRuntime.removal.remove(id)) },
+      existing: async (id) => (await cameraStore.all()).find((entry) => entry.id === id) ?? null,
+      addPorts: (seed) => ({
+        images: { ensure: ensureTwinImage },
+        containers: twinRuntime.containers,
+        ports: { allocate: allocatePort },
+        // Deterministic: the same job always derives the same Twin id, which is
+        // what stops a resume creating a second camera.
+        secrets: { newPassword: () => randomBytes(18).toString('base64url'), newId: () => seed },
+        records: cameraStore,
+      }),
+      runtime: containerRuntime,
+      wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      now: () => Date.now(),
+    }),
     gatewayDetect: { concentrator },
     gatewayRegister: {
       chirp: createChirpGatewayClient({ auth: createSessionStore(), unzip: readZipEntries }),

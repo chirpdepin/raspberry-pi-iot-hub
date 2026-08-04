@@ -7,6 +7,7 @@ import {
   useDockerStatusQuery,
   useHostDetailsQuery,
   useInstallDockerMutation,
+  useStartDockerMutation,
   useSystemLoadQuery,
 } from '../../../services/api/host/hooks/useHostDetailsQuery';
 import { useSubsystemStatusQuery } from '../../../services/api/status/hooks/useStatusQuery';
@@ -45,11 +46,18 @@ export const useDashboard = () => {
   const systemLoadQuery = useSystemLoadQuery();
   const subsystemQuery = useSubsystemStatusQuery();
   const installDocker = useInstallDockerMutation();
+  const startDocker = useStartDockerMutation();
   const navigate = useNavigate();
 
   // useCallback so the attention items below have a stable dependency; without
   // it the memo rebuilds on every render and the lint rule is right to object.
-  const handleInstallDocker = useCallback(() => installDocker.mutate(), [installDocker]);
+  // `null`: the dashboard's install is not attached to a camera request, unlike
+  // the one on the Cameras page.
+  const handleInstallDocker = useCallback(() => installDocker.mutate(null), [installDocker]);
+
+  // A stopped Docker is started, not reinstalled. These were the same call until
+  // now, so "Start Docker" offered to download the installer again.
+  const handleStartDocker = useCallback(() => startDocker.mutate(), [startDocker]);
 
   const cards = useMemo<CapabilityCard[]>(() => {
     const capabilities = hostQuery.data?.capabilities;
@@ -84,7 +92,7 @@ export const useDashboard = () => {
         id: 'docker-stopped',
         message: 'Docker is installed but not running.',
         actionLabel: 'Start Docker',
-        onAction: handleInstallDocker,
+        onAction: handleStartDocker,
       });
     }
 
@@ -109,7 +117,7 @@ export const useDashboard = () => {
     }
 
     return items;
-  }, [dockerQuery.data, handleInstallDocker, subsystemQuery.data, navigate]);
+  }, [dockerQuery.data, handleInstallDocker, handleStartDocker, subsystemQuery.data, navigate]);
 
   const isNothingConfigured = cards.every((card) => !card.available);
 
@@ -124,5 +132,6 @@ export const useDashboard = () => {
     isNothingConfigured,
     isLoading: hostQuery.isLoading,
     handleInstallDocker,
+    handleStartDocker,
   };
 };

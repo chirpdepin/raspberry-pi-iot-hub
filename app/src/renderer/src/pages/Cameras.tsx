@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { CAPABILITY_COPY } from '../config/capabilities';
 import { LAYOUT } from '../config/defaults';
 import { DataTable } from '../features/common/DataTable';
-import { EmptyState } from '../features/common/EmptyState';
 import { Notice } from '../features/common/Notice';
 import { cameraColumns, discoveredColumns } from '../features/cameras/columns';
 import { CapacityBar } from '../features/cameras/CapacityBar';
@@ -49,9 +48,13 @@ export const Cameras = memo(() => {
     confirmRemove,
     cancelRemove,
     dismissJustAdded,
+    pending,
+    awaitingConsent,
+    handleInstallDocker,
+    dismissConsent,
+    handleCancelPending,
+    dismissPending,
   } = useCameras();
-
-  const dockerReady = hostQuery.data?.capabilities.cameras.available ?? false;
 
   const columns = useMemo(
     () => cameraColumns(t, { onOpen: handleOpen, onRemove: requestRemove }),
@@ -72,45 +75,74 @@ export const Cameras = memo(() => {
       // setting one up must not depend on being found.
       actions={
         <>
+          {/* No Docker gate. This button is how a user WITHOUT Docker gets
+              Docker — disabling it left the person who most needed help staring
+              at a greyed-out control. */}
           <PageAction
             label='Add camera'
             onClick={handleAddBlank}
-            disabledReason={
-              !dockerReady
-                ? 'Cameras need Docker, which is not running.'
-                : busyAddress === BLANK_ADD
-                  ? 'Setting up…'
-                  : undefined
-            }
+            disabledReason={busyAddress === BLANK_ADD ? 'Setting up…' : undefined}
           />
+          {/* Scanning never needed Docker: it looks for cameras on the network
+              and starts nothing. */}
           <PageAction
             label={scan ? 'Scan again' : 'Scan for cameras'}
             variant='secondary'
             showPlus={false}
             onClick={handleScan}
-            disabledReason={
-              dockerReady
-                ? isScanning
-                  ? 'Looking for cameras on your network…'
-                  : undefined
-                : 'Cameras need Docker, which is not running.'
-            }
+            disabledReason={isScanning ? 'Looking for cameras on your network…' : undefined}
           />
         </>
       }
     >
-      {/* Docker missing is its own state: cameras cannot run without it, and
-          "no cameras yet" would send the user looking for a camera problem. */}
-      {!dockerReady ? (
-        <EmptyState
-          title={CAPABILITY_COPY.cameras.emptyTitle}
-          description='Cameras run in Docker on this device. Install it from Settings and this page will be ready.'
-        />
-      ) : null}
+      <>
+        {errorMessage ? <Notice title={errorMessage} tone='error' /> : null}
 
-      {dockerReady ? (
-        <>
-          {errorMessage ? <Notice title={errorMessage} tone='error' /> : null}
+        {/* Asking before sending the user away, and telling them to come back.
+            Nothing else in the flow will: the installer belongs to Docker, and
+            when it finishes the user is looking at Docker's window, not ours. */}
+        {awaitingConsent !== undefined ? (
+          <Notice
+            title='Your camera needs Docker first'
+            description="Cameras run in a small program called Docker, which isn't installed on this computer yet. We'll take you to Docker's installer — accept the defaults and finish it. When Docker is done, come back to Chirp Hub and we'll finish setting up your camera for you."
+            tone='warning'
+          >
+            <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+              <PageAction label='Install Docker' showPlus={false} onClick={handleInstallDocker} />
+              <PageAction label='Cancel' variant='secondary' showPlus={false} onClick={dismissConsent} />
+            </Stack>
+          </Notice>
+        ) : null}
+
+        {/* The screen the user comes back to. It repeats the instruction rather
+            than only spinning, because a progress bar does not tell anyone that
+            they are the one who has to finish the installer. */}
+        {pending && (pending.state === 'awaiting-runtime' || pending.state === 'finishing') ? (
+          <Notice
+            title={pending.state === 'finishing' ? 'Setting up your camera…' : 'Waiting for Docker…'}
+            description={
+              pending.state === 'finishing'
+                ? 'Docker is ready. Finishing your camera now — this takes a moment.'
+                : "Finish Docker's installer, then come back to this window. We'll pick up your camera setup automatically — there's nothing else for you to click."
+            }
+          >
+            {pending.state === 'awaiting-runtime' ? (
+              <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+                <PageAction label='Cancel' variant='secondary' showPlus={false} onClick={handleCancelPending} />
+              </Stack>
+            ) : null}
+          </Notice>
+        ) : null}
+
+        {/* A request that failed is kept, not silently dropped, so the user can
+            try again rather than wonder whether they imagined asking. */}
+        {pending?.state === 'failed' ? (
+          <Notice title={pending.error ?? "Your camera couldn't be set up."} tone='error' onDismiss={dismissPending}>
+            <Stack direction='row' sx={{ gap: LAYOUT.gapLg }}>
+              <PageAction label='Try again' showPlus={false} onClick={handleAddBlank} />
+            </Stack>
+          </Notice>
+        ) : null}
 
           {/* Asked, never assumed. Recordings outlive the camera unless the user
               says otherwise, and the screen used to decide that silently. */}
@@ -190,8 +222,7 @@ export const Cameras = memo(() => {
             emptyTitle={CAPABILITY_COPY.cameras.unconfiguredTitle}
             emptyDescription='Use Add camera to set one up, or scan to find cameras that advertise themselves.'
           />
-        </>
-      ) : null}
+      </>
     </PageLayout>
   );
 });

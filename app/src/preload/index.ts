@@ -19,7 +19,11 @@ const api: ChirpHubApi = {
   getHostDetails: () => ipcRenderer.invoke(IPC.hostDetails),
   getSystemLoad: () => ipcRenderer.invoke(IPC.systemLoad),
   getDockerStatus: () => ipcRenderer.invoke(IPC.dockerStatus),
-  installDocker: () => ipcRenderer.invoke(IPC.dockerInstall),
+  installDocker: (camera) => ipcRenderer.invoke(IPC.dockerInstall, camera ?? null),
+  startDocker: () => ipcRenderer.invoke(IPC.dockerStart),
+  getPendingCamera: () => ipcRenderer.invoke(IPC.pendingCamera),
+  cancelPendingCamera: () => ipcRenderer.invoke(IPC.pendingCameraCancel),
+  acknowledgePendingCamera: () => ipcRenderer.invoke(IPC.pendingCameraAck),
 
   detectGateway: () => ipcRenderer.invoke(IPC.gatewayDetect),
   registerGateway: (input) => ipcRenderer.invoke(IPC.gatewayRegister, input),

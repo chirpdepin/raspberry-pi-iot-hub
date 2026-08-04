@@ -352,6 +352,45 @@ Do not treat these as intentional; do not copy their patterns.
 
 ---
 
+## The Twin ships as a binary, and Docker is installed for the user
+
+Two facts that constrain everything in `app/`:
+
+- **The Twin is not open source.** It reaches customers as a **compiled container
+  image** and never as source. That is why `app/src/main/config/images.ts` loads
+  it from a downloaded tarball (`TWIN_MANIFEST_URL`) rather than building it: a
+  distributable must not contain Twin code. Never vendor its source, and never
+  ship a build produced from it.
+- **No feed is published yet, so development uses `lens/twin:local`** — built
+  from the Lens repo on the machine under test. `TWIN_MANIFEST_URL` currently
+  returns **404**. This is deliberate for now (get the program working first),
+  and it is a **release blocker**, not a footnote: a fresh non-technical machine
+  has no local image, so the "click Add camera and it works" journey cannot pass
+  acceptance until the compiled image is distributable.
+
+**Docker is installed by the app, not by the user.** The product is for someone
+who has never opened a terminal, so `[Add camera]` stays clickable with no Docker
+and becomes the way in: it explains, sends them to Docker's installer, **tells
+them to come back**, and then finishes the camera by itself. The parts that make
+that work, each of which is easy to get wrong:
+
+- **Readiness means "this process can run a Docker command"**, not "a socket
+  exists". Electron inherits its PATH at launch, so a Docker installed while the
+  app is running is invisible to `docker …` until restart — on Windows the
+  installer edits the system PATH the running process never re-reads. Everything
+  goes through `adapters/container/docker-command.ts`, which also covers the
+  Linux case where the user is not yet in the `docker` group (the socket is
+  `root:docker 0660`, and group membership only applies to new login sessions).
+- **The request is written to disk before the installer opens**
+  (`adapters/store/pending-job.ts`), because a Docker Desktop install on Windows
+  usually wants a reboot and an in-memory request would simply vanish.
+- **The Twin id is derived, never stored twice.** `cameraIdForJob` and
+  `camera-add` derive it from the same seed, so resuming a job cannot create a
+  second camera.
+- **Adding a user to the `docker` group is root-equivalent** on the host. It is
+  the standard way to use Docker without sudo and it is a real privilege grant,
+  which is why the consent copy says so.
+
 ## The Chirp Hub app (`app/`) — three contracts, enforced
 
 Full design record: **[app/electron.md](app/electron.md)**. The summary that matters here:

@@ -9,6 +9,7 @@ export const cameraQueryKeys = {
   all: ['cameras'] as const,
   list: () => [...cameraQueryKeys.all, 'list'] as const,
   capacity: () => [...cameraQueryKeys.all, 'capacity'] as const,
+  pending: () => [...cameraQueryKeys.all, 'pending'] as const,
 };
 
 export const useCamerasQuery = () =>
@@ -48,5 +49,37 @@ export const useRemoveCameraMutation = () => {
   return useMutation({
     mutationFn: camerasApi.remove,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: cameraQueryKeys.all }),
+  });
+};
+
+/**
+ * The camera request waiting on Docker.
+ *
+ * Polled, because it is finished by the **main process** while the user is away
+ * installing Docker — there is no click to invalidate this cache. The interval
+ * is the same one the waiting screen implies is happening.
+ */
+export const usePendingCameraQuery = () =>
+  useQuery({
+    queryKey: cameraQueryKeys.pending(),
+    queryFn: camerasApi.pending,
+    refetchInterval: POLL.pendingCameraMs,
+  });
+
+export const useCancelPendingMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: camerasApi.cancelPending,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: cameraQueryKeys.all }),
+  });
+};
+
+export const useAcknowledgePendingMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: camerasApi.acknowledgePending,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: cameraQueryKeys.all }),
   });
 };

@@ -17,8 +17,16 @@ export const IPC = {
   dockerStatus: 'docker:status',
   /** App metadata for the Settings screen. */
   appInfo: 'app:info',
-  /** Launch the platform's official Docker installer. Never called implicitly. */
+  /** Start installing Docker: vendor installer, or an automated engine install. */
   dockerInstall: 'docker:install',
+  /** Start an installed-but-stopped runtime. Not the same thing as installing it. */
+  dockerStart: 'docker:start',
+  /** The camera request waiting on Docker, if any. */
+  pendingCamera: 'camera:pending',
+  /** Give up on the pending request. Only an explicit cancel discards it. */
+  pendingCameraCancel: 'camera:pendingCancel',
+  /** Acknowledge a finished pending request so its notice stops showing. */
+  pendingCameraAck: 'camera:pendingAck',
   /** Host facts plus per-capability availability and reasons. */
   hostDetails: 'host:details',
   /** Live load and memory use. Polled far more often than hostDetails. */
@@ -174,6 +182,28 @@ export interface DockerStatus {
   installed: boolean;
   running: boolean;
   version: string | null;
+  /**
+   * What the app can do about it right now, decided in main.
+   *
+   * `needs-permission` is why this is not two booleans: Docker installed and
+   * running but unusable by this account is a real state with its own fix, and
+   * the boolean pair reported it as "not installed".
+   */
+  state: 'missing' | 'stopped' | 'needs-permission' | 'ready' | 'unknown';
+  /** English text used as an i18n key, absent when ready. */
+  message?: string;
+  /** English text used as an i18n key for the one primary button. */
+  action?: string;
+}
+
+/** A camera request that is waiting on Docker, surfaced to the renderer. */
+export interface PendingCameraPayload {
+  id: string;
+  state: 'awaiting-runtime' | 'finishing' | 'done' | 'failed';
+  /** Set once finished, so the first-login credentials can still be shown. */
+  camera?: CameraPayload;
+  /** English text used as an i18n key, set when the attempt failed. */
+  error?: string;
 }
 
 export interface HostDetails {
@@ -256,7 +286,12 @@ export interface ChirpHubApi {
   getHostDetails(): Promise<HostDetails>;
   getSystemLoad(): Promise<SystemLoadPayload>;
   getDockerStatus(): Promise<DockerStatus>;
-  installDocker(): Promise<IpcResult<void>>;
+  /** Records the camera the user asked for, then starts the install. */
+  installDocker(camera?: DiscoveredCameraPayload | null): Promise<IpcResult<void>>;
+  startDocker(): Promise<IpcResult<void>>;
+  getPendingCamera(): Promise<PendingCameraPayload | null>;
+  cancelPendingCamera(): Promise<void>;
+  acknowledgePendingCamera(): Promise<void>;
 
   detectGateway(): Promise<ConcentratorInfo | null>;
   registerGateway(input: GatewayRegisterInput): Promise<IpcResult<LnsCredentialsPayload>>;

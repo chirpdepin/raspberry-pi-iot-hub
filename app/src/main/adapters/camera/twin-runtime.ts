@@ -1,11 +1,7 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
 import { domainError, err, ok, type Result } from '../../domain/errors';
 import type { ContainerRuntimePort } from '../../usecase/camera-add/contract';
 import type { TwinRemovalPort } from '../../usecase/camera-remove/contract';
-
-const run = promisify(execFile);
+import type { DockerCommandPort } from '../container/docker-command';
 
 /**
  * Twin lifecycle: start one, remove one, delete its recordings.
@@ -30,7 +26,7 @@ const run = promisify(execFile);
  * map through (Contract 3).
  */
 
-export const createTwinRuntime = () => {
+export const createTwinRuntime = (docker: DockerCommandPort) => {
   /**
    * The volume holding one Twin's data. Derived once so creation and deletion
    * cannot build the name differently — the version of this bug that deletes
@@ -41,7 +37,7 @@ export const createTwinRuntime = () => {
   const containers: ContainerRuntimePort = {
     async createTwin({ id, imageTag, hostPort, seedUsername, seedPassword }): Promise<Result<void>> {
       try {
-        await run('docker', [
+        await docker.run([
           'run',
           '-d',
           '--name',
@@ -89,7 +85,7 @@ export const createTwinRuntime = () => {
       try {
         // -f because a recording Twin will not stop on its own signal quickly,
         // and the user has already confirmed they want it gone.
-        await run('docker', ['rm', '-f', id]);
+        await docker.run(['rm', '-f', id]);
         return ok(undefined);
       } catch (error) {
         return err(
@@ -106,7 +102,7 @@ export const createTwinRuntime = () => {
       try {
         // Only ever the one Twin's own volume, named the same way it is at
         // creation, so this cannot reach another camera's recordings.
-        await run('docker', ['volume', 'rm', dataVolume(id)]);
+        await docker.run(['volume', 'rm', dataVolume(id)]);
         return ok(undefined);
       } catch (error) {
         return err(

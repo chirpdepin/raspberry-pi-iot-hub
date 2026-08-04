@@ -1,85 +1,93 @@
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-
+import { DOCKER_TIMEOUTS } from '../../config/docker';
 import { domainError, err, ok, type Result } from '../../domain/errors';
-import type { ContainerRuntimeControlPort, RuntimeStatus } from '../../usecase/docker-ensure/contract';
+import type { ContainerRuntimeStatusPort, RuntimeStatus } from '../../usecase/docker-status/contract';
 
-const run = promisify(exec);
+import { isMissingBinary, isPermissionFailure, type DockerCommandPort } from './docker-command';
 
 /**
- * Docker adapter.
+ * Docker status and start.
  *
- * Implements the port declared by `docker-ensure`. Nothing here is imported by a
- * use case — the composition root wires it — which is what allows a future
- * `PodmanRuntime` to replace it without touching business logic (Contract 1 L).
+ * **Readiness is "can this process run a Docker command", not "does a socket
+ * exist".** Those are different questions, and the app needs the second one
+ * answered by asking the first: after an install the daemon can be up and
+ * answering while our own process still cannot find the CLI, because Electron
+ * inherited its PATH before Docker existed. Probing a socket alone would report
+ * ready, and then every container operation would fail.
  *
- * `docker version` is used rather than the dockerode socket probe because it
- * distinguishes the two states the UI must tell apart: a missing binary
- * (ENOENT) versus an installed binary whose daemon is not answering (non-zero
- * exit). A socket probe reports both as "cannot connect".
+ * Everything here therefore goes through `DockerCommandPort` — the same
+ * mechanism the Twin, image and inventory adapters use. If this reports ready,
+ * those work.
+ *
+ * `docker version` separates the states the UI must tell apart: a missing binary
+ * (ENOENT), a present binary whose daemon is silent (non-zero exit), and a
+ * running daemon this user may not talk to (EACCES on the socket).
  */
 
-const DOCKER_PROBE_TIMEOUT_MS = 5_000;
-
-/** Where the official installer lives, per platform. */
-const INSTALLER_URL: Record<string, string> = {
-  win32: 'https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe',
-  darwin: 'https://desktop.docker.com/mac/main/arm64/Docker.dmg',
-  linux: 'https://docs.docker.com/engine/install/',
-};
-
 export interface DockerRuntimeDeps {
+  docker: DockerCommandPort;
   platform: NodeJS.Platform;
-  /** Injected so the use case tests never open a browser. */
-  openExternal(url: string): Promise<void>;
+  /** Injected so tests never launch an application. */
+  openApp(): Promise<Result<void>>;
 }
 
-export const createDockerRuntime = ({ platform, openExternal }: DockerRuntimeDeps): ContainerRuntimeControlPort => ({
+export const createDockerRuntime = ({ docker, platform, openApp }: DockerRuntimeDeps): ContainerRuntimeStatusPort => ({
   async status(): Promise<RuntimeStatus> {
     try {
-      const { stdout } = await run('docker version --format "{{.Server.Version}}"', {
-        timeout: DOCKER_PROBE_TIMEOUT_MS,
+      const { stdout } = await docker.run(['version', '--format', '{{.Server.Version}}'], {
+        timeoutMs: DOCKER_TIMEOUTS.probeMs,
       });
       const version = stdout.trim();
 
-      // An empty server version means the client answered but the daemon did not.
+      // The client answered but printed no server version: the daemon is down.
       return version ? { state: 'ready', version } : { state: 'stopped', version: null };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const detail = error instanceof Error ? error.message : String(error);
 
-      // ENOENT/"not found" means no binary at all; anything else means the
-      // binary exists but the daemon is unreachable.
-      const notInstalled = /ENOENT|not found|not recognized/i.test(message);
-
-      if (notInstalled) {
-        return { state: 'missing', version: null };
+      // Checked before "missing": a permission failure means Docker is both
+      // installed and running, and calling that "missing" would tell the user
+      // to reinstall software they already have.
+      if (isPermissionFailure(detail)) {
+        return { state: 'needs-permission', version: null, detail };
       }
 
-      // The client is present, so report the version we can still read.
+      if (isMissingBinary(detail)) {
+        return { state: 'missing', version: null, detail };
+      }
+
+      // The CLI exists and the failure is not permissions. Reading the client
+      // version proves "installed but stopped" rather than leaving it unexplained.
       try {
-        const { stdout } = await run('docker --version', { timeout: DOCKER_PROBE_TIMEOUT_MS });
-        return { state: 'stopped', version: stdout.trim() || null };
+        const { stdout } = await docker.run(['--version'], { timeoutMs: DOCKER_TIMEOUTS.probeMs });
+        return { state: 'stopped', version: stdout.trim() || null, detail };
       } catch {
-        return { state: 'missing', version: null };
+        // Genuinely could not tell. Never silently "missing".
+        return { state: 'unknown', version: null, detail };
       }
     }
   },
 
-  async openInstaller(): Promise<Result<void>> {
-    const url = INSTALLER_URL[platform] ?? INSTALLER_URL['linux'];
-
-    if (!url) {
-      return err(domainError('not-supported-on-platform', 'Automatic installation is not available on this system.'));
-    }
-
+  /**
+   * Starts the runtime, or opens the application that owns it.
+   *
+   * This exists because the dashboard's "Start Docker" button called the
+   * *installer* — offering to reinstall Docker to somebody whose Docker is
+   * merely not running.
+   */
+  async start(): Promise<Result<void>> {
     try {
-      await openExternal(url);
+      const result = await openApp();
+      if (!result.ok) return result;
+
+      // Whatever was just started needs a moment before it answers, and the
+      // caller polls. Clearing the cached strategy means the next probe
+      // re-resolves rather than repeating the failure that led here.
+      docker.reset();
       return ok(undefined);
     } catch (error) {
       return err(
         domainError(
           'unknown',
-          "Couldn't open the Docker installer.",
+          platform === 'linux' ? "Couldn't start Docker." : "Couldn't open Docker Desktop.",
           error instanceof Error ? error.message : String(error)
         )
       );

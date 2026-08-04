@@ -3,13 +3,17 @@ import { useCallback, useState } from 'react';
 import type { CameraPayload, CameraScanPayload, DiscoveredCameraPayload } from '@shared/ipc';
 
 import {
+  useAcknowledgePendingMutation,
   useAddCameraMutation,
   useCamerasQuery,
+  useCancelPendingMutation,
   useCapacityQuery,
   useDiscoverCamerasMutation,
   useOpenCameraMutation,
+  usePendingCameraQuery,
   useRemoveCameraMutation,
 } from '../../../services/api/cameras/hooks/useCamerasQuery';
+import { useDockerStatusQuery, useInstallDockerMutation } from '../../../services/api/host/hooks/useHostDetailsQuery';
 
 /**
  * Business layer for the camera screens (Contract 5).
@@ -35,6 +39,12 @@ export const useCameras = () => {
   const camerasQuery = useCamerasQuery();
   const capacityQuery = useCapacityQuery();
 
+  const dockerQuery = useDockerStatusQuery();
+  const pendingQuery = usePendingCameraQuery();
+  const installDocker = useInstallDockerMutation();
+  const cancelPending = useCancelPendingMutation();
+  const acknowledgePending = useAcknowledgePendingMutation();
+
   const discoverMutation = useDiscoverCamerasMutation();
   const addMutation = useAddCameraMutation();
   const removeMutation = useRemoveCameraMutation();
@@ -45,6 +55,8 @@ export const useCameras = () => {
   const [busyAddress, setBusyAddress] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<CameraPayload | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<CameraPayload | null>(null);
+  /** The camera the user asked for while Docker was missing, held until they confirm the install. */
+  const [awaitingConsent, setAwaitingConsent] = useState<DiscoveredCameraPayload | null | undefined>(undefined);
 
   const handleScan = useCallback(async () => {
     setErrorMessage(null);
@@ -85,6 +97,13 @@ export const useCameras = () => {
         return;
       }
 
+      // Same route as the blank add: a scan result is a shortcut into setup, and
+      // setup still needs Docker.
+      if (dockerQuery.data && dockerQuery.data.state !== 'ready') {
+        setAwaitingConsent(camera);
+        return;
+      }
+
       setBusyAddress(camera.address);
       const result = await addMutation.mutateAsync(camera);
       setBusyAddress(null);
@@ -96,7 +115,7 @@ export const useCameras = () => {
 
       setJustAdded(result.value.camera);
     },
-    [addMutation, camerasQuery.data, handleOpen]
+    [addMutation, camerasQuery.data, dockerQuery.data, handleOpen]
   );
 
   /**
@@ -128,7 +147,23 @@ export const useCameras = () => {
     [pendingRemoval, removeMutation]
   );
 
-  const dismissJustAdded = useCallback(() => setJustAdded(null), []);
+  /**
+   * The camera to show first-login details for.
+   *
+   * Either one added just now in this window, **or one main finished while the
+   * user was away installing Docker**. The second case is why this is not plain
+   * local state: that camera was created by the resume, so nothing in the
+   * renderer ever saw its credentials — and the Twin forces a password change at
+   * first login, making them the only way in. Dropping them would lock the user
+   * out of their own camera.
+   */
+  const readyCamera = justAdded ?? (pendingQuery.data?.state === 'done' ? (pendingQuery.data.camera ?? null) : null);
+
+  const dismissJustAdded = useCallback(async () => {
+    setJustAdded(null);
+    // Also clears the finished job, so the notice does not return on the next poll.
+    if (pendingQuery.data?.state === 'done') await acknowledgePending.mutateAsync();
+  }, [acknowledgePending, pendingQuery.data]);
   const clearScan = useCallback(() => {
     setScan(null);
     setErrorMessage(null);
@@ -141,8 +176,16 @@ export const useCameras = () => {
    */
   const handleAddBlank = useCallback(async () => {
     setErrorMessage(null);
-    setBusyAddress(BLANK_ADD);
 
+    // Docker missing is not a reason to refuse the click — it is the reason the
+    // user needs help. Asking for consent here is what turns a greyed-out button
+    // into the way in.
+    if (dockerQuery.data && dockerQuery.data.state !== 'ready') {
+      setAwaitingConsent(null);
+      return;
+    }
+
+    setBusyAddress(BLANK_ADD);
     const result = await addMutation.mutateAsync(undefined);
     setBusyAddress(null);
 
@@ -152,15 +195,47 @@ export const useCameras = () => {
     }
 
     setJustAdded(result.value.camera);
-  }, [addMutation]);
+  }, [addMutation, dockerQuery.data]);
+
+  /**
+   * The user accepted: record the request, then hand over to Docker's installer.
+   *
+   * The job is written by main **before** the installer opens, so an installer
+   * that triggers a reboot cannot lose what the user asked for.
+   */
+  const handleInstallDocker = useCallback(async () => {
+    const camera = awaitingConsent;
+    setAwaitingConsent(undefined);
+    setErrorMessage(null);
+
+    const result = await installDocker.mutateAsync(camera ?? undefined);
+    if (!result.ok) setErrorMessage(result.error.message);
+  }, [awaitingConsent, installDocker]);
+
+  const dismissConsent = useCallback(() => setAwaitingConsent(undefined), []);
+
+  const handleCancelPending = useCallback(async () => {
+    await cancelPending.mutateAsync();
+  }, [cancelPending]);
+
+  const dismissPending = useCallback(async () => {
+    await acknowledgePending.mutateAsync();
+  }, [acknowledgePending]);
 
   return {
     cameras: camerasQuery.data ?? [],
+    docker: dockerQuery.data,
+    pending: pendingQuery.data ?? null,
+    awaitingConsent,
+    handleInstallDocker,
+    dismissConsent,
+    handleCancelPending,
+    dismissPending,
     capacity: capacityQuery.data ?? null,
     scan,
     isScanning: discoverMutation.isPending,
     busyAddress,
-    justAdded,
+    justAdded: readyCamera,
     pendingRemoval,
     errorMessage,
     handleScan,

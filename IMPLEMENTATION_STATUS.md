@@ -8,7 +8,7 @@ the answer to "where did we get to?" at the start of a new session.
 > Build guides: **[docs/ubuntu-2604.md](docs/ubuntu-2604.md)** (LoRaWAN),
 > **[docs/zigbee-thread.md](docs/zigbee-thread.md)** (Zigbee/Thread).
 
-**Last updated:** 2026-08-02
+**Last updated:** 2026-08-04
 **Target device:** `hub@iot-hub.local` (192.168.2.199) — Raspberry Pi 4B 8GB, Ubuntu 26.04 LTS Server arm64
 **Concentrator:** RAK5146 SPI (SX1303 / CORECELL) on a RAK2287/5146 Pi HAT
 **Concentrator EUI:** `0016C001FF1E96BB` (read from the chip; `0016C0` is the RAK Wireless OUI)
@@ -929,3 +929,65 @@ No throttling at any point (`get_throttled` = `0x0`, 51–62 °C). Heat is not t
 - 🚧 **One camera model, one GOP.** A 1 s GOP (a common default) roughly doubles
   the decode rate. A 1s-GOP stream was prepared for this comparison but the
   number is not yet taken.
+
+
+## The app installs Docker and finishes the camera by itself (2026-08-04)
+
+- ✅ **`[Add camera]` works with no Docker installed.** It used to be disabled,
+  which handed a greyed-out button to exactly the person who needed help. It now
+  explains, opens Docker's installer, **tells the user to come back**, waits, and
+  creates the Twin **with no second click**.
+- ✅ **Readiness means the app can actually run Docker.** Six adapters used to
+  invoke a bare `docker`, resolved from the PATH Electron inherited at launch —
+  so a Docker installed *while the app was running* stayed invisible, which is
+  precisely the flow being built. All six now go through
+  `adapters/container/docker-command.ts`, which falls back to known absolute
+  install paths and to `sg docker` when the user is not yet in the `docker`
+  group, and honours `DOCKER_HOST`.
+- ✅ **Five runtime states, not two booleans:** `missing`, `stopped`,
+  `needs-permission`, `ready`, `unknown`. A permission failure means Docker is
+  installed *and running*; reporting it as missing told the user to reinstall
+  what they already had. `unknown` never silently becomes `missing`.
+- ✅ **The request survives a restart.** Written to disk *before* the installer
+  opens (a Windows Docker Desktop install usually wants a reboot), and picked up
+  at next launch. Verified: planting an unfinished job and starting a fresh
+  process finishes the camera; doing it twice creates **one** camera, not two.
+- ✅ **The resumed camera's first-login credentials are shown.** Found by testing
+  rather than by reading: the resume ran in main, created the camera, and the
+  renderer never saw the password. The Twin forces a change at first login and
+  those are the only way in, so this would have locked users out of their own
+  camera.
+- ✅ **Two pre-existing bugs fixed on the way.** The dashboard's "Start Docker"
+  called the *installer*; and the macOS installer URL was arm64-only while the
+  app packages arm64 **and** x64, so an Intel Mac was handed an unusable disk
+  image.
+- ✅ **A camera with no address now reads "Set in camera setup"** instead of an
+  empty cell that looked like seeded placeholder data. Deliberately **not**
+  "Not set up yet": nothing ever writes the address back, so that label would
+  still be showing a year after the user finished setup.
+
+### Security note, recorded because it is not obvious
+
+Automated Linux installation adds the user to the **`docker` group, which is
+root-equivalent on the host** — a member can mount the filesystem into a
+container as root. It is the standard way to use Docker without sudo, and it is
+a real privilege grant. Automation is restricted to an allow-list of tested
+distributions (`AUTOMATED_INSTALL_DISTROS`); "linux" spans dozens of package
+managers and guessing wrong runs a privileged command that does something
+unintended.
+
+### Open
+
+- 🚧 **The Twin image feed is still 404** (`TWIN_MANIFEST_URL`), so a machine
+  without a locally built `lens/twin:local` cannot add a camera at all. This is
+  the **release blocker** for the non-technical journey, by decision to get the
+  program working first. **Next action:** publish the compiled image + manifest
+  as a release.
+- 🚧 **Docker Desktop is unverified.** This machine is Linux, so the
+  macOS/Windows guided path is exercised through fakes and the reboot is
+  simulated by starting a fresh process. **Next action:** run the flow once on a
+  real Mac and a real Windows box.
+- 🚧 **A truly uninstalled Docker is not testable here.** The runtime probe is
+  faked in the end-to-end driver, because the adapter correctly finds Docker at
+  an absolute path even when it is off the PATH. Everything downstream of that
+  answer is the real code.

@@ -32,6 +32,15 @@ export const POLL = {
    * `os.loadavg()` and `os.freemem()`, no filesystem and no subprocess.
    */
   systemLoadMs: 3_000,
+
+  /**
+   * The camera request waiting on Docker.
+   *
+   * Main finishes that job on its own while the user is off installing Docker,
+   * so nothing in the renderer knows when to refetch — polling is what turns
+   * "we'll carry on from here" into something the screen actually shows.
+   */
+  pendingCameraMs: 2_000,
 } as const;
 
 /** How long the Zigbee network stays open for new devices, in seconds. */

@@ -1,4 +1,5 @@
 import type {
+  PendingCameraPayload,
   CameraPayload,
   CameraScanPayload,
   CapacityPayload,
@@ -8,6 +9,9 @@ import type {
 
 /** Transport layer — plain functions, no React (Contract 5). */
 export const camerasApi = {
+  pending: (): Promise<PendingCameraPayload | null> => window.chirpHub.getPendingCamera(),
+  cancelPending: (): Promise<void> => window.chirpHub.cancelPendingCamera(),
+  acknowledgePending: (): Promise<void> => window.chirpHub.acknowledgePendingCamera(),
   discover: (): Promise<IpcResult<CameraScanPayload>> => window.chirpHub.discoverCameras(),
   add: (camera?: DiscoveredCameraPayload): Promise<IpcResult<{ camera: CameraPayload }>> =>
     window.chirpHub.addCamera(camera),

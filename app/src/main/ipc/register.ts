@@ -14,8 +14,6 @@ import {
   type ZigbeeLinkInput,
 } from '../../shared/ipc';
 import type { LorawanRegion } from '../domain/gateway';
-import { handleDockerEnsure, handleDockerInstall } from '../usecase/docker-ensure/usecase';
-import type { DockerEnsurePorts } from '../usecase/docker-ensure/contract';
 import type { GatewayDetectPorts } from '../usecase/gateway-detect/contract';
 import { handleGatewayDetect } from '../usecase/gateway-detect/usecase';
 import type { GatewayProvisionPorts } from '../usecase/gateway-provision/contract';
@@ -23,6 +21,12 @@ import { handleGatewayProvision } from '../usecase/gateway-provision/usecase';
 import type { GatewayRegisterPorts } from '../usecase/gateway-register/contract';
 import { handleGatewayRegister } from '../usecase/gateway-register/usecase';
 import type { HostCapabilitiesPorts } from '../usecase/host-capabilities/contract';
+import type { DockerStatusPorts } from '../usecase/docker-status/contract';
+import { handleDockerStatus } from '../usecase/docker-status/usecase';
+import type { DockerInstallPorts } from '../usecase/docker-install/contract';
+import { handleDockerInstall } from '../usecase/docker-install/usecase';
+import type { CameraJobCoordinator } from './camera-job';
+import type { PendingJob } from '../domain/pending-job';
 import type { SystemLoadPorts } from '../usecase/system-load/contract';
 import { handleSystemLoad } from '../usecase/system-load/usecase';
 import type { ZigbeeDeviceListPorts } from '../usecase/zigbee-device-list/contract';
@@ -59,7 +63,9 @@ import { handleSubsystemStatus } from '../usecase/subsystem-status/usecase';
 
 export interface IpcDependencies {
   hostCapabilities: HostCapabilitiesPorts;
-  docker: DockerEnsurePorts;
+  dockerStatus: DockerStatusPorts;
+  dockerInstall: DockerInstallPorts;
+  cameraJob: CameraJobCoordinator;
   gatewayDetect: GatewayDetectPorts;
   gatewayRegister: GatewayRegisterPorts;
   gatewayProvision: GatewayProvisionPorts;
@@ -76,6 +82,13 @@ export interface IpcDependencies {
   capacity: CapacityAdvisePorts;
   systemLoad: SystemLoadPorts;
 }
+
+
+/** Only what the renderer needs; the rest of the job is main's business. */
+const toPendingPayload = (job: PendingJob | null) =>
+  job === null
+    ? null
+    : { id: job.id, state: job.state, camera: job.result, error: job.error };
 
 export const registerIpcHandlers = (deps: IpcDependencies): void => {
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({
@@ -97,16 +110,33 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   });
 
   ipcMain.handle(IPC.dockerStatus, async (): Promise<DockerStatus> => {
-    const { status } = await handleDockerEnsure(deps.docker);
+    const { status, message, action } = await handleDockerStatus(deps.dockerStatus);
 
     return {
-      installed: status.state !== 'missing',
+      // Kept for the screens that only care whether cameras can run. Anything
+      // other than 'missing'/'unknown' means Docker is genuinely on this
+      // machine, which is what stops the UI offering to reinstall it.
+      installed: status.state !== 'missing' && status.state !== 'unknown',
       running: status.state === 'ready',
       version: status.version,
+      state: status.state,
+      message,
+      action,
     };
   });
 
-  ipcMain.handle(IPC.dockerInstall, async () => handleDockerInstall(deps.docker));
+  ipcMain.handle(IPC.dockerInstall, async (_event, camera: DiscoveredCameraPayload | null) => {
+    // The job is recorded FIRST. An installer that triggers a reboot must not be
+    // able to lose what the user asked for, and writing it afterwards would.
+    await deps.cameraJob.begin(camera);
+
+    return handleDockerInstall(deps.dockerInstall);
+  });
+
+  // Starting is not installing. The dashboard used to call the installer for
+  // both, which offered to reinstall Docker to someone whose Docker was merely
+  // not running.
+  ipcMain.handle(IPC.dockerStart, async () => deps.dockerStatus.runtime.start());
 
   ipcMain.handle(IPC.gatewayDetect, async () => handleGatewayDetect(deps.gatewayDetect));
 
@@ -160,6 +190,12 @@ export const registerIpcHandlers = (deps: IpcDependencies): void => {
   ipcMain.handle(IPC.cameraCapacity, async (): Promise<CapacityPayload> => handleCapacityAdvise(deps.capacity));
 
   ipcMain.handle(IPC.systemLoad, async (): Promise<SystemLoadPayload> => handleSystemLoad(deps.systemLoad));
+
+  ipcMain.handle(IPC.pendingCamera, async () => toPendingPayload(await deps.cameraJob.current()));
+
+  ipcMain.handle(IPC.pendingCameraCancel, async () => deps.cameraJob.cancel());
+
+  ipcMain.handle(IPC.pendingCameraAck, async () => deps.cameraJob.acknowledge());
 
   ipcMain.handle(IPC.cameraOpen, async (_event, id: string) => handleCameraOpen(deps.cameraOpen, id));
 

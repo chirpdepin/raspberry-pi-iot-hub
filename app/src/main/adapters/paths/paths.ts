@@ -31,6 +31,13 @@ export interface PathsPort {
   imageCacheDir(): string;
   /** Stable device symlinks created by the udev rules. */
   radioDevice(role: 'zigbee' | 'thread'): string;
+  /**
+   * Where the OS states which distribution this is.
+   *
+   * Through the port like every other system path: on Ubuntu Core the app is
+   * confined and this is not simply readable at its usual location.
+   */
+  osRelease(): string;
 }
 
 /**
@@ -57,6 +64,7 @@ export const createLinuxPaths = (): PathsPort => ({
   serviceDir: (service) => `/opt/iot-hub/${service}`,
   imageCacheDir: () => '/var/lib/iot-hub/images',
   radioDevice: (role) => `/dev/${role}`,
+  osRelease: () => '/etc/os-release',
 });
 
 /**
@@ -79,6 +87,9 @@ export const createDesktopPaths = (): PathsPort => {
     serviceDir: (service) => join(base, 'services', service),
     imageCacheDir: () => join(base, 'images'),
     radioDevice: (role) => join(base, 'devices', role),
+    // No /etc/os-release off Linux; the reader treats an unreadable file as
+    // "distribution unknown", which is the correct answer here.
+    osRelease: () => join(base, 'os-release'),
   };
 };
 

@@ -50,6 +50,22 @@ export const useSystemLoadQuery = () =>
     refetchInterval: POLL.systemLoadMs,
   });
 
+/**
+ * Starting an installed-but-stopped runtime.
+ *
+ * Separate from installing on purpose: the dashboard used to call the installer
+ * for both, which offered to reinstall Docker to someone whose Docker was merely
+ * not running.
+ */
+export const useStartDockerMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: hostApi.startDocker,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: hostQueryKeys.all }),
+  });
+};
+
 export const useInstallDockerMutation = () => {
   const queryClient = useQueryClient();
 

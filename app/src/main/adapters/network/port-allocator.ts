@@ -3,6 +3,7 @@ import { createServer } from 'node:net';
 import { promisify } from 'node:util';
 
 import type { PortClaimsPort, PortProbePort } from '../../usecase/port-allocate/contract';
+import type { DockerCommandPort } from '../container/docker-command';
 
 const run = promisify(execFile);
 
@@ -32,10 +33,10 @@ export const createPortProbe = (): PortProbePort => ({
  * stopped Twin keeps its port mapping, and it is the case the kernel cannot
  * report.
  */
-export const createPortClaims = (): PortClaimsPort => ({
+export const createPortClaims = (docker: DockerCommandPort): PortClaimsPort => ({
   async published(): Promise<number[]> {
     try {
-      const { stdout } = await run('docker', ['ps', '-a', '--format', '{{.Ports}}']);
+      const { stdout } = await docker.run(['ps', '-a', '--format', '{{.Ports}}']);
 
       // Formats seen: "0.0.0.0:18080->80/tcp", "[::]:18080->80/tcp",
       // ":::18080->80/tcp", and several comma-separated on one line.

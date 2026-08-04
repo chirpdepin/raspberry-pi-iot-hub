@@ -52,8 +52,22 @@ const createWindow = (): BrowserWindow => {
 };
 
 void app.whenReady().then(() => {
-  registerIpcHandlers(buildDependencies());
+  const dependencies = buildDependencies();
+  registerIpcHandlers(dependencies);
   createWindow();
+
+  /**
+   * Pick up a camera the user asked for before Docker existed.
+   *
+   * This is the path that survives a restart. Installing Docker Desktop on
+   * Windows usually wants a reboot, so the app that promised to "carry on from
+   * here" is not running when Docker finally arrives — without this, the user
+   * comes back to an app that has forgotten what they asked for.
+   *
+   * Deliberately not awaited: it waits on Docker, and the window must not be
+   * held back behind it.
+   */
+  void dependencies.cameraJob.resumeIfPending();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

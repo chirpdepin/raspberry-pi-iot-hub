@@ -10,6 +10,7 @@ import { IMAGES } from '../../config/images';
 import type { ZigbeeServicePort } from '../../usecase/zigbee-start/contract';
 import type { RadioRolesResult } from '../../usecase/radio-roles/contract';
 import type { PathsPort } from '../paths/paths';
+import type { DockerCommandPort } from '../container/docker-command';
 
 const run = promisify(execFile);
 
@@ -51,6 +52,8 @@ export interface ZigbeeDockerServiceDeps {
   configTemplate(): Promise<string>;
   /** Whether a TCP port can be bound right now. */
   isPortFree(port: number): Promise<boolean>;
+  /** The one way this app runs Docker — see adapters/container/docker-command.ts. */
+  docker: DockerCommandPort;
 }
 
 const exists = async (path: string): Promise<boolean> => {
@@ -68,6 +71,7 @@ export const createZigbeeDockerService = ({
   scanRoles,
   configTemplate,
   isPortFree,
+  docker,
 }: ZigbeeDockerServiceDeps): ZigbeeServicePort => {
   const dataDir = () => paths.zigbeeDataDir();
 
@@ -87,7 +91,7 @@ export const createZigbeeDockerService = ({
 
   const isRunning = async (name: string): Promise<boolean> => {
     try {
-      const { stdout } = await run('docker', ['inspect', '-f', '{{.State.Running}}', name]);
+      const { stdout } = await docker.run(['inspect', '-f', '{{.State.Running}}', name]);
       return stdout.trim() === 'true';
     } catch {
       return false;
@@ -168,15 +172,15 @@ export const createZigbeeDockerService = ({
 
         // The broker first: Zigbee2MQTT exits if it cannot connect on startup.
         if (!(await isRunning(CONTAINERS.broker))) {
-          await run('docker', ['rm', '-f', CONTAINERS.broker]).catch(() => undefined);
-          await run('docker', [
+          await docker.run(['rm', '-f', CONTAINERS.broker]).catch(() => undefined);
+          await docker.run([
             'run', '-d', '--name', CONTAINERS.broker, '--restart', 'unless-stopped',
             '--network', 'host', IMAGES.mosquitto,
           ]);
         }
 
-        await run('docker', ['rm', '-f', CONTAINERS.zigbee]).catch(() => undefined);
-        await run('docker', [
+        await docker.run(['rm', '-f', CONTAINERS.zigbee]).catch(() => undefined);
+        await docker.run([
           'run', '-d', '--name', CONTAINERS.zigbee, '--restart', 'unless-stopped',
           '--network', 'host',
           // The real node. `/dev/zigbee` is a Pi udev artefact and does not

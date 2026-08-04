@@ -19,5 +19,5 @@ export const camerasApi = {
   remove: (input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>> =>
     window.chirpHub.removeCamera(input),
   capacity: (): Promise<CapacityPayload> => window.chirpHub.getCameraCapacity(),
-  open: (id: string): Promise<IpcResult<void>> => window.chirpHub.openCamera(id),
+  open: (id: string): Promise<IpcResult<string>> => window.chirpHub.openCamera(id),
 };

@@ -1,4 +1,4 @@
-import { domainError, err, type Result } from '../../domain/errors';
+import { domainError, err, ok, type Result } from '../../domain/errors';
 
 import type { CameraOpenPorts } from './contract';
 
@@ -16,8 +16,14 @@ import type { CameraOpenPorts } from './contract';
  *
  * Contract 2 rule 1: to the user this is "open camera". The Twin, its container
  * and its port are not mentioned.
+ *
+ * **It returns the address it opened**, because on Wayland — and on any desktop
+ * where the browser is already running behind this window — the tab appears
+ * without the browser coming to the front. The click then looks like it did
+ * nothing at all. Handing the address back lets the screen say where the camera
+ * went, which is Contract 2 rule 5: show proof it worked.
  */
-export const handleCameraOpen = async (ports: CameraOpenPorts, id: string): Promise<Result<void>> => {
+export const handleCameraOpen = async (ports: CameraOpenPorts, id: string): Promise<Result<string>> => {
   const port = await ports.location.hostPort(id);
 
   if (port === null) {
@@ -32,5 +38,8 @@ export const handleCameraOpen = async (ports: CameraOpenPorts, id: string): Prom
   // Loopback, always: the Twin's UI is not exposed to the network, and building
   // this URL from anything the renderer supplied would make it something a bug
   // could point elsewhere.
-  return ports.external.open(`http://127.0.0.1:${port}`);
+  const url = `http://127.0.0.1:${port}`;
+  const opened = await ports.external.open(url);
+
+  return opened.ok ? ok(url) : err(opened.error);
 };

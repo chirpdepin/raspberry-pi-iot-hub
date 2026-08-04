@@ -61,4 +61,12 @@ describe('camera-open', () => {
 
     expect(result.ok).toBe(false);
   });
+
+  it('reports the address it opened, so the UI can prove it happened', async () => {
+    // The browser opens a tab but cannot raise its own window on Wayland, so
+    // without this the click is indistinguishable from a dead button.
+    const result = await handleCameraOpen(ports(18081), 'twin-abc');
+
+    expect(result.ok && result.value).toBe('http://127.0.0.1:18081');
+  });
 });

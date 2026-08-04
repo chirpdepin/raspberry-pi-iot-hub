@@ -317,5 +317,6 @@ export interface ChirpHubApi {
   listCameras(): Promise<CameraPayload[]>;
   removeCamera(input: { id: string; keepRecordings: boolean }): Promise<IpcResult<void>>;
   getCameraCapacity(): Promise<CapacityPayload>;
-  openCamera(id: string): Promise<IpcResult<void>>;
+  /** Resolves with the address opened, so the UI can say where the camera went. */
+  openCamera(id: string): Promise<IpcResult<string>>;
 }

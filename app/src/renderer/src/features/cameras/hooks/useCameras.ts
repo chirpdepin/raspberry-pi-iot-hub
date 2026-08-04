@@ -54,6 +54,8 @@ export const useCameras = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busyAddress, setBusyAddress] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<CameraPayload | null>(null);
+  /** The address of the camera most recently opened in the browser. */
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<CameraPayload | null>(null);
   /** The camera the user asked for while Docker was missing, held until they confirm the install. */
   const [awaitingConsent, setAwaitingConsent] = useState<DiscoveredCameraPayload | null | undefined>(undefined);
@@ -72,13 +74,31 @@ export const useCameras = () => {
     setScan(result.value);
   }, [discoverMutation]);
 
+  /**
+   * Opens a camera, and says where it went.
+   *
+   * The confirmation is not decoration. The browser is usually already running
+   * behind this window, and neither Wayland nor a tiling desktop will let it
+   * raise itself — so the tab opens where the user cannot see it and the click
+   * looks like it did nothing. Naming the address is what turns that into
+   * something they can act on (Contract 2 rule 5).
+   */
   const handleOpen = useCallback(
     async (id: string) => {
+      setErrorMessage(null);
       const result = await openMutation.mutateAsync(id);
-      if (!result.ok) setErrorMessage(result.error.message);
+
+      if (!result.ok) {
+        setErrorMessage(result.error.message);
+        return;
+      }
+
+      setOpenedAt(result.value);
     },
     [openMutation]
   );
+
+  const dismissOpened = useCallback(() => setOpenedAt(null), []);
 
   /**
    * Picking a camera is the whole of setup: its Twin is created and opened.
@@ -243,6 +263,8 @@ export const useCameras = () => {
     handleSetUp,
     handleAddBlank,
     handleOpen,
+    openedAt,
+    dismissOpened,
     requestRemove,
     confirmRemove,
     cancelRemove,

@@ -44,6 +44,8 @@ export const Cameras = memo(() => {
     handleSetUp,
     handleAddBlank,
     handleOpen,
+    openedAt,
+    dismissOpened,
     requestRemove,
     confirmRemove,
     cancelRemove,
@@ -167,7 +169,20 @@ export const Cameras = memo(() => {
             </Notice>
           ) : null}
 
-          {justAdded ? (
+          {/* Proof that the click did something. The browser opens the camera in a
+            tab but cannot raise its own window on Wayland, so without this the
+            click is indistinguishable from a dead button. */}
+        {openedAt ? (
+          <Notice
+            title='Your camera is open in your browser.'
+            description='If you cannot see it, switch to your browser — it opened in a tab there.'
+            onDismiss={dismissOpened}
+          >
+            <Typography variant='body2'>{openedAt}</Typography>
+          </Notice>
+        ) : null}
+
+        {justAdded ? (
             <Notice
               title='Your camera is ready.'
               description='Sign in with these details the first time. The camera will ask you to choose your own password, and these stop working.'

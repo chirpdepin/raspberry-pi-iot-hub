@@ -173,7 +173,9 @@
     "Docker is installed, but this account is not allowed to use it yet.": "Docker is installed, but this account is not allowed to use it yet.",
     "Couldn't tell whether Docker is working on this computer.": "Couldn't tell whether Docker is working on this computer.",
     "Fix permissions": "Fix permissions",
-    "Check again": "Check again"
+    "Check again": "Check again",
+    "Your camera is open in your browser.": "Your camera is open in your browser.",
+    "If you cannot see it, switch to your browser — it opened in a tab there.": "If you cannot see it, switch to your browser — it opened in a tab there."
   },
   "de": {
     "Chirp Hub": "Chirp Hub",
@@ -349,7 +351,9 @@
     "Docker is installed, but this account is not allowed to use it yet.": "Docker ist installiert, aber dieses Konto darf es noch nicht verwenden.",
     "Couldn't tell whether Docker is working on this computer.": "Es konnte nicht festgestellt werden, ob Docker auf diesem Computer funktioniert.",
     "Fix permissions": "Berechtigungen korrigieren",
-    "Check again": "Erneut prüfen"
+    "Check again": "Erneut prüfen",
+    "Your camera is open in your browser.": "Ihre Kamera ist in Ihrem Browser geöffnet.",
+    "If you cannot see it, switch to your browser — it opened in a tab there.": "Falls Sie sie nicht sehen, wechseln Sie zu Ihrem Browser — sie wurde dort in einem Tab geöffnet."
   },
   "es": {
     "Chirp Hub": "Chirp Hub",
@@ -525,7 +529,9 @@
     "Docker is installed, but this account is not allowed to use it yet.": "Docker está instalado, pero esta cuenta aún no puede usarlo.",
     "Couldn't tell whether Docker is working on this computer.": "No se pudo determinar si Docker funciona en este ordenador.",
     "Fix permissions": "Corregir permisos",
-    "Check again": "Comprobar de nuevo"
+    "Check again": "Comprobar de nuevo",
+    "Your camera is open in your browser.": "Su cámara está abierta en su navegador.",
+    "If you cannot see it, switch to your browser — it opened in a tab there.": "Si no la ve, cambie a su navegador: se abrió allí en una pestaña."
   },
   "fr": {
     "Chirp Hub": "Chirp Hub",
@@ -701,7 +707,9 @@
     "Docker is installed, but this account is not allowed to use it yet.": "Docker est installé, mais ce compte n'est pas encore autorisé à l'utiliser.",
     "Couldn't tell whether Docker is working on this computer.": "Impossible de déterminer si Docker fonctionne sur cet ordinateur.",
     "Fix permissions": "Corriger les autorisations",
-    "Check again": "Vérifier à nouveau"
+    "Check again": "Vérifier à nouveau",
+    "Your camera is open in your browser.": "Votre caméra est ouverte dans votre navigateur.",
+    "If you cannot see it, switch to your browser — it opened in a tab there.": "Si vous ne la voyez pas, passez à votre navigateur — elle s'est ouverte dans un onglet."
   },
   "pt": {
     "Chirp Hub": "Chirp Hub",
@@ -877,6 +885,8 @@
     "Docker is installed, but this account is not allowed to use it yet.": "O Docker está instalado, mas esta conta ainda não tem permissão para o utilizar.",
     "Couldn't tell whether Docker is working on this computer.": "Não foi possível determinar se o Docker está a funcionar neste computador.",
     "Fix permissions": "Corrigir permissões",
-    "Check again": "Verificar novamente"
+    "Check again": "Verificar novamente",
+    "Your camera is open in your browser.": "A sua câmara está aberta no seu navegador.",
+    "If you cannot see it, switch to your browser — it opened in a tab there.": "Se não a vir, mude para o seu navegador — foi aberta lá num separador."
   }
 }

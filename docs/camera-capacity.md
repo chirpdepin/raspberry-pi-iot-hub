@@ -1,7 +1,7 @@
 # How many cameras can a Raspberry Pi run?
 
 Measured on real hardware on 2026-08-01. This is the provenance for the numbers
-in `app/src/main/config/capacity.ts` — if you change that file, change this one,
+in `src/main/config/capacity.ts` in [chirpwireless/electron-app](https://github.com/chirpwireless/electron-app) — if you change that file, change this one,
 and if a figure here is ever contradicted by a newer measurement, record both
 rather than overwriting.
 

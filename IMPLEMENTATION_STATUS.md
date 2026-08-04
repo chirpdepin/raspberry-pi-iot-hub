@@ -226,7 +226,7 @@ to pristine unprovisioned state: `sudo systemctl stop iot-hub-zigbee && sudo rm 
 
 # Chirp Hub desktop app (`app/`)
 
-Design record: **[app/electron.md](app/electron.md)**. Built in 11 phases, each ending in a commit, each
+Design record: **`electron.md` in [chirpwireless/electron-app](https://github.com/chirpwireless/electron-app)**. Built in 11 phases, each ending in a commit, each
 carrying its own **SOLID · UX · Portability · Single-source-of-truth** gate — a constraint stated once at
 the top of a long plan stops influencing the work several phases later.
 
@@ -235,7 +235,7 @@ using no terminal. Finish line is Phase 11: all three live and reaching Chirp at
 
 | | Phase | State |
 |---|---|---|
-| ✅ | 1 · Docs and enforcement | `app/electron.md`, `CLAUDE.md` contracts, `check-boundaries.ts` + CI |
+| ✅ | 1 · Docs and enforcement | `electron.md` (app repo), `CLAUDE.md` contracts, `check-boundaries.ts` + CI |
 | ✅ | 2 · Scaffold, ui-kit, shell | Electron 43 + React 19 + MUI 9 + ui-kit; 22/22 smoke checks |
 | ✅ | 3 · Domain, ports, capabilities, Docker | 9 use-case tests, no Docker/radio/Electron needed |
 | ⬜ | 4 · Dashboard and empty states | |
@@ -249,11 +249,11 @@ using no terminal. Finish line is Phase 11: all three live and reaching Chirp at
 
 ### Phase 1 — done 2026-08-01
 
-- **`app/electron.md`** — architecture, all four contracts, the complete screen-by-screen spec with real
+- **`electron.md` (app repo)** — architecture, all four contracts, the complete screen-by-screen spec with real
   API fields (`POST /nodes/nonminer/{band}/{gatewayId}`, `GET /nodes/signed-cert/{gateway_id}`,
   `connection_create`, `device_provision_mqtt`), Twin distribution, ui-kit gotchas, blockers.
-- **`CLAUDE.md`** — four contract sections + `app/electron.md` in the documentation map.
-- **`app/scripts/check-boundaries.ts`** — 7 enforced rules across all four contracts.
+- **`CLAUDE.md`** — four contract sections + `electron.md` (app repo) in the documentation map.
+- **`scripts/check-boundaries.ts` (app repo)** — 7 enforced rules across all four contracts.
 - **`.github/workflows/app-boundaries.yml`** — runs the self-test *first*, so a green "boundaries clean"
   cannot be produced by a broken checker.
 
@@ -991,3 +991,28 @@ unintended.
   faked in the end-to-end driver, because the adapter correctly finds Docker at
   an absolute path even when it is off the PATH. Everything downstream of that
   answer is the real code.
+
+
+## The app moved out of this repository (2026-08-04)
+
+`app/` is gone. The Chirp Hub desktop app lives in
+**[chirpwireless/electron-app](https://github.com/chirpwireless/electron-app)**, which is now the only copy.
+
+**Why:** the app was pushed to its own repository and then kept being changed
+here, so the two diverged within a day. Two copies of the same application with
+no sync mechanism is not a state worth maintaining, and the hub repository does
+not build the app.
+
+**What came with it:** the boundary-checker CI workflow, which now runs
+`npm run check && npm test` there rather than a subset of it here.
+
+**What was deleted rather than moved:** `scripts/benchmark-twins.sh`. Its premise
+— that the capacity figures were unmeasured and blocked on a published Twin image
+— stopped being true: the measurement was done on real hardware by a different
+method, and it referenced `CAPACITY_PROFILES` and a `measured` flag that no
+longer exist. The method that was actually used is recorded in
+[docs/camera-capacity.md](docs/camera-capacity.md).
+
+**What stays here:** the hub image, the LoRaWAN/Zigbee/Thread work, the
+measurement data, and the docs. Anything about the app itself belongs in the app
+repository now.

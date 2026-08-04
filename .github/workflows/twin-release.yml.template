@@ -7,7 +7,7 @@
 # while lens-core and lens-bridge both publish to ghcr.io.
 #
 # Installing it needs write access to chirpwireless/lens-twin, which is why this
-# is a template rather than an active workflow. See app/electron.md.
+# is a template rather than an active workflow. See electron.md in https://github.com/chirpwireless/electron-app.
 #
 # Why tarballs on a public release rather than a private registry: Twin is
 # closed-source, but pushing adopters toward a private registry means every user

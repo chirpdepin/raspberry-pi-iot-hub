@@ -28,9 +28,9 @@ files inside `raspberry-pi-iot-hub/`.
 |---|---|
 | [docs/ubuntu-2604.md](docs/ubuntu-2604.md) | The Ubuntu Server build: GPIO chardev reset, the temperature-sensor patch, region-from-LNS, provisioning, GNSS opt-in |
 | [docs/zigbee-thread.md](docs/zigbee-thread.md) | Zigbee/Thread dongles: supported hardware table, stable device names, network coordinators, MQTT topology, troubleshooting |
-| [docs/camera-capacity.md](docs/camera-capacity.md) | **How many cameras a Pi can run, and the measurements behind it.** The provenance for `app/src/main/config/capacity.ts` — the curve, the five findings (keyframe-only decoding, scene content beating camera count, why CPU% lies, the Tapo's 2-session cap), and what is deliberately not covered |
+| [docs/camera-capacity.md](docs/camera-capacity.md) | **How many cameras a Pi can run, and the measurements behind it.** The provenance for `src/main/config/capacity.ts` in the app repo — the curve, the five findings (keyframe-only decoding, scene content beating camera count, why CPU% lies, the Tapo's 2-session cap), and what is deliberately not covered |
 | [config/README.md](config/README.md) | What each config template is and the constraints that cannot live inside the files themselves (JSON has no comments) |
-| [app/electron.md](app/electron.md) | **Chirp Hub desktop app** — architecture, the three contracts (SOLID, non-technical user, Ubuntu Core portability), every screen and flow with real API fields, Twin distribution, ui-kit gotchas |
+| **[chirpwireless/electron-app](https://github.com/chirpwireless/electron-app)** (separate repo) | **Chirp Hub desktop app** — architecture, the five contracts, every screen and flow with real API fields, Twin distribution, ui-kit gotchas. Its design record is `electron.md` **in that repository**; the app no longer lives here |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | The non-negotiable rules (region-agnostic, ship unprovisioned, stable device names, pinned images), testing bar, style |
 | [LICENSE](LICENSE) | MIT, Copyright (c) 2025-2026 Chirp |
 | [docs/hardware-setup.md](docs/hardware-setup.md) | Physical assembly |
@@ -357,7 +357,7 @@ Do not treat these as intentional; do not copy their patterns.
 Two facts that constrain everything in `app/`:
 
 - **The Twin is not open source.** It reaches customers as a **compiled container
-  image** and never as source. That is why `app/src/main/config/images.ts` loads
+  image** and never as source. That is why `src/main/config/images.ts` in the app repo loads
   it from a downloaded tarball (`TWIN_MANIFEST_URL`) rather than building it: a
   distributable must not contain Twin code. Never vendor its source, and never
   ship a build produced from it.
@@ -391,9 +391,9 @@ that work, each of which is easy to get wrong:
   the standard way to use Docker without sudo and it is a real privilege grant,
   which is why the consent copy says so.
 
-## The Chirp Hub app (`app/`) — three contracts, enforced
+## The Chirp Hub app (separate repository) — three contracts, enforced
 
-Full design record: **[app/electron.md](app/electron.md)**. The summary that matters here:
+Full design record: **`electron.md` in [chirpwireless/electron-app](https://github.com/chirpwireless/electron-app)**. The summary that matters here:
 
 **Nothing in the app is written in Go, and TinyGo is ruled out.** Node covers it (`dockerode`,
 `serialport`, plus the existing `detect-*.sh` scripts). TinyGo targets microcontrollers and WASM with a
@@ -414,7 +414,7 @@ second toolchain for no gain.
 camera, no network, no Electron. If one cannot be, the layering is wrong; fix the layering, don't mock
 harder.
 
-`app/scripts/check-boundaries.ts` runs in CI and **fails** on: a `domain/` file importing outside
+`scripts/check-boundaries.ts` in the app repo runs in CI and **fails** on: a `domain/` file importing outside
 `domain/` · a `usecase/` file importing `adapters/`, `electron` or a Node built-in · a renderer file
 importing `main/` or `dockerode` · a use case directory with no `usecase.test.ts`.
 
@@ -485,7 +485,7 @@ searching for the new one.
 ### Contract 5 — Chirp frontend conventions
 
 From **`chirp-frontend/CLAUDE.md`**, so code reads the same across the web app and this one. Full detail
-in [app/electron.md](app/electron.md).
+in [electron.md](https://github.com/chirpwireless/electron-app/blob/main/electron.md).
 
 - **Layered:** Component → business hook → cache hook (TanStack Query) → IPC transport. **No `useQuery`
   or IPC call inside a component.**

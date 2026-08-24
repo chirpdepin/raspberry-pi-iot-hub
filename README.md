@@ -40,17 +40,14 @@ Whether you're a hobbyist, maker, or professional looking to explore LoRaWAN tec
 
 ## Pre-configured Image
 
-For convenience, we provide a pre-configured Raspberry Pi OS image with all necessary software installed.
-
-### Download Image
-
-You can download the latest Raspberry Pi OS image with pre-configured IoT Hub software here:
-
-- [Download Raspberry Pi IoT Hub Image](https://chirpdepin.s3.fr-par.scw.cloud/raspberry-pi-iot-hub/raspberrydiyiothub_upd.img)
+> **The pre-built image is not currently available for download.** The bucket that hosted it has been
+> removed and the previous download link is dead. Follow the manual setup steps in this README instead.
+> This section describes what that image contained, and is kept as a reference for the equivalent
+> manual configuration.
 
 ### Image Contents
 
-The pre-configured image contains:
+The pre-configured image contained:
 
 #### Pre-installed Software
 

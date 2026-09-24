@@ -1,6 +1,14 @@
 # Software Setup Guide
 
-This guide walks you through setting up your Senses IoT Hub software. The process involves preparing the SD card, installing necessary software, and configuring the Basic Station service.
+**Do not begin a new installation from these steps.** This is the historical setup guide for the
+earlier Raspberry Pi hub. It depends on an operating-system image supplied separately, but this
+repository provides no verified download or complete replacement installation procedure.
+
+Before starting, obtain an exact supported release and matching, verified instructions. The
+[main README](../README.md) explains the unavailable image. The commands below are retained as
+historical reference; they have not been verified as a current installation path.
+
+## Historical procedure
 
 ## Prerequisites
 

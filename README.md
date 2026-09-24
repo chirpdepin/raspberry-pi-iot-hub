@@ -1,21 +1,17 @@
-# DIY Raspberry Pi LoRaWAN Gateway for Home Automation
+# Raspberry Pi IoT Hub — historical installation reference
 
-Welcome to the Raspberry Pi IoT Hub repository! This project helps you build your own DIY LoRaWAN gateway using a Raspberry Pi and RAK5146 concentrator, allowing you to connect LoRaWAN devices to Chirp's network and the Home Senses platform for smart home automation.
+**Do not start a new installation from this guide.** The pre-built operating-system image is no
+longer available here, and this repository does not provide a verified complete replacement
+installation procedure. There is no image to download or write to an SD card from these instructions.
 
-## What is This Project?
-
-This repository contains everything you need to transform a Raspberry Pi into a powerful LoRaWAN gateway that connects to Chirp's cloud services. With this setup, you can:
-
-- Create your own LoRaWAN gateway for a fraction of the cost of commercial solutions
-- Connect various LoRaWAN sensors and devices throughout your home
-- Automate your home using the Home Senses platform
-- Contribute to the growing community of DIY IoT enthusiasts
-
-Whether you're a hobbyist, maker, or professional looking to explore LoRaWAN technology, this project provides a complete, open-source solution to get started.
+This repository preserves the earlier Raspberry Pi gateway software and setup notes. The material
+below explains that earlier setup; it is not a current supported installer or evidence that a new
+installation will work. Before a new installation, obtain an exact supported release and matching,
+verified instructions through the project's published release process.
 
 ## Repository Contents
 
-- **Documentation**: Comprehensive guides for hardware setup, software installation, and troubleshooting
+- **Documentation**: Historical hardware, installation and troubleshooting notes
 - **Configuration Files**: Templates and examples for Basic Station and system services
 - **Web Interface**: A Go-based configuration utility to easily set up your gateway
 - **Scripts**: Utility scripts for installation and maintenance
@@ -31,19 +27,16 @@ Whether you're a hobbyist, maker, or professional looking to explore LoRaWAN tec
 
 ## Quick Start Guide
 
-1. Assemble the hardware components (see [Hardware Setup](docs/hardware-setup.md))
-2. Download the [pre-configured Raspberry Pi OS image](#download-image)
-3. Flash the image to your SD card using [balenaEtcher](https://etcher.balena.io/)
-4. Configure your gateway to connect to Chirp's network
-5. Register your gateway on the Home Senses platform
-6. Start connecting LoRaWAN devices to automate your home
+A pre-built image is not available from this repository. Do not download or flash an image
+on the basis of these notes. A new installation needs an exact supported release and matching,
+verified instructions. The sections below describe the earlier setup only.
 
 ## Pre-configured Image
 
 > **The pre-built image is not currently available for download.** The bucket that hosted it has been
-> removed and the previous download link is dead. Follow the manual setup steps in this README instead.
-> This section describes what that image contained, and is kept as a reference for the equivalent
-> manual configuration.
+> removed and the previous download link is dead. The software setup guide also depends on a
+> separately supplied image; it is not a verified replacement installation procedure. This section
+> records the earlier image contents only.
 
 ### Image Contents
 
@@ -116,10 +109,9 @@ The system is configured to use:
 
 ## Quick Start
 
-1. Flash the image to an SD card using Raspberry Pi Imager
-2. Insert the SD card into your Raspberry Pi 4
-3. Power on the device
-4. The Basic Station will automatically start and try to connect to ChirpWireless.io
+A pre-built image is not available from this repository. Do not download or flash an image
+on the basis of these notes. A new installation needs an exact supported release and matching,
+verified instructions. The sections below describe the earlier setup only.
 
 ## Important Notes
 
@@ -263,7 +255,9 @@ This image is provided as-is under the MIT license.
 
 # Senses IoT Hub
 
-A complete DIY LoRaWAN gateway solution designed for home automation enthusiasts. This project helps you set up your own LoRaWAN gateway using a Raspberry Pi 4 and RAK5146 concentrator, connecting to Chirp's LNS (Network Server).
+This section describes the earlier Raspberry Pi 4 and RAK5146 gateway. Its installation image is
+unavailable. Treat the features and configuration below as historical reference, not a current
+complete installation offer.
 
 ## Overview
 
@@ -285,11 +279,9 @@ The Senses IoT Hub provides:
 
 ## Quick Start
 
-1. Flash the provided SD card image
-2. Connect the hardware
-3. Power on your Raspberry Pi
-4. Access the web interface at `http://<raspberry-pi-ip>`
-5. Configure your gateway using certificates from app.chirpwireless.io
+A pre-built image is not available from this repository. Do not download or flash an image
+on the basis of these notes. A new installation needs an exact supported release and matching,
+verified instructions. The sections below describe the earlier setup only.
 
 ## Documentation
 

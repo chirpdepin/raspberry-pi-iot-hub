@@ -18,7 +18,8 @@ LoRaWAN gateway too if you fit a RAK5146 LoRaWAN card. Everything is set up from
    sudo ./scripts/install-ubuntu.sh
    ```
 
-   On Ubuntu Server, add `--with-desktop` so the app has a screen to run on. Reboot when the script
+   On Ubuntu Server, add `--with-desktop` so the app has a screen to run on, with a web browser for
+   the links the app opens and an archive tool to unzip the gateway certificates. Reboot when the script
    asks. If you add a LoRaWAN card later, run the script again.
 4. Download `kilo-hub_<version>_arm64.deb` from the
    [latest release](https://github.com/chirpdepin/raspberry-pi-iot-hub/releases/latest) and install it:

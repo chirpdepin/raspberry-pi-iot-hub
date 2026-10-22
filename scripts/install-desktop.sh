@@ -4,7 +4,9 @@
 #
 # The Ubuntu Server image has no X, no Wayland and no window manager, so an
 # Electron app cannot start on it at all. This adds the smallest session that
-# will run one application well.
+# will run one application well, plus a web browser and an archive tool: the
+# app's "Open …" actions hand links to the system browser, and registering the
+# LoRaWAN gateway means downloading certs.zip in the console and unzipping it.
 #
 # ADDITIVE ONLY. The Pi must still boot and run headless with no monitor
 # attached: every service verified in the LoRaWAN and Zigbee work keeps running
@@ -54,7 +56,16 @@ apt-get -y install --no-install-recommends \
     seatd \
     wlr-randr \
     fonts-dejavu-core \
-    xwayland
+    xwayland \
+    xdg-utils \
+    file-roller \
+    snapd
+
+# ---------------------------------------------------------------------------
+step "Web browser"
+
+# Ubuntu ships Firefox as a snap; the apt "firefox" package only installs the snap.
+snap install firefox
 
 systemctl enable --now seatd
 usermod -aG video,input,render,seat "$TARGET_USER" 2>/dev/null || true
@@ -71,6 +82,12 @@ install -d -o "$TARGET_USER" -g "$TARGET_USER" "/home/$TARGET_USER/.config/labwc
     printf 'if command -v kilo-hub >/dev/null 2>&1; then kilo-hub & else chirp-hub & fi\n'
 } > "/home/$TARGET_USER/.config/labwc/autostart"
 chown "$TARGET_USER:$TARGET_USER" "/home/$TARGET_USER/.config/labwc/autostart"
+
+# There is no desktop environment to pick defaults, so name them: links open in
+# Firefox, and a downloaded zip (certs.zip) opens in the archive tool to extract.
+sudo -u "$TARGET_USER" xdg-mime default firefox_firefox.desktop \
+    x-scheme-handler/http x-scheme-handler/https text/html
+sudo -u "$TARGET_USER" xdg-mime default org.gnome.FileRoller.desktop application/zip
 
 # ---------------------------------------------------------------------------
 if [ "$AUTOLOGIN" -eq 1 ]; then
@@ -111,6 +128,8 @@ printf 'A graphical session is installed for user "%s".\n\n' "$TARGET_USER"
 printf 'Plug in a monitor and reboot: the Pi logs in on its own and the hub app\n'
 printf 'starts fullscreen. With no monitor attached nothing changes - the gateway,\n'
 printf 'Zigbee and camera services run exactly as before.\n\n'
+printf 'Links the app opens (the console, a camera, the Zigbee dashboard) open in\n'
+printf 'Firefox; a downloaded zip opens in the archive tool so you can extract it.\n\n'
 printf 'The app package itself is installed separately, from\n'
 printf 'https://github.com/chirpdepin/raspberry-pi-iot-hub/releases/latest :\n'
 printf '    sudo apt install ./kilo-hub_*_arm64.deb\n\n'

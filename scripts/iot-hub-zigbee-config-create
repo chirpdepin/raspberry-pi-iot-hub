@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# iot-hub-zigbee-config-create — create the Zigbee2MQTT configuration, once.
+#
+#     iot-hub-zigbee-config-create < configuration.yaml
+#
+# Content on stdin. There is deliberately NO destination argument: the
+# destination is compiled in from the shared definitions. A privileged helper
+# that accepts a path is a general root-owned file writer wearing a narrow name,
+# and the app that calls it is one bug away from writing anywhere on the device.
+#
+# It also never replaces. Zigbee2MQTT rewrites this file at runtime to store the
+# network key and every pairing, so an overwrite does not lose a setting — it
+# loses the network, and every device in the home has to be re-paired. An
+# existing file is reported, not touched.
+#
+# The write is durable, not merely atomic. A hard link that is visible but whose
+# content is still in page cache survives a rename and does not survive a power
+# cut, which on a hub is the ordinary way to turn it off.
+#
+# Exit codes:
+#     0  status=created, or status=exists — both are success
+#     1  the write failed
+#     2  usage
+
+set -euo pipefail
+
+# shellcheck source=lib/iot-hub-definitions.sh
+. "${IOT_HUB_DEFINITIONS:-/usr/local/lib/iot-hub/definitions.sh}"
+
+log() { printf '%s\n' "$*" >&2; }
+
+[ "$#" -eq 0 ] || { log "usage: ${0##*/} < configuration.yaml   (no arguments; content on stdin)"; exit 2; }
+[ "$(id -u)" -eq 0 ] || { log "run as root"; exit 2; }
+[ ! -t 0 ] || { log "expected configuration content on stdin"; exit 2; }
+
+dest="$IOT_HUB_ZIGBEE_CONFIG"
+dir="$(dirname "$dest")"
+
+# Report an existing file before staging anything. This is the common case —
+# every start after the first — and it should not touch the directory at all.
+if [ -e "$dest" ]; then
+    printf 'status=exists\npath=%s\n' "$dest"
+    exit 0
+fi
+
+# The ownership contract, applied idempotently. setgid so that the database and
+# coordinator backup Zigbee2MQTT writes here land in the same group and stay
+# readable by the onboarding app.
+install -d -o root -g "$IOT_HUB_GROUP" -m "$IOT_HUB_DIR_MODE" "$dir"
+
+# 1. Exclusive creation, in the destination directory so the link is same-filesystem.
+staging="$(mktemp "$dir/.configuration.yaml.XXXXXX")"
+
+# Staging is never swept by this command. An age threshold cannot prove another
+# process is dead — least of all while a pkexec prompt sits waiting for someone
+# to type a password — and deleting a live one loses that caller's write. A
+# unique leftover costs a few hundred bytes; cleanup, if it is ever wanted, is a
+# separately locked maintenance job.
+cleanup() { rm -f "$staging"; }
+trap cleanup EXIT
+
+# 2. Write, chmod, fsync, close.
+cat > "$staging"
+chown root:"$IOT_HUB_GROUP" "$staging"
+chmod "$IOT_HUB_CONFIG_MODE" "$staging"
+sync -d "$staging"
+
+# 3. Hard-link without replacement. ln(1) fails if the destination exists and
+#    never follows through with a replace, which is exactly the semantics
+#    wanted: two callers race, one wins, the loser is told the file is there.
+if ! ln "$staging" "$dest" 2>/dev/null; then
+    if [ -e "$dest" ]; then
+        printf 'status=exists\npath=%s\n' "$dest"
+        exit 0
+    fi
+    log "could not create $dest"
+    exit 1
+fi
+
+# 4. Flush the directory entry, or the file is visible now and absent after a
+#    power cut.
+sync -d "$dir"
+
+# 5/6. Drop the staging name and flush that removal too.
+rm -f "$staging"
+trap - EXIT
+sync -d "$dir"
+
+printf 'status=created\npath=%s\n' "$dest"

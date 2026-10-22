@@ -1,0 +1,74 @@
+# OpenThread Border Router for the IoT Hub.
+# Installed to /opt/iot-hub/thread/docker-compose.yml by scripts/install-radios.sh.
+#
+# Needs its OWN dongle flashed with OpenThread RCP firmware. A single radio
+# cannot serve Zigbee and Thread at the same time without multiprotocol
+# firmware, which this image deliberately does not use — the repo's older
+# README_ZIGBEE.md and README_OTBR.md both claimed /dev/ttyACM0 for the same
+# dongle, which cannot work. The Thread radio is /dev/thread, assigned by USB
+# serial in /etc/iot-hub/radios.conf, so the two can never swap.
+#
+# The unit that starts this is gated on /dev/thread existing, so with no second
+# dongle present nothing here runs and nothing fails.
+
+services:
+  otbr:
+    # openthread/otbr publishes only a ":latest" tag, so it is pinned by digest
+    # to keep the image reproducible. Digest of the 2026-07 build (v2026.07.0),
+    # arm64. To move forward: docker pull openthread/otbr:latest, then record
+    # the new digest here deliberately.
+    image: openthread/otbr@sha256:0cfccb10c3d5f878028e07ea4f652f72fc967592ee9591978c41dcced0ede4e6
+    container_name: otbr
+    restart: unless-stopped
+
+    # Border routing has to run in the host network namespace: it creates the
+    # wpan tun interface and advertises on-mesh prefixes and routes onto the
+    # LAN, neither of which works from inside a bridge network.
+    network_mode: host
+
+    # Upstream's documented configuration. OTBR creates a tun interface, drives
+    # ip6tables and uses netfilter queue, so it needs more than a narrow
+    # capability set. Left as upstream specifies because it cannot be verified
+    # here without a Thread dongle, and a tightened set that is untested would
+    # be worse than an honest one.
+    privileged: true
+
+    devices:
+      - /dev/thread:/dev/thread
+
+    volumes:
+      - /etc/iot-hub/thread:/etc/iot-hub/thread
+      - /var/lib/iot-hub/thread:/var/lib/thread
+      - /etc/localtime:/etc/localtime:ro
+
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv4.conf.all.forwarding: "1"
+      net.ipv6.conf.all.forwarding: "1"
+
+    # INFRA_IF_NAME is written by install-radios.sh from the actual default
+    # route interface. The image defaults to eth0 and the old README_OTBR.md
+    # hardcoded wlan0; neither is safe to assume on an image other people flash.
+    #
+    # RADIO_URL baud rate depends on the RCP firmware: 460800 is usual for
+    # Silicon Labs EFR32 builds, 1000000 for the nRF52840. Set it to match the
+    # firmware actually flashed.
+    env_file:
+      - /etc/iot-hub/thread/thread.env
+
+    environment:
+      # The onboarding app drives Thread through the REST API on :8081. The web
+      # GUI is off because with host networking it would bind :80, which the
+      # hub's own configuration interface uses.
+      - WEB_GUI=0
+      - REST_API=1
+      - BORDER_ROUTING=1
+      - BACKBONE_ROUTER=1
+      - NAT64=1
+      - FIREWALL=1
+
+    command:
+      - "--radio-url"
+      - "${RADIO_URL:-spinel+hdlc+uart:///dev/thread?uart-baudrate=460800}"
+      - "--backbone-interface"
+      - "${INFRA_IF_NAME:-eth0}"

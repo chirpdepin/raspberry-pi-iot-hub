@@ -1,0 +1,79 @@
+diff --git a/libloragw/src/loragw_hal.c b/libloragw/src/loragw_hal.c
+index ffc8ec0..1b59335 100644
+--- a/libloragw/src/loragw_hal.c
++++ b/libloragw/src/loragw_hal.c
+@@ -203,6 +203,11 @@ static lgw_context_t lgw_context = {
+ FILE * log_file = NULL;
+ 
+ /* I2C temperature sensor handles */
++/* Fallback ambient temperature in Celsius, used when the board carries no
++ * STTS751. Semtech RSSI temperature compensation is calibrated around this
++ * point, so it is the least-wrong constant to assume. */
++#define LGW_FALLBACK_TEMPERATURE 25.0
++
+ static int     ts_fd = -1;
+ static uint8_t ts_addr = 0xFF;
+ 
+@@ -1098,8 +1103,9 @@ int lgw_start(void) {
+             ts_addr = I2C_PORT_TEMP_SENSOR[i];
+             err = i2c_linuxdev_open(I2C_DEVICE, ts_addr, &ts_fd);
+             if (err != LGW_I2C_SUCCESS) {
+-                printf("ERROR: failed to open I2C for temperature sensor on port 0x%02X\n", ts_addr);
+-                return LGW_HAL_ERROR;
++                printf("INFO: no I2C device for temperature sensor on port 0x%02X\n", ts_addr);
++                ts_fd = -1;
++                continue;
+             }
+ 
+             err = stts751_configure(ts_fd, ts_addr);
+@@ -1113,8 +1119,14 @@ int lgw_start(void) {
+             }
+         }
+         if (i == sizeof I2C_PORT_TEMP_SENSOR) {
+-            printf("ERROR: no temperature sensor found.\n");
+-            return LGW_HAL_ERROR;
++            /* The RAK2287/RAK5146 and other non-reference CORECELL boards do
++             * not fit the STTS751 that Semtech reference design assumes.
++             * Upstream treats that as fatal. Carry on with a fallback value
++             * instead: the reading only feeds RSSI temperature compensation,
++             * so the cost is a small RSSI error, not a dead gateway. */
++            printf("WARNING: no temperature sensor found, using %.1f C fallback for RSSI compensation\n", (double)LGW_FALLBACK_TEMPERATURE);
++            ts_fd = -1;
++            ts_addr = 0xFF;
+         }
+ 
+         /* Configure ADC AD338R for full duplex (CN490 reference design) */
+@@ -1222,11 +1234,14 @@ int lgw_stop(void) {
+     }
+ 
+     if (CONTEXT_COM_TYPE == LGW_COM_SPI) {
+-        DEBUG_MSG("INFO: Closing I2C for temperature sensor\n");
+-        x = i2c_linuxdev_close(ts_fd);
+-        if (x != 0) {
+-            printf("ERROR: failed to close I2C temperature sensor device (err=%i)\n", x);
+-            err = LGW_HAL_ERROR;
++        if (ts_fd >= 0) {
++            DEBUG_MSG("INFO: Closing I2C for temperature sensor\n");
++            x = i2c_linuxdev_close(ts_fd);
++            if (x != 0) {
++                printf("ERROR: failed to close I2C temperature sensor device (err=%i)\n", x);
++                err = LGW_HAL_ERROR;
++            }
++            ts_fd = -1;
+         }
+ 
+         if (CONTEXT_BOARD.full_duplex == true) {
+@@ -1597,7 +1612,12 @@ int lgw_get_temperature(float* temperature) {
+ 
+     switch (CONTEXT_COM_TYPE) {
+         case LGW_COM_SPI:
+-            err = stts751_get_temperature(ts_fd, ts_addr, temperature);
++            if (ts_fd < 0) {
++                *temperature = LGW_FALLBACK_TEMPERATURE;
++                err = LGW_HAL_SUCCESS;
++            } else {
++                err = stts751_get_temperature(ts_fd, ts_addr, temperature);
++            }
+             break;
+         case LGW_COM_USB:
+             err = lgw_com_get_temperature(temperature);

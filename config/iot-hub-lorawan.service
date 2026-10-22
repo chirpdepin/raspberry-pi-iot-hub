@@ -1,0 +1,31 @@
+[Unit]
+Description=IoT Hub LoRaWAN gateway (Basic Station)
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+# A freshly flashed card has no LNS credentials yet — they are written by the
+# onboarding app once the user registers the gateway with Chirp. Without this
+# condition the container would crash-loop on every boot of every unprovisioned
+# image. With it, the unit sits quietly inactive and starts by itself the moment
+# tc.uri appears.
+ConditionPathExists=/etc/iot-hub/lorawan/tc.uri
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/iot-hub/lorawan
+
+# Identify the concentrator on every start rather than at image build time, so
+# the same image works with whatever RAK card the user plugged in. Non-fatal:
+# if the probe fails we still try to start with the last known values.
+ExecStartPre=-/usr/local/bin/detect-concentrator.sh
+
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

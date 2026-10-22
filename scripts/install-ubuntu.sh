@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-# install-ubuntu.sh — build the IoT Hub LoRaWAN layer on Ubuntu Server (arm64).
+# install-ubuntu.sh — prepare a Raspberry Pi running Ubuntu Server (arm64) for Kilo Hub / Chirp Hub.
+#
+# The LoRaWAN card is optional. Without one, everything else is installed and
+# the Pi simply is not set up as a LoRaWAN gateway; run again after fitting a card.
 #
 # Targets Ubuntu 24.04/26.04 on a Raspberry Pi 4/5. This is NOT the same path as
 # the Raspberry Pi OS instructions in docs/software-setup.md — see
@@ -13,7 +16,7 @@
 # AS923 and the rest.
 #
 # Usage:
-#   sudo ./install-ubuntu.sh [--skip-upgrade] [--skip-docker]
+#   sudo ./install-ubuntu.sh [--skip-upgrade] [--skip-docker] [--skip-radios] [--with-desktop]
 
 set -euo pipefail
 
@@ -59,6 +62,9 @@ if [ "$SKIP_UPGRADE" -eq 0 ]; then
 fi
 apt-get -y install build-essential git gpiod libgpiod-dev i2c-tools
 
+# The apps treat this folder as the marker of a prepared Pi, card or no card.
+install -d "$ETC_DIR"
+
 # i2c-tools installs a udev rule that moves /dev/i2c-* from group "dialout" to a
 # new "i2c" group. Without this the HAL's temperature-sensor probe fails with
 # EACCES, which is indistinguishable in the logs from the sensor being absent.
@@ -91,7 +97,6 @@ fi
 # ---------------------------------------------------------------------------
 step "Concentrator reset helper"
 
-install -d "$ETC_DIR"
 # Never clobber an existing config — an adopter may have retuned the pins for a
 # non-RAK board.
 if [ ! -f "$ETC_DIR/concentrator.conf" ]; then
@@ -149,17 +154,14 @@ done
 # ---------------------------------------------------------------------------
 step "Concentrator detection"
 
-/usr/local/bin/concentrator-reset start
-if ! (cd "$SRC_DIR/sx1302_hal" && /usr/local/bin/util_chip_id -d /dev/spidev0.0); then
-    echo
-    echo "FAILED: the concentrator did not answer on /dev/spidev0.0." >&2
-    echo "This is a hardware or wiring problem, not a software one. Check that" >&2
-    echo "the card is fully seated in the HAT, the HAT is seated on the header," >&2
-    echo "and RESET_PIN in $ETC_DIR/concentrator.conf matches your board." >&2
-    exit 1
+HAS_CARD=0
+if /usr/local/bin/concentrator-reset start \
+    && (cd "$SRC_DIR/sx1302_hal" && /usr/local/bin/util_chip_id -d /dev/spidev0.0); then
+    HAS_CARD=1
+    /usr/local/bin/detect-concentrator.sh
+else
+    echo "No LoRaWAN card answered on /dev/spidev0.0; the gateway part is skipped."
 fi
-
-/usr/local/bin/detect-concentrator.sh
 
 # ---------------------------------------------------------------------------
 if [ "$SKIP_DOCKER" -eq 0 ]; then
@@ -169,6 +171,7 @@ if [ "$SKIP_DOCKER" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+if [ "$HAS_CARD" -eq 1 ]; then
 step "Basic Station"
 
 # The config directory must be writable by the container: the image generates
@@ -185,6 +188,7 @@ install -m 0644 "$REPO_DIR/config/iot-hub-lorawan.service" \
     /etc/systemd/system/iot-hub-lorawan.service
 systemctl daemon-reload
 systemctl enable iot-hub-lorawan.service
+fi
 
 # ---------------------------------------------------------------------------
 if [ "$SKIP_RADIOS" -eq 0 ]; then
@@ -203,6 +207,7 @@ fi
 # ---------------------------------------------------------------------------
 step "Done"
 
+if [ "$HAS_CARD" -eq 1 ]; then
 cat <<EOF
 
 Concentrator:  $(sed -n 's/^GATEWAY_EUI=//p' "$ETC_DIR/concentrator.env" 2>/dev/null || echo unknown)
@@ -217,6 +222,17 @@ LoRaWAN Gateway page, and follow it: it shows the EUI above, sends you to the
 console to register it, and installs the files the console gives you.
 
 EOF
+else
+cat <<EOF
+
+This Pi is ready for cameras, Zigbee and Thread. Install Kilo Hub (or Chirp Hub)
+from https://github.com/chirpdepin/raspberry-pi-iot-hub/releases/latest.
+
+No LoRaWAN card found, so this Pi is not set up as a LoRaWAN gateway. If you add
+a card later, or fitted one and this script asked for a restart, run it again.
+
+EOF
+fi
 
 if [ -f /var/run/reboot-required ]; then
     echo "A reboot is required to finish (kernel and/or SPI overlay)."

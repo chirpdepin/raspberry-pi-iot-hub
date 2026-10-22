@@ -1,15 +1,16 @@
 # Raspberry Pi IoT Hub
 
-Turn a Raspberry Pi with a RAK5146 LoRaWAN card into an on-site hub: a LoRaWAN gateway, a Zigbee and
-Thread radio host, and a camera recorder, set up from the **Kilo Hub** app (built as Chirp Hub for Chirp).
+Turn a Raspberry Pi into an on-site hub: a camera recorder and a Zigbee and Thread radio host, and a
+LoRaWAN gateway too if you fit a RAK5146 LoRaWAN card. Everything is set up from the **Kilo Hub** app
+(built as Chirp Hub for Chirp). The LoRaWAN card is optional.
 
 ## Set up a Raspberry Pi hub
 
-1. Assemble the Pi, the RAK HAT with the RAK5146 mPCIe card, and the LoRa antenna. Fit the antenna
-   before powering on.
+1. Put the Pi in its case. For a LoRaWAN gateway, first fit the RAK HAT with the RAK5146 mPCIe card
+   and the LoRa antenna, and fit the antenna before powering on.
 2. Install **Ubuntu 24.04 or 26.04 (64-bit)** on the SD card with Raspberry Pi Imager.
-3. Prepare the Pi. This enables SPI, checks that the card answers, installs Docker, Basic Station and
-   the Zigbee/Thread radio support:
+3. Prepare the Pi. This installs Docker and the Zigbee/Thread radio support. If a LoRaWAN card
+   answers, it also sets up the gateway (Basic Station); with no card it skips that part and carries on:
 
    ```bash
    git clone https://github.com/chirpdepin/raspberry-pi-iot-hub.git
@@ -18,7 +19,7 @@ Thread radio host, and a camera recorder, set up from the **Kilo Hub** app (buil
    ```
 
    On Ubuntu Server, add `--with-desktop` so the app has a screen to run on. Reboot when the script
-   asks.
+   asks. If you add a LoRaWAN card later, run the script again.
 4. Download `kilo-hub_<version>_arm64.deb` from the
    [latest release](https://github.com/chirpdepin/raspberry-pi-iot-hub/releases/latest) and install it:
 
@@ -26,8 +27,9 @@ Thread radio host, and a camera recorder, set up from the **Kilo Hub** app (buil
    sudo apt install ./kilo-hub_<version>_arm64.deb
    ```
 
-5. Open Kilo Hub and go to **LoRaWAN Gateway**. It shows the gateway ID read from the card, sends you to
-   the console to register it, and installs the certificates the console gives you.
+5. Open Kilo Hub. Cameras, Zigbee and Thread each have their own page. With a LoRaWAN card, go to
+   **LoRaWAN Gateway**: it shows the gateway ID read from the card, sends you to the console to
+   register it, and installs the certificates the console gives you.
 
 [docs/ubuntu-2604.md](docs/ubuntu-2604.md) explains what the script does and how to check the hardware
 by hand; [docs/zigbee-thread.md](docs/zigbee-thread.md) covers the radios.

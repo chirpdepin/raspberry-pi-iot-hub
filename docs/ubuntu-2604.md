@@ -12,7 +12,9 @@ cd raspberry-pi-iot-hub
 sudo ./scripts/install-ubuntu.sh
 ```
 
-The rest of this document explains what that does and why, because two of the decisions are
+The LoRaWAN card is optional. If no card answers, the script skips only the gateway part and still
+installs Docker, the radios and (with `--with-desktop`) the desktop session; run it again after fitting
+a card. The rest of this document explains what the script does and why, because two of the decisions are
 non-obvious and will otherwise be "fixed" back into something broken.
 
 ---

@@ -1,0 +1,195 @@
+#!/bin/bash
+#
+# iot-hub-radio-assign — the only thing that writes /etc/iot-hub/radios.conf.
+#
+#     iot-hub-radio-assign <usb-serial> <zigbee|thread>
+#
+# Assignment used to have three writers: this map, an automatic append inside
+# detect-radios.sh, and an implicit claim from the USB descriptor inside the
+# udev role helper. Nothing could arbitrate between them — a lock held by the
+# onboarding app did not stop detect-radios.sh appending from the Zigbee
+# service's own ExecStartPre. So they are gone, and this is the single writer.
+#
+# One operation, start to finish: take the lock, parse, decide, rewrite
+# atomically, refresh udev, regenerate the inventory, and verify against the
+# hardware that the role symlink really points at the radio that was asked for.
+# A caller gets a verified assignment or an error, never a hopeful one.
+#
+# Reports machine-readable key=value on stdout; everything human goes to stderr.
+#
+# Exit codes:
+#     0  assigned (or already assigned — this is idempotent)
+#     2  usage
+#     3  that role already belongs to a different radio
+#     4  this radio already holds the other role
+#     5  no radio with that serial is attached
+#     6  written, but the hardware did not come up as asked
+
+set -euo pipefail
+
+# shellcheck source=lib/iot-hub-definitions.sh
+. "${IOT_HUB_DEFINITIONS:-/usr/local/lib/iot-hub/definitions.sh}"
+
+log() { printf '%s\n' "$*" >&2; }
+emit() { printf '%s\n' "$*"; }
+
+SERIAL="${1:-}"
+ROLE="${2:-}"
+
+case "$ROLE" in
+    zigbee|thread) ;;
+    *) log "usage: ${0##*/} <usb-serial> <zigbee|thread>"; exit 2 ;;
+esac
+[ -n "$SERIAL" ] || { log "usage: ${0##*/} <usb-serial> <zigbee|thread>"; exit 2 ; }
+
+[ "$(id -u)" -eq 0 ] || { log "run as root"; exit 2; }
+
+# ---------------------------------------------------------------------------
+# Serialise the whole operation.
+#
+# The window that matters is not the write — it is read-decide-write-verify. Two
+# assignments interleaved there would each see a free role and both take it.
+# ---------------------------------------------------------------------------
+mkdir -p "$(dirname "$IOT_HUB_RADIOS_LOCK")"
+exec 9>"$IOT_HUB_RADIOS_LOCK"
+flock 9
+
+# ---------------------------------------------------------------------------
+# The radio has to be here. Assignment is verified against the hardware, so
+# pinning a role to a serial that is not attached could only ever report
+# "written but unverified" — which is the outcome this command exists to stop.
+# ---------------------------------------------------------------------------
+# The `|| true` is load-bearing under `set -o pipefail`: udevadm exits non-zero
+# for a device it does not know, and `head` closing the pipe early makes `sed`
+# exit on SIGPIPE. Either would take the whole script down mid-scan.
+serial_of() {
+    udevadm info -q property -n "$1" 2>/dev/null | sed -n 's/^ID_SERIAL_SHORT=//p' | head -n1 || true
+}
+
+device_node=""
+shopt -s nullglob
+for link in /dev/serial/by-id/*; do
+    node="$(readlink -f "$link")"
+    [ -c "$node" ] || continue
+    if [ "$(serial_of "$node")" = "$SERIAL" ]; then device_node="$node"; break; fi
+done
+shopt -u nullglob
+
+if [ -z "$device_node" ]; then
+    log "no attached radio reports serial $SERIAL"
+    emit "status=not-present"
+    exit 5
+fi
+
+# ---------------------------------------------------------------------------
+# Read the map. Comments and blank lines are preserved on rewrite; only the
+# assignment lines are interpreted.
+# ---------------------------------------------------------------------------
+mapped_role_of() {
+    [ -r "$IOT_HUB_RADIOS_CONF" ] || return 0
+    sed -e 's/#.*//' -e 's/[[:space:]]//g' "$IOT_HUB_RADIOS_CONF" 2>/dev/null |
+        awk -F= -v s="$1" '$1 == s && $2 != "" { print $2; exit }' || true
+}
+
+serial_holding_role() {
+    [ -r "$IOT_HUB_RADIOS_CONF" ] || return 0
+    sed -e 's/#.*//' -e 's/[[:space:]]//g' "$IOT_HUB_RADIOS_CONF" 2>/dev/null |
+        awk -F= -v r="$1" '$2 == r && $1 != "" { print $1; exit }' || true
+}
+
+current_role="$(mapped_role_of "$SERIAL")"
+role_holder="$(serial_holding_role "$ROLE")"
+
+# ---------------------------------------------------------------------------
+# Decide. Transferring a role between radios is deliberately not implemented
+# here: moving Zigbee to a different coordinator abandons the network key held
+# by the old one, and every paired device with it. That is a migration, and a
+# migration has to be asked for explicitly — it is not a side effect of picking
+# a different item in a list.
+# ---------------------------------------------------------------------------
+if [ -n "$current_role" ] && [ "$current_role" != "$ROLE" ]; then
+    log "$SERIAL is already assigned to $current_role"
+    emit "status=radio-occupied"
+    emit "current_role=$current_role"
+    exit 4
+fi
+
+if [ -n "$role_holder" ] && [ "$role_holder" != "$SERIAL" ]; then
+    log "$ROLE already belongs to $role_holder"
+    emit "status=role-conflict"
+    emit "held_by=$role_holder"
+    exit 3
+fi
+
+if [ "$current_role" = "$ROLE" ]; then
+    already="yes"
+else
+    already="no"
+
+    # -----------------------------------------------------------------------
+    # Atomic rewrite preserving everything else in the file. A rename replaces,
+    # which is what we want here — unlike the configuration helper, where the
+    # whole point is never to replace.
+    # -----------------------------------------------------------------------
+    conf_dir="$(dirname "$IOT_HUB_RADIOS_CONF")"
+    mkdir -p "$conf_dir"
+    staging="$(mktemp "$conf_dir/.radios.conf.XXXXXX")"
+    trap 'rm -f "$staging"' EXIT
+
+    if [ -f "$IOT_HUB_RADIOS_CONF" ]; then
+        cat "$IOT_HUB_RADIOS_CONF" > "$staging"
+    else
+        printf '# serial = role   (zigbee | thread | ignore)\n' > "$staging"
+    fi
+    printf '%s = %s\n' "$SERIAL" "$ROLE" >> "$staging"
+
+    chmod 0644 "$staging"
+    sync -d "$staging"
+    mv -f "$staging" "$IOT_HUB_RADIOS_CONF"
+    sync -d "$conf_dir"
+    trap - EXIT
+
+    log "assigned $SERIAL -> $ROLE in $IOT_HUB_RADIOS_CONF"
+fi
+
+# ---------------------------------------------------------------------------
+# Make udev act on it, then regenerate the inventory. detect-radios.sh is the
+# only thing that knows the shape of radios.env, so it is invoked rather than
+# reimplemented here.
+# ---------------------------------------------------------------------------
+udevadm control --reload >/dev/null 2>&1 || true
+udevadm trigger --subsystem-match=tty >/dev/null 2>&1 || true
+udevadm settle --timeout="$IOT_HUB_UDEV_TIMEOUT" >/dev/null 2>&1 || true
+
+"$IOT_HUB_DETECT_RADIOS_CMD" >/dev/null 2>&1 || true
+
+# ---------------------------------------------------------------------------
+# Verify against the hardware.
+#
+# "The symlink exists" is not the check. A stale /dev/zigbee left by a previous
+# radio satisfies that and points somewhere else entirely; the caller would
+# report success and Zigbee2MQTT would open the wrong device.
+# ---------------------------------------------------------------------------
+link="/dev/$ROLE"
+if [ ! -e "$link" ]; then
+    log "$link was not created — is the udev rule installed?"
+    emit "status=unverified"
+    emit "reason=no-symlink"
+    exit 6
+fi
+
+link_serial="$(serial_of "$link")"
+if [ "$link_serial" != "$SERIAL" ]; then
+    log "$link points at $link_serial, not $SERIAL"
+    emit "status=unverified"
+    emit "reason=wrong-device"
+    emit "resolved_serial=$link_serial"
+    exit 6
+fi
+
+emit "status=assigned"
+emit "serial=$SERIAL"
+emit "role=$ROLE"
+emit "port=$link"
+emit "device=$(readlink -f "$link")"
+emit "already_assigned=$already"

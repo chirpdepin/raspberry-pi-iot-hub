@@ -1,13 +1,41 @@
-# Raspberry Pi IoT Hub — historical installation reference
+# Raspberry Pi IoT Hub
 
-**Do not start a new installation from this guide.** The pre-built operating-system image is no
-longer available here, and this repository does not provide a verified complete replacement
-installation procedure. There is no image to download or write to an SD card from these instructions.
+Turn a Raspberry Pi with a RAK5146 LoRaWAN card into an on-site hub: a LoRaWAN gateway, a Zigbee and
+Thread radio host, and a camera recorder, set up from the **Kilo Hub** app (built as Chirp Hub for Chirp).
 
-This repository preserves the earlier Raspberry Pi gateway software and setup notes. The material
-below explains that earlier setup; it is not a current supported installer or evidence that a new
-installation will work. Before a new installation, obtain an exact supported release and matching,
-verified instructions through the project's published release process.
+## Set up a Raspberry Pi hub
+
+1. Assemble the Pi, the RAK HAT with the RAK5146 mPCIe card, and the LoRa antenna. Fit the antenna
+   before powering on.
+2. Install **Ubuntu 24.04 or 26.04 (64-bit)** on the SD card with Raspberry Pi Imager.
+3. Prepare the Pi. This enables SPI, checks that the card answers, installs Docker, Basic Station and
+   the Zigbee/Thread radio support:
+
+   ```bash
+   git clone https://github.com/chirpdepin/raspberry-pi-iot-hub.git
+   cd raspberry-pi-iot-hub
+   sudo ./scripts/install-ubuntu.sh
+   ```
+
+   On Ubuntu Server, add `--with-desktop` so the app has a screen to run on. Reboot when the script
+   asks.
+4. Download `kilo-hub_<version>_arm64.deb` from the
+   [latest release](https://github.com/chirpdepin/raspberry-pi-iot-hub/releases/latest) and install it:
+
+   ```bash
+   sudo apt install ./kilo-hub_<version>_arm64.deb
+   ```
+
+5. Open Kilo Hub and go to **LoRaWAN Gateway**. It shows the gateway ID read from the card, sends you to
+   the console to register it, and installs the certificates the console gives you.
+
+[docs/ubuntu-2604.md](docs/ubuntu-2604.md) explains what the script does and how to check the hardware
+by hand; [docs/zigbee-thread.md](docs/zigbee-thread.md) covers the radios.
+
+## Earlier Raspberry Pi OS image (historical)
+
+The rest of this README describes the earlier pre-built Raspberry Pi OS image. That image is no longer
+available, and none of the steps below is needed for the setup above.
 
 ## Repository Contents
 

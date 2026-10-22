@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# iot-hub-radio-role — look up the role a radio dongle has been assigned.
+#
+# Called from /etc/udev/rules.d/99-iot-hub-radios.rules as:
+#     iot-hub-radio-role <serial>
+#
+# Prints exactly one of "zigbee", "thread", or nothing at all. udev matches the
+# output with RESULT== and creates /dev/zigbee or /dev/thread accordingly.
+#
+# This is a pure lookup and nothing else. It does not guess a role from the USB
+# descriptor, and it does not inspect the current state of /dev/zigbee to
+# arbitrate between two candidates — both of which it used to do, and both of
+# which made the answer depend on enumeration order rather than on the map.
+#
+# A role symlink now exists if and only if somebody explicitly asked for it, via
+# iot-hub-radio-assign or by editing the map. Nothing claims a radio on its own.
+#
+# Runs inside udev, so it must be fast, dependency-free and side-effect-free.
+
+set -eu
+
+# shellcheck source=lib/iot-hub-definitions.sh
+. "${IOT_HUB_DEFINITIONS:-/usr/local/lib/iot-hub/definitions.sh}"
+
+SERIAL="${1:-}"
+
+[ -n "$SERIAL" ] || exit 0
+[ -r "$IOT_HUB_RADIOS_CONF" ] || exit 0
+
+# Keyed on the USB serial number so a role follows the physical dongle across
+# ports, reboots and replugs. This is what makes a two-radio hub deterministic.
+role=$(
+    sed -e 's/#.*//' -e 's/[[:space:]]//g' "$IOT_HUB_RADIOS_CONF" 2>/dev/null |
+    awk -F= -v s="$SERIAL" '$1 == s && $2 != "" { print $2; exit }'
+)
+
+case "$role" in
+    zigbee|thread) printf '%s' "$role" ;;
+esac

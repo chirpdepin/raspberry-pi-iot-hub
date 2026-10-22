@@ -1,0 +1,20 @@
+[Unit]
+Description=IoT Hub MQTT broker (Mosquitto)
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+# No provisioning gate. Unlike the LoRaWAN and Zigbee services, the broker needs
+# no credentials or radio to be useful, and Zigbee2MQTT depends on it being up.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/iot-hub/mqtt
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

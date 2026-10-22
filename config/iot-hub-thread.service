@@ -1,0 +1,24 @@
+[Unit]
+Description=IoT Hub Thread Border Router (OpenThread)
+Documentation=https://github.com/chirpdepin/raspberry-pi-iot-hub
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+# Gated on the radio itself rather than on a config file. Thread needs a second
+# dongle flashed with OpenThread RCP firmware; with none present this stays
+# cleanly inactive, and starts by itself once one is plugged in and mapped in
+# /etc/iot-hub/radios.conf.
+ConditionPathExists=/dev/thread
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/iot-hub/thread
+ExecStartPre=-/usr/local/bin/detect-radios.sh
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
